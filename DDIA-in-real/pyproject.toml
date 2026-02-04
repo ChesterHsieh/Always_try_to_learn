@@ -1,0 +1,17 @@
+[project]
+name = "data-engineering-design-patterns"
+version = "0.1.0"
+description = "A Python project implementing Data Engineering Design Patterns from the book 'Data Engineering Design Patterns' (2025)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # PySpark 4.0+ - for large-scale batch processing
+    # Note: PySpark 4.0.0 was released in May 2025
+    # If not available, you can use pyspark>=3.5.0 for development
+    "pyspark>=4.0.0",
+    # PyFlink 2.0+ - for streaming processing
+    # Note: PyFlink 2.0.0 was released in March 2025
+    # Package name: apache-flink
+    # If not available, you can use apache-flink>=1.18.0 for development
+    "apache-flink>=2.0.0",
+]

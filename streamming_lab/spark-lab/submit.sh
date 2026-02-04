@@ -1,0 +1,1 @@
+spark-submit --class com.example.spark.SparkPi --master spark://spark-master:7077 ./spark-batch/target/spark-batch-1.0-SNAPSHOT.jar

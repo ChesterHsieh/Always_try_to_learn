@@ -1,0 +1,26 @@
+# Data Generator Configuration for Upsert Writer Pattern Demo
+# This configuration generates user profiles that may need updates over time
+
+dataset:
+  rows: 50
+  composition_percentage:
+    duplicates: 0
+    missing_fields: 0
+    unprocessable_rows: 0
+data_blocker:
+  type: sleep
+  configuration:
+    sleep_time_range_seconds:
+      from: 0
+      to: 1
+entity:
+  type: user
+  configuration: {}
+generator:
+  type: one-shot
+writer:
+  type: json
+  configuration:
+    output_path: '/tmp/upsert_writer_demo'
+    clean_path: true
+

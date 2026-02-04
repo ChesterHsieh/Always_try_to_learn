@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+---
+
+# 客戶需求
+There are two CSV files: Orders (transactional data of customer orders) and Products (inventory
+levels for the products available for sale).
+Please use Python to finish below tasks:
+1. Validate and clean the data
+2. Detect and resolve inconsistencies and outliers
+3. Apply business rules and identify potential fraud
+4. Analyze historical patterns of inventory issues and missing order data
+Hint:
+1. Validate the Referential Integrity:
+Ensure all product_id in orders exist in product_inventory
+2. Check Business Logic for Orders:
+Ensure quantity in orders doesn’t exceed available inventory (inventory_count in
+product_inventory)
+Detect and flag any orders with negative quantities or price discrepancies
+3. Temporal Consistency Check:
+Flag any orders where the shipping_date is earlier than the order_date
+Flag orders where the shipping date is missing (for shipped orders)
+4. Identify Potential Fraud:
+Identify any orders with quantities that deviate significantly from historical order patterns
+for that product (e.g., more than 2 standard deviations above the average quantity ordered
+in the last 30 days)
+Detect any orders marked as "shipped" but with no corresponding shipping_date.
+5. Generate Cleaned and Validated Dataset:
+Output the clean dataset and the dataset with all identified issues and their reasons
+(Issues: Invalid product IDs, Exceeded inventory, Price mismatches, Temporal
+inconsistencies [shipping date issues], Potential fraud [outliers in order quantity])
+
+# Best Practice
+- The project must use `uv` as package/dependency manager.
+- 採用 `src/` 目錄結構，並以 `data_pipeline` 作為可安全匯入的套件名稱（如有更適合專案語意的名稱可調整，例如 `order_inventory_pipeline`）。
+- Include CLI via `typer` with `pipeline` entrypoint.
+- Include an example Prefect flow with tasks and parameters.
+- Provide `.env.example` and YAML config loading.
+- Include `ruff`, `mypy`, `pytest` and scripts in `[tool.uv.scripts]`.
+- Ready-to-run commands: `uv run pipeline --help` and `uv run test`.

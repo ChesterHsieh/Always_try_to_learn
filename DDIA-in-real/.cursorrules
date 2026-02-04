@@ -1,0 +1,126 @@
+# Data Engineering Design Patterns - Project Rules
+
+## Project Focus
+
+This repository is primarily focused on implementing **Data Engineering Design Patterns** from the book "Data Engineering Design Patterns" (2025). Patterns are organized by topic/theme as presented in the book, not by technology (batch/streaming/etl).
+
+## Project Structure
+
+```
+patterns/                    # PRIMARY: Data Engineering Design Patterns implementations
+  ├── data_ingestion/        # Data ingestion patterns (e.g., Transactional Writer)
+  ├── data_quality/          # Data quality & validation patterns
+  ├── updates/              # Updates & merges patterns
+  ├── time_and_lateness/    # Time, lateness, windowing patterns
+  ├── schema_evolution/     # Schema evolution & compatibility patterns
+  ├── security_and_governance/  # Security, PII, partitioning patterns
+  ├── observability/        # Monitoring, SLAs, WAP patterns
+  └── utils/                # Shared utilities (e.g., SimpleDB for demos)
+
+data_generator/             # Fake data generator
+tests/                      # Test suite
+scripts/                    # Execution scripts
+docs/                       # Reference materials (PDFs)
+```
+
+## Code Style & Standards
+
+### Python Code
+- Use Python 3.11+ features
+- Follow PEP 8 style guidelines
+- Use type hints for function signatures
+- Write docstrings for all public functions and classes
+- Comments should be in English, but docstrings can be bilingual (English/Traditional Chinese)
+
+### File Organization
+- Each pattern should be in its own module/file
+- Pattern implementations should include:
+  - Clear pattern name and description
+  - Use case scenarios
+  - Implementation details
+  - Example usage
+  - Trade-offs and considerations
+
+
+## Pattern Implementation Guidelines
+
+### When Implementing a New Pattern
+
+1. **Research First**: Review the pattern in the book and understand:
+   - Problem it solves
+   - When to use it
+   - Trade-offs and alternatives
+
+2. **Structure**: Create a new file in the appropriate `patterns/` subdirectory:
+   ```python
+   """
+   Pattern Name: [Pattern Name]
+   
+   Problem: [What problem does this solve?]
+   Solution: [How does this pattern solve it?]
+   Use Cases: [When should this pattern be used?]
+   
+   Reference: Data Engineering Design Patterns (2025)
+   """
+   ```
+
+3. **Implementation**:
+   - Start with a simple, clear implementation
+   - Then, implment with spark and flink (all in python)
+   - Add comments explaining key decisions
+   - Include error handling and edge cases
+   - Make it runnable with data_generator, single section should also include data_genarator config
+
+4. **Documentation**:
+   - Add README.md in the pattern directory if needed
+   - Update main README.md with pattern description
+   - Include usage examples
+
+
+### Pattern Categories
+
+Patterns are organized by topic/theme (as in the book), not by technology:
+- **Data Ingestion**: Patterns for writing data (e.g., Transactional Writer)
+- **Data Quality**: Patterns for validation and quality enforcement
+- **Updates**: Patterns for merging and updating data
+- **Time & Lateness**: Patterns for handling late data and time windows
+- **Schema Evolution**: Patterns for schema compatibility and evolution
+- **Security & Governance**: Patterns for security, PII, and data partitioning
+- **Observability**: Patterns for monitoring, SLAs, and data observability
+
+## Utilities
+
+The `patterns/utils/` directory contains shared utilities:
+- `simple_db.py`: In-memory database simulator with transaction support, used for pattern demonstrations
+
+## Dependencies
+
+- Prefer standard library when possible
+- Use `uv` for dependency management
+- Document why specific dependencies are needed
+- Keep dependencies minimal and well-justified
+
+## Documentation Standards
+
+- README.md should clearly explain the project's focus on Data Engineering Design Patterns
+- Each pattern should have clear documentation
+- Code comments should explain "why" not just "what"
+- Include references to the book chapters when applicable
+
+## Code Review Checklist
+
+When reviewing or implementing patterns:
+- [ ] Pattern clearly solves a specific problem
+- [ ] Code is readable and well-documented
+- [ ] Error handling is appropriate
+- [ ] Performance considerations are documented
+- [ ] Trade-offs are explained
+- [ ] Example usage is provided
+
+## Communication
+
+- Use Traditional Chinese for user-facing documentation
+- Use English for code comments and technical discussions
+- Be clear about which pattern is being implemented
+- Reference book chapters when discussing patterns
+
