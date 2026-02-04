@@ -1,0 +1,19 @@
+[project]
+name = "jax-playground"
+version = "0.1.0"
+description = "JAX playground with Metal acceleration for Apple Silicon"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "wheel",
+    "jax>=0.4.26,<0.5.0",
+    "jaxlib>=0.4.26,<0.5.0",
+    "jax-metal>=0.1.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "ipython>=8.0.0",
+]

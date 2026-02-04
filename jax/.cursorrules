@@ -1,0 +1,116 @@
+# JAX with Metal Playground - Cursor Rules
+
+## Project Context
+This is a JAX development environment configured for Apple Silicon with Metal acceleration support. It uses uv for package management and includes examples demonstrating JAX capabilities.
+
+## Metal Backend Limitations
+
+### CRITICAL: Always use float32
+The Metal backend does NOT support:
+- `float64` / `np.float64` - Always use `float32` instead
+- `complex64` / `complex128`
+- Integer matrix operations - Cast to float32 first
+
+### Unsupported Operations
+The following JAX operations are NOT supported on Metal:
+- `jnp.linalg.solve()` - Linear system solving
+- `jnp.linalg.eigh()` - Eigenvalue decomposition
+- `jnp.linalg.qr()` - QR decomposition
+- `jnp.linalg.svd()` - SVD decomposition
+- `jnp.linalg.lstsq()` - Least squares
+
+When these operations are needed, wrap them in try/except blocks or document the limitation.
+
+## Code Guidelines
+
+### 1. Data Types
+```python
+# ✅ Good - Use float32
+x = jnp.array([1.0, 2.0, 3.0], dtype=jnp.float32)
+A = jnp.ones((5, 5), dtype=jnp.float32)
+
+# ❌ Bad - float64 not supported
+x = jnp.array([1.0, 2.0, 3.0], dtype=jnp.float64)
+```
+
+### 2. Environment Setup
+All scripts should set compatibility flag at the top:
+```python
+import os
+os.environ.setdefault('ENABLE_PJRT_COMPATIBILITY', '1')
+
+import jax
+import jax.numpy as jnp
+```
+
+### 3. Unsupported Operations
+Handle gracefully with try/except:
+```python
+try:
+    result = jnp.linalg.solve(A, b)
+except NotImplementedError:
+    print("Operation not supported on Metal backend")
+```
+
+### 4. Matrix Operations
+```python
+# ✅ Supported
+result = A @ B  # Matrix multiplication
+result = A + B  # Element-wise operations
+result = A.T    # Transpose
+result = jnp.dot(A, B)
+
+# ❌ Not supported
+x = jnp.linalg.solve(A, b)
+eigenvalues, eigenvectors = jnp.linalg.eigh(A)
+```
+
+### 5. JIT Compilation
+Always use JIT for performance-critical code:
+```python
+from jax import jit
+
+@jit
+def fast_function(x):
+    return x ** 2 + 2 * x + 1
+```
+
+## Package Management
+
+- Use `uv` for all package operations
+- Pin JAX/jaxlib to 0.4.x versions for Metal compatibility
+- Never upgrade JAX to 0.5+ or 0.9+ (incompatible with jax-metal)
+
+```bash
+# Add packages
+uv add package-name
+
+# Update dependencies
+uv sync
+```
+
+## Testing
+
+When creating new examples or tests:
+1. Always test on Metal device
+2. Handle unsupported operations gracefully
+3. Use float32 data types
+4. Include device information in output
+5. Verify operations work before committing
+
+## Performance
+
+For optimal Metal performance:
+- Use float32 (not float64)
+- Enable JIT compilation
+- Use larger batch sizes
+- Prefer supported operations
+- Check device usage: `jax.devices()`
+
+## Documentation
+
+When adding new scripts:
+1. Include docstrings explaining what the script does
+2. Document any Metal-specific limitations
+3. Add usage examples in comments
+4. Update README.md with new script information
