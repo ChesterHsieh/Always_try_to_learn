@@ -1,0 +1,42 @@
+{
+  // ============ Python 配置 ============
+  "python.defaultInterpreterPath": "${workspaceFolder}/jax/.venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  
+  // 针对 Python 的特定配置
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  
+  // Python 测试配置
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "jax"
+  ],
+  
+  // ============ Rust 配置 ============
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.checkOnSave": true,
+  
+  // 针对 Rust 的特定配置
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  
+  // ============ 通用配置 ============
+  // Terminal 配置
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  
+  // 文件关联
+  "files.associations": {
+    "*.toml": "toml",
+    "Cargo.toml": "toml",
+    "Cargo.lock": "toml"
+  }
+}
