@@ -49,13 +49,22 @@ Spark 流处理实验室 - 最小可行实验设置，用于流式事件模拟
   - ORM 讨论
 - **原仓库**: https://github.com/ChesterHsieh/unit-test-pardigm
 
+### 6. jax
+JAX 学习和实践项目
+- **技术栈**: Python, JAX
+- **内容**: JAX 基础示例、矩阵运算、Transformer 实现
+- **特点**: 
+  - 基础 JAX 操作和自动微分
+  - 矩阵运算示例
+  - Transformer 模型实现
+
 ## 技术栈概览
 
 - **语言**: Python, Rust, Java
-- **框架/工具**: Spark, FastAPI, pytest
+- **框架/工具**: Spark, FastAPI, pytest, JAX
 - **领域**: 
   - 大数据处理
-  - 机器学习 (Transformer)
+  - 机器学习 (Transformer, JAX)
   - 数据工程
   - 软件测试
   - Clean Architecture
@@ -74,4 +83,4 @@ Chester Hsieh
 
 ## 更新日期
 
-2026-02-04
+2026-02-06
