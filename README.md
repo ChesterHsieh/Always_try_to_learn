@@ -2,6 +2,26 @@
 
 多语言学习仓库，整合了多个项目的代码和学习资料。
 
+## 🚀 快速开始
+
+本仓库配置了 **Python 和 Rust 的完整开发环境**，可以在 VS Code/Cursor 中无缝切换：
+
+### 在编辑器中运行 (推荐)
+1. 打开任意 Python 或 Rust 文件
+2. 按 `F5` 键选择运行配置
+3. 享受零配置的开发体验！
+
+### 在终端中运行
+```bash
+# Python (JAX)
+cd jax && make run-basic
+
+# Rust (Transformer)
+cd from-zero-to-smallest-transformer && make run
+```
+
+📖 详细配置说明: [MULTI_LANGUAGE_SETUP.md](MULTI_LANGUAGE_SETUP.md)
+
 ## 仓库结构
 
 本仓库包含以下子项目：
@@ -18,6 +38,7 @@ Spark 流处理实验室 - 最小可行实验设置，用于流式事件模拟
 - **内容**: 纯 Rust 实现的 Transformer 架构，无第三方依赖
 - **特点**: 包含矩阵运算、注意力机制、层归一化、前馈网络等完整实现
 - **原仓库**: https://github.com/ChesterHsieh/from-zero-to-smallest-transformer
+- **使用指南**: [from-zero-to-smallest-transformer/USAGE.md](from-zero-to-smallest-transformer/USAGE.md)
 
 ### 3. DDIA-in-real
 设计数据密集型应用的实战项目
@@ -57,6 +78,8 @@ JAX 学习和实践项目
   - 基础 JAX 操作和自动微分
   - 矩阵运算示例
   - Transformer 模型实现
+  - 支持 Apple Silicon Metal 加速
+- **使用指南**: [jax/USAGE.md](jax/USAGE.md)
 
 ## 技术栈概览
 

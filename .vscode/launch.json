@@ -1,0 +1,78 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    // ============ Python 配置 ============
+    {
+      "name": "Python: JAX Basic Main",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/jax/basic/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/jax",
+      "justMyCode": true,
+      "python": "${workspaceFolder}/jax/.venv/bin/python"
+    },
+    {
+      "name": "Python: Current File (JAX)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/jax",
+      "justMyCode": true,
+      "python": "${workspaceFolder}/jax/.venv/bin/python"
+    },
+    {
+      "name": "Python: JAX Verify",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/jax/verify_jax.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/jax",
+      "justMyCode": true,
+      "python": "${workspaceFolder}/jax/.venv/bin/python"
+    },
+    {
+      "name": "Python: JAX Transformer Train",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/jax/transformer/train.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/jax",
+      "justMyCode": true,
+      "python": "${workspaceFolder}/jax/.venv/bin/python"
+    },
+    
+    // ============ Rust 配置 ============
+    {
+      "name": "Rust: Run Transformer",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/from-zero-to-smallest-transformer/target/debug/transformer",
+      "args": [],
+      "cwd": "${workspaceFolder}/from-zero-to-smallest-transformer",
+      "preLaunchTask": "cargo build (transformer)",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Rust: Run Transformer (Release)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/from-zero-to-smallest-transformer/target/release/transformer",
+      "args": [],
+      "cwd": "${workspaceFolder}/from-zero-to-smallest-transformer",
+      "preLaunchTask": "cargo build --release (transformer)",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Rust: Test Transformer",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/from-zero-to-smallest-transformer/target/debug/deps/from_zero_to_smallest_transformer-*",
+      "args": [],
+      "cwd": "${workspaceFolder}/from-zero-to-smallest-transformer",
+      "preLaunchTask": "cargo test (transformer)",
+      "sourceLanguages": ["rust"]
+    }
+  ]
+}
