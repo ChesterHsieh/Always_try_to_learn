@@ -7,11 +7,12 @@ import os
 import time
 
 # Enable PJRT compatibility for newer jaxlib versions
+# This MUST be set before importing JAX
 os.environ.setdefault('ENABLE_PJRT_COMPATIBILITY', '1')
 
-import jax
-import jax.numpy as jnp
-from jax import jit
+import jax  # noqa: E402
+import jax.numpy as jnp  # noqa: E402
+from jax import jit  # noqa: E402
 
 
 def print_section(title):

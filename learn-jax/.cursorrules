@@ -1,7 +1,7 @@
 # JAX with Metal Playground - Cursor Rules
 
 ## Project Context
-This is a JAX development environment configured for Apple Silicon with Metal acceleration support. It uses uv for package management and includes examples demonstrating JAX capabilities.
+This project is focus on learn the jax by implement transformer from scratch. Don't comeout solution instantly
 
 ## Metal Backend Limitations
 
@@ -73,20 +73,6 @@ from jax import jit
 @jit
 def fast_function(x):
     return x ** 2 + 2 * x + 1
-```
-
-## Package Management
-
-- Use `uv` for all package operations
-- Pin JAX/jaxlib to 0.4.x versions for Metal compatibility
-- Never upgrade JAX to 0.5+ or 0.9+ (incompatible with jax-metal)
-
-```bash
-# Add packages
-uv add package-name
-
-# Update dependencies
-uv sync
 ```
 
 ## Testing

@@ -6,11 +6,12 @@ Basic JAX examples demonstrating core functionality with Metal acceleration.
 import os
 
 # Enable PJRT compatibility for newer jaxlib versions
+# This MUST be set before importing JAX
 os.environ.setdefault('ENABLE_PJRT_COMPATIBILITY', '1')
 
-import jax
-import jax.numpy as jnp
-from jax import grad, jit, vmap
+import jax  # noqa: E402
+import jax.numpy as jnp  # noqa: E402
+from jax import grad, jit, vmap  # noqa: E402
 
 
 def print_section(title):
