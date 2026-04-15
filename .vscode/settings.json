@@ -1,6 +1,6 @@
 {
   // ============ Python 配置 ============
-  "python.defaultInterpreterPath": "${workspaceFolder}/jax/.venv/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder}/learn-jax/.venv/bin/python",
   "python.terminal.activateEnvironment": true,
   
   // 针对 Python 的特定配置
@@ -15,7 +15,7 @@
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   "python.testing.pytestArgs": [
-    "jax"
+    "learn-jax"
   ],
   
   // ============ Rust 配置 ============
