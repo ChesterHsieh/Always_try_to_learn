@@ -1,0 +1,9 @@
+resources:
+  minimal: true
+  recommendations:
+    clusterCPU: "4"
+    clusterMemory: "8Gi"
+components:
+  prometheusReplicas: 1
+  grafanaReplicas: 1
+  otelCollectorReplicas: 1

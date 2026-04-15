@@ -1,0 +1,14 @@
+{
+  "run_started": {
+    "run_id": "test-run",
+    "pipeline_name": "ai_monitor_simple_pipeline",
+    "status": "running",
+    "input_path": "/data/input/sample.txt",
+    "output_path": "/data/output/result.txt"
+  },
+  "run_failed": {
+    "run_id": "test-run",
+    "status": "failed",
+    "failure_category": "runtime_error"
+  }
+}

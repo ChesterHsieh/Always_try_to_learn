@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-defaults
+data:
+  spark-defaults.conf: |
+    spark.jars.packages io.openlineage:openlineage-spark:1.45.0
+    spark.extraListeners io.openlineage.spark.agent.OpenLineageSparkListener
+    spark.openlineage.transport.url {{ .Values.openlineage.transport.url }}
+    spark.openlineage.transport.type {{ .Values.openlineage.transport.type }}
+    spark.openlineage.namespace {{ .Values.openlineage.namespace }}

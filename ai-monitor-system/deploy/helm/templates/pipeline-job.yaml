@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pyspark-pipeline
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: pipeline
+          image: {{ .Values.pyspark.image }}
+          command: ["python", "pipeline/job.py"]
+          envFrom:
+            - configMapRef:
+                name: openlineage-config

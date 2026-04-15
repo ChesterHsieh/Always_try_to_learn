@@ -1,0 +1,12 @@
+{
+  "title": "Lineage Correlation",
+  "panels": [
+    {
+      "title": "Telemetry Freshness",
+      "type": "stat",
+      "targets": [
+        { "expr": "pipeline_telemetry_freshness_seconds" }
+      ]
+    }
+  ]
+}

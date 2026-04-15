@@ -1,0 +1,12 @@
+{
+  "title": "Pipeline Health",
+  "panels": [
+    {
+      "title": "Failed Runs",
+      "type": "stat",
+      "targets": [
+        { "expr": "pipeline_run_total{status=\"failed\"}" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+global:
+  namespace: ai-monitor-system
+
+pyspark:
+  image: local/ai-monitor-pyspark:latest
+  inputPath: /data/input/sample.txt
+  outputPath: /data/output/result.txt
+
+openlineage:
+  enabled: true
+  namespace: ai_monitor_system
+  transport:
+    type: http
+    url: http://marquez-api:5000
+
+prometheus:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+otelCollector:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+grafana:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi

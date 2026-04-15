@@ -1,0 +1,10 @@
+groups:
+  - name: pipeline-failure
+    rules:
+      - alert: PipelineRunFailed
+        expr: pipeline_run_total{status="failed"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PySpark pipeline failure detected"

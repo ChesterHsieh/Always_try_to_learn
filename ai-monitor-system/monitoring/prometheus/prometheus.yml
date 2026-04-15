@@ -1,0 +1,6 @@
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: "pyspark-pipeline"
+    static_configs:
+      - targets: ["pyspark-pipeline:8000"]
