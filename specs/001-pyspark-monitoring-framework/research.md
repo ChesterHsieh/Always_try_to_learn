@@ -1,55 +1,57 @@
-# Research: PySpark Monitoring Framework
+# Research: PySpark Monitoring Framework (Option B)
 
-## Decision 1: Keep pipeline scope to local-file input/output only
+## Decision 1: Rebase observability components to upstream Helm charts
 
-- **Decision**: Implement the reference pipeline as local-file-to-local-file processing only.
-- **Rationale**: User explicitly requested a simple pipeline and highlighted monitoring as the key design concern.
+- **Decision**: Use upstream Helm charts as primary deployment mechanism for Prometheus, Grafana, OpenTelemetry Collector, and OpenLineage backend.
+- **Rationale**: Standardized charts reduce custom YAML maintenance, improve upgrade path, and align with operational simplicity goals.
 - **Alternatives considered**:
+  - Keep fully custom manifests in repo (rejected due to long-term maintenance overhead and drift risk)
+  - Use only managed SaaS observability (rejected because local-cluster-first scope requires self-contained stack)
 
-  - Object storage integration (rejected for v1 due to added complexity and operational overhead)
-  - Message queue/stream ingestion (rejected for v1 because it shifts focus away from observability baseline)
+## Decision 2: Keep project-owned chart scope to pipeline and integration overlays
 
-## Decision 2: Use Helm as the default deployment interface
-
-- **Decision**: Package all deployable components with Helm and provide a minimal local-cluster values profile.
-- **Rationale**: Helm gives repeatable install/upgrade/uninstall workflows and configuration centralization, which supports local experimentation.
+- **Decision**: Retain local chart/templates only for pipeline job execution, Spark/OpenLineage runtime wiring, and required project-specific config bridges.
+- **Rationale**: Preserves control for pipeline semantics while offloading generic observability infrastructure lifecycle.
 - **Alternatives considered**:
+  - Migrate everything to upstream charts with no local wrappers (rejected because pipeline runtime wiring still needs project ownership)
+  - Keep all existing local templates unchanged (rejected because it defeats Option B maintenance goals)
 
-  - Raw manifests only (rejected due to lower repeatability and weaker parameter management)
-  - Kustomize-only layering (rejected for v1 to keep one primary deployment workflow)
+## Decision 3: Preserve local-file pipeline scope
 
-## Decision 3: Establish a low-resource local cluster profile
-
-- **Decision**: Define conservative default resource requests/limits and reduced component replicas for monitoring services.
-- **Rationale**: The framework must run on developer-grade local clusters with constrained CPU/memory.
+- **Decision**: Keep v1 data path as local file input to local file output.
+- **Rationale**: User requirement explicitly prioritizes monitoring framework behavior over data-pipeline complexity.
 - **Alternatives considered**:
+  - Add object storage connector now (rejected due to scope expansion)
+  - Add streaming source support now (rejected as out of v1 assumptions)
 
-  - Production-like default sizing (rejected because it fails local resource constraints)
-  - Per-team manual tuning only (rejected because onboarding would be inconsistent and error-prone)
+## Decision 4: Adopt strict run identity correlation contract
 
-## Decision 4: Correlate OpenLineage, metrics, and traces around run identity
-
-- **Decision**: Use a shared run identifier and consistent labels/tags across lineage, metrics, and traces.
-- **Rationale**: Correlation is required for fast triage and aligns with monitoring-first outcomes in the feature spec.
+- **Decision**: Use `run_id` as mandatory correlation key across metrics, traces, lineage records, and run-scoped alerts.
+- **Rationale**: End-to-end triage speed depends on deterministic cross-signal joins.
 - **Alternatives considered**:
+  - Best-effort correlation by timestamp/job name only (rejected due to ambiguity)
+  - Separate IDs per telemetry domain (rejected due to investigation friction)
 
-  - Independent telemetry channels with no common IDs (rejected due to investigation friction)
-  - Log-only correlation (rejected due to weaker dashboard and alert integration)
+## Decision 5: Local resource profile remains a first-class deployment contract
 
-## Decision 5: Focus dashboards on operator triage workflow
-
-- **Decision**: Build a minimal dashboard set around run state, failure counts, recent failures, and telemetry freshness.
-- **Rationale**: Operators need immediate actionable visibility, not broad exploratory analytics in v1.
+- **Decision**: Define and enforce low-resource profile values for all upstream components (single replica defaults, bounded CPU/memory requests/limits).
+- **Rationale**: Feature must run reliably on developer-grade clusters for onboarding and smoke validation.
 - **Alternatives considered**:
+  - Production-sized defaults (rejected because it breaks local usability)
+  - Unbounded resources with user tuning (rejected due to inconsistent onboarding outcomes)
 
-  - Comprehensive analytics dashboards (rejected as non-critical for initial monitoring framework)
-  - Trace UI only without dashboards (rejected because on-call workflow benefits from summary views)
+## Decision 6: Test strategy upgraded from file-existence checks to behavior checks
 
-## Decision 6: Validate with lightweight smoke tests in local Kubernetes
-
-- **Decision**: Include a smoke test path that deploys stack, runs one success and one failure pipeline case, and verifies visibility in observability outputs.
-- **Rationale**: This provides practical delivery evidence while keeping validation fast for local development.
+- **Decision**: Convert placeholder tests and shallow checks into behavior-driven contract/integration/smoke validations against deployed stack.
+- **Rationale**: Existing scaffolding is insufficient evidence for FR/NFR success criteria.
 - **Alternatives considered**:
+  - Keep placeholder smoke tests for speed (rejected as non-compliant with testing constitution)
+  - Manual verification only (rejected because repeatable release gating is required)
 
-  - Unit-test-only validation (rejected because it misses integration behavior)
-  - Heavy load/performance test suite in v1 (rejected as out of scope for local-focused first release)
+## Decision 7: Migration path is phased, not big-bang
+
+- **Decision**: Migrate by component groups: Prometheus/Grafana first, then OTel Collector, then OpenLineage backend integration stabilization.
+- **Rationale**: Limits blast radius and keeps rollback simple.
+- **Alternatives considered**:
+  - One-shot chart migration (rejected due to higher outage/debug risk)
+  - No migration sequencing (rejected because ownership boundaries become unclear)

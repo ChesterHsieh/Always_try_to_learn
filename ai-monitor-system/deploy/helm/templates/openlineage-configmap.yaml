@@ -2,7 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: openlineage-config
+  namespace: {{ .Values.global.namespace }}
 data:
   OPENLINEAGE_NAMESPACE: "{{ .Values.openlineage.namespace }}"
   OPENLINEAGE_URL: "{{ .Values.openlineage.transport.url }}"
   OPENLINEAGE_TRANSPORT: "{{ .Values.openlineage.transport.type }}"
+  OPENLINEAGE_BACKEND_ENABLED: "{{ .Values.upstream.openlineageBackend.enabled }}"

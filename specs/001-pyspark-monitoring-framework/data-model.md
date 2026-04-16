@@ -1,99 +1,106 @@
-# Data Model: PySpark Monitoring Framework
+# Data Model: PySpark Monitoring Framework (Option B)
 
 ## Entity: PipelineRun
 
-- **Description**: One execution of the reference PySpark job processing local input file(s) into local output file(s).
+- **Description**: One execution instance of the reference PySpark job (local input file to local output file) running on Kubernetes.
 - **Fields**:
-
   - `run_id` (string, required, unique)
   - `pipeline_name` (string, required)
   - `status` (enum: queued, running, succeeded, failed, recovering)
   - `start_time` (datetime, required)
-  - `end_time` (datetime, optional until completion)
+  - `end_time` (datetime, optional)
+  - `duration_ms` (integer, optional)
   - `input_path` (string, required)
   - `output_path` (string, required)
   - `failure_category` (string, optional)
+  - `failure_message` (string, optional)
   - `k8s_namespace` (string, required)
-  - `k8s_pod_name` (string, optional)
+  - `k8s_job_name` (string, required)
 - **Validation Rules**:
-
-  - `run_id` MUST be present for all telemetry events.
-  - `status=failed` MUST include `failure_category`.
-  - `end_time` MUST be >= `start_time` when present.
+  - `status=failed` requires `failure_category` and `failure_message`.
+  - Terminal statuses (`succeeded`, `failed`) require `end_time`.
+  - `duration_ms` MUST be non-negative when present.
 - **State Transitions**:
-
   - queued -> running
   - running -> succeeded | failed
-  - failed -> recovering (optional operational state)
+  - failed -> recovering (optional operator state)
+
+## Entity: MonitoringSignal
+
+- **Description**: Normalized envelope for emitted telemetry records across metric/trace/lineage channels.
+- **Fields**:
+  - `signal_id` (string, required, unique)
+  - `signal_type` (enum: metric, trace, lineage, alert)
+  - `run_id` (string, required for run-scoped events)
+  - `source_component` (string, required; e.g., pipeline-job, otel-collector, prometheus-rule)
+  - `timestamp` (datetime, required)
+  - `attributes` (map<string,string>, optional)
+- **Validation Rules**:
+  - Run-scoped signals MUST include `run_id`.
+  - `signal_type` determines minimum required attributes defined in contract docs.
 
 ## Entity: LineageRecord
 
-- **Description**: Data movement metadata tied to a `PipelineRun`.
+- **Description**: OpenLineage-compatible event view linked to a `PipelineRun`.
 - **Fields**:
-
   - `lineage_event_id` (string, required, unique)
   - `run_id` (string, required, foreign key -> PipelineRun.run_id)
+  - `job_name` (string, required)
+  - `job_namespace` (string, required)
   - `source_dataset` (string, required)
   - `target_dataset` (string, required)
   - `event_time` (datetime, required)
-  - `job_name` (string, required)
-  - `job_namespace` (string, required)
 - **Validation Rules**:
-
-  - `run_id` MUST match an existing pipeline run.
-  - Source and target dataset identifiers MUST not be empty.
-
-## Entity: MetricSample
-
-- **Description**: Operational metric point generated for run health and system behavior.
-- **Fields**:
-
-  - `metric_name` (string, required)
-  - `run_id` (string, optional for infrastructure-wide metrics)
-  - `value` (number, required)
-  - `labels` (key-value map, optional)
-  - `timestamp` (datetime, required)
-- **Validation Rules**:
-
-  - Run-scoped metrics SHOULD include `run_id`.
-  - `metric_name` MUST align with agreed naming conventions.
-
-## Entity: TraceSpan
-
-- **Description**: Distributed tracing unit representing a logical work segment in pipeline execution.
-- **Fields**:
-
-  - `trace_id` (string, required)
-  - `span_id` (string, required)
-  - `parent_span_id` (string, optional)
-  - `run_id` (string, required)
-  - `operation_name` (string, required)
-  - `start_time` (datetime, required)
-  - `end_time` (datetime, required)
-  - `status_code` (enum: unset, ok, error)
-- **Validation Rules**:
-
-  - `run_id` MUST be attached for pipeline-relevant spans.
-  - `end_time` MUST be >= `start_time`.
+  - `source_dataset` and `target_dataset` MUST be non-empty.
+  - `job_namespace` SHOULD match deployment namespace unless explicitly overridden.
 
 ## Entity: AlertEvent
 
-- **Description**: Operator-facing event emitted when monitoring conditions are met.
+- **Description**: Alert instance generated from monitoring rules and consumed by operator workflows.
 - **Fields**:
-
   - `alert_id` (string, required, unique)
   - `run_id` (string, optional)
   - `severity` (enum: warning, critical)
-  - `trigger_time` (datetime, required)
   - `summary` (string, required)
+  - `trigger_time` (datetime, required)
+  - `dashboard_link` (string, optional)
   - `state` (enum: firing, resolved)
 - **Validation Rules**:
+  - Run-failure alerts SHOULD include `run_id`.
+  - Critical alerts MUST include actionable `summary`.
 
-  - Critical alerts MUST include actionable summary text.
-  - Alert state transitions MUST follow firing -> resolved.
+## Entity: CoverageProfile
+
+- **Description**: Versioned readiness profile defining required observability components and checks for onboarding/release.
+- **Fields**:
+  - `profile_name` (string, required; default `local-minimal`)
+  - `profile_version` (string, required)
+  - `components` (string list, required; OpenLineage, Prometheus, OTel Collector, Grafana)
+  - `resource_budget` (map, required; cpu/memory defaults)
+  - `validation_checks` (string list, required)
+  - `last_verified_at` (datetime, optional)
+- **Validation Rules**:
+  - All required components MUST be present before production readiness sign-off.
+  - Validation checks MUST map to automated tests/scripts.
+
+## Entity: ChartReleaseBinding
+
+- **Description**: Mapping of observability components to upstream chart release configuration and pinned versions.
+- **Fields**:
+  - `component_name` (string, required)
+  - `chart_name` (string, required)
+  - `chart_repo` (string, required)
+  - `chart_version` (string, required)
+  - `namespace` (string, required)
+  - `values_overlay_path` (string, required)
+  - `enabled` (boolean, required)
+- **Validation Rules**:
+  - `chart_version` MUST be pinned (no floating latest tags).
+  - `values_overlay_path` MUST exist in repository.
 
 ## Relationship Summary
 
-- `PipelineRun` is the primary entity.
-- `LineageRecord`, `TraceSpan`, and run-scoped `MetricSample` associate to `PipelineRun` via `run_id`.
-- `AlertEvent` may associate to `PipelineRun` for run-level incidents or exist cluster-wide for stack health conditions.
+- `PipelineRun` is the primary operational entity.
+- `MonitoringSignal`, `LineageRecord`, and run-scoped `AlertEvent` associate to `PipelineRun` via `run_id`.
+- `CoverageProfile` defines expected component and validation coverage.
+- `ChartReleaseBinding` describes Option B deployment ownership for observability stack components.

@@ -7,6 +7,20 @@
       "targets": [
         { "expr": "pipeline_run_total{status=\"failed\"}" }
       ]
+    },
+    {
+      "title": "Succeeded Runs",
+      "type": "stat",
+      "targets": [
+        { "expr": "pipeline_run_total{status=\"succeeded\"}" }
+      ]
+    },
+    {
+      "title": "Run Duration",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "pipeline_run_duration_seconds" }
+      ]
     }
   ]
 }

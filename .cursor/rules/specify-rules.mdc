@@ -9,6 +9,8 @@ alwaysApply: true
 Auto-generated from all feature plans. Last updated: 2026-04-15
 
 ## Active Technologies
+- Python 3.11 (pipeline/helpers), YAML (Helm and Kubernetes manifests), Markdown (runbooks/contracts) + PySpark, OpenLineage Spark integration, OpenTelemetry Collector, Prometheus, Grafana, Helm 3 (001-pyspark-monitoring-framework)
+- Local files only for v1 pipeline I/O; local Kubernetes persistent/ephemeral storage for monitoring components (001-pyspark-monitoring-framework)
 
 - Python 3.11 for pipeline and helpers; YAML for deployment manifests + PySpark, OpenLineage integration, OpenTelemetry SDK/collector, Prometheus-compatible metrics export, Grafana dashboards, Helm charts (001-pyspark-monitoring-framework)
 
@@ -28,6 +30,7 @@ cd src && pytest && ruff check .
 Python 3.11 for pipeline and helpers; YAML for deployment manifests: Follow standard conventions
 
 ## Recent Changes
+- 001-pyspark-monitoring-framework: Added Python 3.11 (pipeline/helpers), YAML (Helm and Kubernetes manifests), Markdown (runbooks/contracts) + PySpark, OpenLineage Spark integration, OpenTelemetry Collector, Prometheus, Grafana, Helm 3
 
 - 001-pyspark-monitoring-framework: Added Python 3.11 for pipeline and helpers; YAML for deployment manifests + PySpark, OpenLineage integration, OpenTelemetry SDK/collector, Prometheus-compatible metrics export, Grafana dashboards, Helm charts
 

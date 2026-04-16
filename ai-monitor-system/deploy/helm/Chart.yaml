@@ -4,3 +4,24 @@ description: Monitoring-first local PySpark stack
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+dependencies:
+  - name: prometheus
+    alias: upstream-prometheus
+    version: "25.27.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: upstream.prometheus.enabled
+  - name: grafana
+    alias: upstream-grafana
+    version: "8.5.1"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: upstream.grafana.enabled
+  - name: opentelemetry-collector
+    alias: upstream-otel-collector
+    version: "0.78.0"
+    repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
+    condition: upstream.otelCollector.enabled
+  - name: marquez
+    alias: upstream-marquez
+    version: "0.43.0"
+    repository: "https://marquezproject.github.io/marquez/"
+    condition: upstream.openlineageBackend.enabled

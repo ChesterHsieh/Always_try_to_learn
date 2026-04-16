@@ -1,0 +1,59 @@
+global:
+  namespace: ai-monitor-system
+
+upstream:
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+  otelCollector:
+    enabled: true
+  openlineageBackend:
+    enabled: true
+
+"upstream-prometheus":
+  server:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 80m
+        memory: 192Mi
+      limits:
+        cpu: 250m
+        memory: 384Mi
+
+"upstream-grafana":
+  replicas: 1
+  resources:
+    requests:
+      cpu: 80m
+      memory: 192Mi
+    limits:
+      cpu: 250m
+      memory: 384Mi
+
+"upstream-otel-collector":
+  mode: deployment
+  resources:
+    requests:
+      cpu: 80m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+"upstream-marquez":
+  marquez:
+    namespace: ai_monitor_system
+  postgresql:
+    primary:
+      resources:
+        requests:
+          cpu: 80m
+          memory: 192Mi
+        limits:
+          cpu: 250m
+          memory: 384Mi
+
+pyspark:
+  imagePullPolicy: IfNotPresent

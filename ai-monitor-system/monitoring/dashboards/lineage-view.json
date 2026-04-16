@@ -7,6 +7,13 @@
       "targets": [
         { "expr": "pipeline_telemetry_freshness_seconds" }
       ]
+    },
+    {
+      "title": "Lineage Events",
+      "type": "stat",
+      "targets": [
+        { "expr": "pipeline_records_processed_total" }
+      ]
     }
   ]
 }

@@ -9,6 +9,22 @@
   "run_failed": {
     "run_id": "test-run",
     "status": "failed",
-    "failure_category": "runtime_error"
+    "failure_category": "runtime_error",
+    "failure_message": "spark stage failed"
+  },
+  "lineage_event": {
+    "run_id": "test-run",
+    "job_name": "ai_monitor_simple_pipeline",
+    "job_namespace": "ai_monitor_system",
+    "source_dataset": "file://input/sample.txt",
+    "target_dataset": "file://output/result.txt",
+    "event_time": "2026-04-15T00:00:00Z"
+  },
+  "alert_event": {
+    "severity": "critical",
+    "summary": "PySpark pipeline failure detected",
+    "trigger_time": "2026-04-15T00:01:00Z",
+    "run_id": "test-run",
+    "dashboard_link": "http://grafana.local/d/pipeline-health"
   }
 }

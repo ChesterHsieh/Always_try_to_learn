@@ -2,6 +2,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 
+from pipeline.failure_classifier import classify_failure
 from pipeline.io_adapter import read_local_file, write_local_file
 from pipeline.telemetry import lifecycle_metric_payload
 
@@ -9,11 +10,16 @@ from pipeline.telemetry import lifecycle_metric_payload
 def create_spark_session():
     from pyspark.sql import SparkSession
 
+    openlineage_jar = os.getenv(
+        "OPENLINEAGE_JAR_PATH",
+        "/opt/openlineage/openlineage-spark_2.13-1.45.0.jar",
+    )
+
     # Reuse OpenLineage Spark listener integration from official guide.
     return (
         SparkSession.builder.master("local[*]")
         .appName("ai_monitor_simple_pipeline")
-        .config("spark.jars.packages", "io.openlineage:openlineage-spark:1.45.0")
+        .config("spark.jars", openlineage_jar)
         .config("spark.extraListeners", "io.openlineage.spark.agent.OpenLineageSparkListener")
         .config("spark.openlineage.transport.url", os.getenv("OPENLINEAGE_URL", "http://marquez-api:5000"))
         .config("spark.openlineage.transport.type", os.getenv("OPENLINEAGE_TRANSPORT", "http"))
@@ -25,9 +31,27 @@ def create_spark_session():
 def run_pipeline(input_path: str, output_path: str) -> dict[str, str]:
     run_id = str(uuid.uuid4())
     _ = create_spark_session()
-    text = read_local_file(input_path)
-    write_local_file(output_path, text.upper())
-    return lifecycle_metric_payload(run_id, "succeeded")
+    _ = lifecycle_metric_payload(
+        run_id,
+        "running",
+        pipeline_name="ai_monitor_simple_pipeline",
+    )
+    try:
+        text = read_local_file(input_path)
+        write_local_file(output_path, text.upper())
+        return lifecycle_metric_payload(
+            run_id,
+            "succeeded",
+            pipeline_name="ai_monitor_simple_pipeline",
+        )
+    except Exception as err:
+        return lifecycle_metric_payload(
+            run_id,
+            "failed",
+            pipeline_name="ai_monitor_simple_pipeline",
+            failure_category=classify_failure(err),
+            failure_message=str(err),
+        )
 
 
 if __name__ == "__main__":

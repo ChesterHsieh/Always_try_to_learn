@@ -8,3 +8,10 @@ groups:
           severity: warning
         annotations:
           summary: "OTel collector is unavailable"
+      - alert: TelemetryFreshnessHigh
+        expr: pipeline_telemetry_freshness_seconds > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline telemetry freshness exceeded threshold"

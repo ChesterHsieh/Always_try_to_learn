@@ -8,3 +8,4 @@ groups:
           severity: critical
         annotations:
           summary: "PySpark pipeline failure detected"
+          dashboard_link: "http://grafana.local/d/pipeline-health"

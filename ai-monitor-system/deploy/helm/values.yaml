@@ -1,10 +1,22 @@
 global:
   namespace: ai-monitor-system
 
+# Option B: upstream charts are primary observability deployment path.
+upstream:
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+  otelCollector:
+    enabled: true
+  openlineageBackend:
+    enabled: true
+
 pyspark:
   image: local/ai-monitor-pyspark:latest
-  inputPath: /data/input/sample.txt
-  outputPath: /data/output/result.txt
+  imagePullPolicy: IfNotPresent
+  inputPath: /app/.local-data/input/sample.txt
+  outputPath: /app/.local-data/output/result.txt
 
 openlineage:
   enabled: true
@@ -15,6 +27,9 @@ openlineage:
 
 prometheus:
   enabled: true
+  image: prom/prometheus:v2.53.0
+  service:
+    port: 9090
   replicas: 1
   resources:
     requests:
@@ -26,6 +41,10 @@ prometheus:
 
 otelCollector:
   enabled: true
+  image: otel/opentelemetry-collector:0.106.1
+  service:
+    grpcPort: 4317
+    httpPort: 4318
   resources:
     requests:
       cpu: 100m
@@ -36,6 +55,9 @@ otelCollector:
 
 grafana:
   enabled: true
+  image: grafana/grafana:11.1.4
+  service:
+    port: 3000
   replicas: 1
   resources:
     requests:
@@ -44,3 +66,47 @@ grafana:
     limits:
       cpu: 300m
       memory: 512Mi
+
+"upstream-prometheus":
+  server:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 300m
+        memory: 512Mi
+
+"upstream-grafana":
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+"upstream-otel-collector":
+  mode: deployment
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+"upstream-marquez":
+  marquez:
+    namespace: ai_monitor_system
+  postgresql:
+    primary:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 300m
+          memory: 512Mi

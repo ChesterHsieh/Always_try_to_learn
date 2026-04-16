@@ -1,66 +1,86 @@
-# Quickstart: Local Cluster Monitoring Framework
+# Quickstart: Local Cluster Monitoring Framework (Option B)
 
 ## Goal
 
-Run a simple local-file-to-local-file PySpark pipeline on a local Kubernetes cluster with monitoring enabled via OpenLineage, Prometheus, OpenTelemetry, and Grafana.
+Run a simple local-file-to-local-file PySpark pipeline on local Kubernetes, with observability components deployed primarily through upstream Helm charts and project overlays.
 
 ## Prerequisites
 
 - Local Kubernetes cluster running.
-- Helm installed.
+- Helm installed and configured for the active cluster context.
 - Docker image build capability for local cluster.
-- Enough local resources for minimal profile (recommended baseline: 4 CPU, 8 GB RAM available to cluster).
+- Recommended local budget: at least 4 CPU and 8 GiB memory available to cluster.
 
-## 1) Prepare local input/output paths
+## 1) Prepare sample data
 
-1. Create input and output directories for the sample pipeline.
-2. Place a small test input file in the input directory.
-3. Ensure output directory is writable by the pipeline runtime.
+1. Create local input/output directories under `ai-monitor-system/.local-data/`.
+2. Place a small input file (for example `sample.txt`) in the input directory.
+3. Ensure output directory is writable.
 
-## 2) Deploy monitoring stack with minimal profile
+## 2) Bootstrap namespace and core chart overlays
 
-1. Navigate to `ai-monitor-system/deploy/helm`.
-2. Install chart using local/minimal values profile.
-3. Wait until monitoring components are in Ready state.
-
-Expected result:
-
-- Grafana reachable.
-- Metrics endpoint scraped by Prometheus.
-- OTel collector accepting telemetry.
-- OpenLineage backend reachable for lineage events.
-
-## 3) Run the sample pipeline
-
-1. Trigger pipeline with `input_path` and `output_path` configured for local files.
-2. Execute one successful run.
-3. Execute one intentionally failing run (e.g., invalid input path).
+1. Change directory to `ai-monitor-system`.
+2. Build local pipeline image.
+3. Apply project-owned Helm release for pipeline-specific templates (`pipeline-job`, OpenLineage env/config bridge, Spark defaults).
+4. Confirm namespace exists and project release is healthy.
 
 Expected result:
 
-- Output file generated for success run.
-- Failure run emits explicit failure category and message.
+- Pipeline runtime config maps are present.
+- Spark OpenLineage listener defaults are injected.
 
-## 4) Verify observability outputs
+## 3) Deploy upstream observability charts
 
-1. In Grafana, verify run status panels reflect success/failure runs.
-2. In metrics view, verify run counters and duration metrics.
-3. In lineage view, verify source-to-target dataset mapping for run IDs.
-4. In tracing view, verify spans include `run_id` and pipeline metadata.
-5. Verify alert fires for failed run and can be resolved.
+1. Add/update upstream Helm repositories required for:
+   - Prometheus (`prometheus-community/prometheus`)
+   - Grafana (`grafana/grafana`)
+   - OpenTelemetry Collector (`open-telemetry/opentelemetry-collector`)
+   - OpenLineage backend (`marquez/marquez`)
+2. Install/upgrade each chart with local-minimal overrides.
+3. Wait for all pods/services to become Ready in the same namespace.
 
-## 5) Run smoke validation
+Expected result:
 
-1. Execute smoke validation script from `ai-monitor-system/deploy/scripts`.
-2. Confirm checks for:
+- Prometheus is scraping configured targets.
+- Grafana is reachable and datasource is connected.
+- OTel Collector OTLP receivers are healthy.
+- OpenLineage backend is reachable by Spark listener settings.
 
-   - lifecycle event emission
-   - metrics visibility
-   - trace/lineage correlation
-   - alert creation for failure case
+## 4) Execute pipeline runs
+
+1. Run one successful pipeline execution.
+2. Run one failing pipeline execution (for example, invalid input path).
+3. Capture run IDs for both cases.
+
+Expected result:
+
+- Success run writes output file and emits terminal status.
+- Failure run emits failure status with category and message.
+
+## 5) Validate observability and correlation
+
+1. Confirm dashboard panels reflect run states (`running`, `succeeded`, `failed`).
+2. Confirm metrics families include run counters/duration/failure category.
+3. Confirm trace spans and lineage events include the same `run_id`.
+4. Confirm failure alert includes severity, summary, and run context.
+5. Confirm state visibility SLA: transitions visible within 2 minutes.
+
+## 6) Run automated checks
+
+1. Execute contract tests.
+2. Execute integration tests.
+3. Execute smoke tests.
+4. Execute coverage script for required stack components.
+
+Pass criteria:
+
+- No placeholder test remains for required behavior validation.
+- All mandatory observability checks pass for success and failure scenarios.
+- Correlation and timing contracts are satisfied.
 
 ## Troubleshooting Notes
 
-- If telemetry is missing, validate run IDs are consistently attached across metrics, traces, and lineage.
-- If local cluster is resource-constrained, reduce non-critical dashboard refresh frequency and keep single replicas.
-- If alerting is noisy, tune thresholds in local profile while preserving failure-detection guarantees.
+- If metrics are missing, verify scrape target/service discovery and pipeline endpoint exposure strategy.
+- If lineage is missing, verify Spark listener config and OpenLineage backend endpoint/namespace.
+- If traces are missing, verify OTLP exporter endpoint and collector pipeline configuration.
+- If local resources are tight, lower non-critical dashboard refresh and keep single-replica profile while preserving required alerts.
