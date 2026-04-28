@@ -57,7 +57,7 @@ echo "--- running probes ---"
 #   <id>\t<cmd>\t<argv0><argv1>...<argvN>\n
 # Using  (Unit Separator) between argv tokens — never appears in PromQL
 # or service names, no escaping needed. \t separates id/cmd/argv-list.
-PROBE_PLAN="$(uv run python <<'PY'
+PROBE_PLAN="$(SCENARIO_FILE="$SCENARIO_FILE" uv run python <<'PY'
 import json, os, sys, yaml
 
 SCENARIO_FILE = os.environ["SCENARIO_FILE"]

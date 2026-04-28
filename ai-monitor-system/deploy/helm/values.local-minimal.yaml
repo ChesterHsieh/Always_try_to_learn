@@ -82,7 +82,10 @@ localData:
       type: ClusterIP
   postgresql:
     enabled: true
-    fullnameOverride: marquez-postgresql
+    # IMPORTANT: do NOT override this. Marquez's wait-for-db init container
+    # hardcodes the host as `monitor-postgresql`, derived from the chart's
+    # default fullname pattern. Renaming via fullnameOverride breaks startup
+    # (init loops "no response"). Leave the chart-default name intact.
     primary:
       persistence:
         enabled: false
