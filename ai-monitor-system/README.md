@@ -5,6 +5,7 @@ Monitoring-first reference project for a simple local-file-to-local-file PySpark
 ## Required Stack
 
 - OpenLineage
+- Marquez
 - Prometheus
 - OpenTelemetry Collector
 - Grafana
@@ -31,6 +32,13 @@ Monitoring-first reference project for a simple local-file-to-local-file PySpark
 4. Run smoke tests:
    - `./deploy/scripts/run-smoke-test.sh`
 
+## Access UIs Locally
+
+- Marquez UI (lineage): `kubectl port-forward -n ai-monitor-system svc/marquez-web 3001:9444` then open `http://localhost:3001`
+- Marquez API (optional check): `kubectl port-forward -n ai-monitor-system svc/marquez 9555:9555`
+- Grafana: `kubectl port-forward -n ai-monitor-system svc/grafana 3000:80` then open `http://localhost:3000`
+- Prometheus: `kubectl port-forward -n ai-monitor-system svc/prometheus-server 9090:80` then open `http://localhost:9090`
+
 ## Test
 
 From project root:
@@ -47,6 +55,7 @@ From project root:
 ## Deployment Namespace
 
 - `./deploy/scripts/bootstrap-local.sh` always deploys to `ai-monitor-system`.
+- Helm release name defaults to `monitor` (override with `RELEASE_NAME=...`).
 - The script uses Helm `--create-namespace`, so it creates the namespace if missing and reuses it if it already exists.
 - The namespace is forced in both Helm release scope (`--namespace`) and chart values (`--set global.namespace=ai-monitor-system`).
 - The pipeline job uses `imagePullPolicy: IfNotPresent` to reuse the local image instead of forcing registry pulls.

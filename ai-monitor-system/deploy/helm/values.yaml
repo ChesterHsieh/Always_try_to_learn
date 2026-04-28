@@ -29,18 +29,19 @@ openlineage:
   namespace: ai_monitor_system
   transport:
     type: http
-    # Service DNS resolves within the namespace; release name is "monitor".
-    url: http://monitor-upstream-marquez:9555
+    # Service DNS resolves within the namespace. Sub-chart names are
+    # collapsed via fullnameOverride in values.local-minimal.yaml so we use
+    # short, namespace-scoped names here.
+    url: http://marquez:9555
 
-# Where the pipeline pod sends OTLP traces. Points at the in-cluster
-# OpenTelemetry Collector service (gRPC port 4317).
+# Where the pipeline pod sends OTLP traces (in-cluster collector, gRPC).
 otel:
-  endpoint: http://monitor-upstream-otel-collector:4317
+  endpoint: http://otel-collector:4317
 
 # Where the pipeline pod pushes its final metrics before exiting.
 # Pushgateway is part of the upstream-prometheus chart in this stack.
 pushgateway:
-  url: http://monitor-prometheus-pushgateway:9091
+  url: http://pushgateway:9091
 
 "upstream-prometheus":
   server:
@@ -111,18 +112,42 @@ pushgateway:
 
 "upstream-grafana":
   replicas: 1
+  # Local-dev only: anonymous Admin access. The stack is reset frequently,
+  # the auto-generated admin password rotates each reset, and we don't want
+  # `kubectl get secret … -o jsonpath` in every readme step. Never enable
+  # this for any non-local environment.
+  "grafana.ini":
+    auth.anonymous:
+      enabled: true
+      org_role: Admin
+      hide_version: true
+    auth:
+      disable_login_form: true
+      disable_signout_menu: true
+    users:
+      allow_sign_up: false
+  # We DO want sidecar to load datasources/dashboards from ConfigMaps so that
+  # the chart's `datasources` block below + our monitor-pipeline-dashboards
+  # ConfigMap actually appear in the Grafana UI. (Previously these were
+  # disabled, which silently produced an empty Grafana on a "running" stack.)
   sidecar:
     dashboards:
-      enabled: false
+      enabled: true
+      label: grafana_dashboard       # ConfigMaps with this label are picked up
+      labelValue: "1"
+      searchNamespace: ALL
     datasources:
-      enabled: false
+      enabled: true
+      label: grafana_datasource
+      labelValue: "1"
   datasources:
     datasources.yaml:
       apiVersion: 1
       datasources:
         - name: Prometheus
           type: prometheus
-          url: http://ai-monitor-system-upstream-prometheus-server
+          # Service short name (fullnameOverride collapses sub-chart prefix).
+          url: http://prometheus-server
           access: proxy
           isDefault: true
   dashboardsConfigMaps:
@@ -140,7 +165,7 @@ pushgateway:
   config:
     exporters:
       prometheusremotewrite:
-        endpoint: "http://monitor-upstream-prometheus-server.ai-monitor-system.svc:80/api/v1/write"
+        endpoint: "http://prometheus-server.ai-monitor-system.svc:80/api/v1/write"
       logging:
         verbosity: detailed
     service:

@@ -20,11 +20,13 @@ localData:
   hostPath: ""
 
 "upstream-prometheus":
+  fullnameOverride: prometheus
   server:
+    fullnameOverride: prometheus-server
     replicaCount: 1
     persistentVolume:
-      enabled: false  # local dev: emptyDir, no PVC
-    retention: "2h"   # chart-provided flag; do NOT also set in extraArgs (would duplicate)
+      enabled: false
+    retention: "2h"
     extraArgs:
       "web.enable-remote-write-receiver": ""
       "enable-feature": "exemplar-storage"
@@ -36,16 +38,22 @@ localData:
         cpu: 250m
         memory: 384Mi
   alertmanager:
+    fullnameOverride: alertmanager
     persistence:
-      enabled: false  # emptyDir for local dev
+      enabled: false
+  prometheus-pushgateway:
+    fullnameOverride: pushgateway
+  kube-state-metrics:
+    fullnameOverride: kube-state-metrics
+  prometheus-node-exporter:
+    fullnameOverride: node-exporter
 
 "upstream-grafana":
+  fullnameOverride: grafana
   replicas: 1
-  sidecar:
-    dashboards:
-      enabled: false
-    datasources:
-      enabled: false
+  # Inherit sidecar.dashboards/datasources.enabled from values.yaml (true).
+  # Local dev still wants Grafana populated; only persistence-heavy features
+  # are turned off in this overlay.
   resources:
     requests:
       cpu: 80m
@@ -55,6 +63,7 @@ localData:
       memory: 384Mi
 
 "upstream-otel-collector":
+  fullnameOverride: otel-collector
   mode: deployment
   resources:
     requests:
@@ -65,6 +74,7 @@ localData:
       memory: 256Mi
 
 "upstream-marquez":
+  fullnameOverride: marquez
   service:
     type: ClusterIP
   web:
@@ -72,9 +82,10 @@ localData:
       type: ClusterIP
   postgresql:
     enabled: true
+    fullnameOverride: marquez-postgresql
     primary:
       persistence:
-        enabled: false  # emptyDir for local dev
+        enabled: false
       resources:
         requests:
           cpu: 80m
