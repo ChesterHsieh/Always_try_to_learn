@@ -7,7 +7,11 @@ dependencies = [
   "pyspark>=3.5.0",
   "opentelemetry-sdk>=1.25.0",
   "opentelemetry-exporter-otlp>=1.25.0",
+  "prometheus_client>=0.20.0",
+  "requests>=2.31.0",
+  "kubernetes>=29.0.0",
   "pytest>=8.0.0",
+  "pyyaml>=6.0.3",
 ]
 
 [tool.pytest.ini_options]
@@ -17,6 +21,11 @@ testpaths = ["tests"]
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.12",
+]
 
 [tool.setuptools]
 packages = ["pipeline"]

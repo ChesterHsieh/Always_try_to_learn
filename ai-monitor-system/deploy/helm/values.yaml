@@ -1,7 +1,8 @@
 global:
   namespace: ai-monitor-system
 
-# Option B: upstream charts are primary observability deployment path.
+# Upstream Helm charts are the sole observability deployment path.
+# Self-managed stack has been removed; there is no migration flag.
 upstream:
   prometheus:
     enabled: true
@@ -17,59 +18,25 @@ pyspark:
   imagePullPolicy: IfNotPresent
   inputPath: /app/.local-data/input/sample.txt
   outputPath: /app/.local-data/output/result.txt
+  metricsPort: 9095
+
+localData:
+  enabled: true
+  hostPath: ""
 
 openlineage:
   enabled: true
   namespace: ai_monitor_system
   transport:
     type: http
-    url: http://marquez-api:5000
-
-prometheus:
-  enabled: true
-  image: prom/prometheus:v2.53.0
-  service:
-    port: 9090
-  replicas: 1
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 300m
-      memory: 512Mi
-
-otelCollector:
-  enabled: true
-  image: otel/opentelemetry-collector:0.106.1
-  service:
-    grpcPort: 4317
-    httpPort: 4318
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 300m
-      memory: 256Mi
-
-grafana:
-  enabled: true
-  image: grafana/grafana:11.1.4
-  service:
-    port: 3000
-  replicas: 1
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 300m
-      memory: 512Mi
+    url: http://ai-monitor-system-upstream-marquez:9555
 
 "upstream-prometheus":
   server:
     replicaCount: 1
+    extraArgs:
+      "web.enable-remote-write-receiver": ""
+      "enable-feature": "exemplar-storage"
     resources:
       requests:
         cpu: 100m
@@ -77,9 +44,78 @@ grafana:
       limits:
         cpu: 300m
         memory: 512Mi
+  extraScrapeConfigs: |
+    - job_name: pyspark-pipeline
+      scrape_interval: 15s
+      kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names:
+              - ai-monitor-system
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          action: keep
+          regex: pyspark-pipeline
+        - source_labels: [__meta_kubernetes_pod_container_port_name]
+          action: keep
+          regex: metrics
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: kubernetes_pod_name
+  serverFiles:
+    "alerting_rules.yml":
+      groups:
+        - name: pipeline-failure
+          rules:
+            - alert: PipelineRunFailed
+              expr: increase(pipeline_failures_total[1m]) > 0
+              for: 1m
+              labels:
+                severity: critical
+              annotations:
+                summary: "PySpark pipeline {{ $labels.pipeline_name }} failed: {{ $labels.failure_category }}"
+                pipeline_name: "{{ $labels.pipeline_name }}"
+                failure_category: "{{ $labels.failure_category }}"
+                dashboard_link: "http://grafana/d/pipeline-health?var-pipeline_name={{ $labels.pipeline_name }}&from=now-15m&to=now"
+                runbook_link: "https://docs.example.com/runbook#failure-{{ $labels.failure_category }}"
+        - name: stack-health
+          rules:
+            - alert: PipelineMetricsMissing
+              expr: up{job="pyspark-pipeline"} == 0
+              for: 2m
+              labels:
+                severity: warning
+              annotations:
+                summary: "PySpark pipeline metrics endpoint is unreachable"
+            - alert: PipelineTelemetryStaleness
+              expr: pipeline_telemetry_freshness_seconds > 300
+              for: 1m
+              labels:
+                severity: warning
+              annotations:
+                summary: "Pipeline telemetry is stale (> 5 minutes)"
+                pipeline_name: "{{ $labels.pipeline_name }}"
+                dashboard_link: "http://grafana/d/pipeline-health?var-pipeline_name={{ $labels.pipeline_name }}"
 
 "upstream-grafana":
   replicas: 1
+  sidecar:
+    dashboards:
+      enabled: false
+    datasources:
+      enabled: false
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://ai-monitor-system-upstream-prometheus-server
+          access: proxy
+          isDefault: true
+  dashboardsConfigMaps:
+    default: "monitor-pipeline-dashboards"
   resources:
     requests:
       cpu: 100m
@@ -90,6 +126,18 @@ grafana:
 
 "upstream-otel-collector":
   mode: deployment
+  config:
+    exporters:
+      prometheusremotewrite:
+        endpoint: "http://ai-monitor-system-upstream-prometheus-server.ai-monitor-system.svc:80/api/v1/write"
+      logging:
+        verbosity: detailed
+    service:
+      pipelines:
+        metrics:
+          exporters: [prometheusremotewrite]
+        traces:
+          exporters: [logging]
   resources:
     requests:
       cpu: 100m
@@ -99,9 +147,13 @@ grafana:
       memory: 256Mi
 
 "upstream-marquez":
-  marquez:
-    namespace: ai_monitor_system
+  service:
+    type: ClusterIP
+  web:
+    service:
+      type: ClusterIP
   postgresql:
+    enabled: true
     primary:
       resources:
         requests:

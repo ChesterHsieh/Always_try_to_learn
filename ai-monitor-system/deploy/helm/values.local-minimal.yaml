@@ -11,9 +11,23 @@ upstream:
   openlineageBackend:
     enabled: true
 
+pyspark:
+  imagePullPolicy: IfNotPresent
+  metricsPort: 9095
+
+localData:
+  enabled: true
+  hostPath: ""
+
 "upstream-prometheus":
   server:
     replicaCount: 1
+    persistentVolume:
+      enabled: false  # local dev: emptyDir, no PVC
+    retention: "2h"   # chart-provided flag; do NOT also set in extraArgs (would duplicate)
+    extraArgs:
+      "web.enable-remote-write-receiver": ""
+      "enable-feature": "exemplar-storage"
     resources:
       requests:
         cpu: 80m
@@ -21,9 +35,17 @@ upstream:
       limits:
         cpu: 250m
         memory: 384Mi
+  alertmanager:
+    persistence:
+      enabled: false  # emptyDir for local dev
 
 "upstream-grafana":
   replicas: 1
+  sidecar:
+    dashboards:
+      enabled: false
+    datasources:
+      enabled: false
   resources:
     requests:
       cpu: 80m
@@ -43,10 +65,16 @@ upstream:
       memory: 256Mi
 
 "upstream-marquez":
-  marquez:
-    namespace: ai_monitor_system
+  service:
+    type: ClusterIP
+  web:
+    service:
+      type: ClusterIP
   postgresql:
+    enabled: true
     primary:
+      persistence:
+        enabled: false  # emptyDir for local dev
       resources:
         requests:
           cpu: 80m
@@ -54,6 +82,10 @@ upstream:
         limits:
           cpu: 250m
           memory: 384Mi
-
-pyspark:
-  imagePullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 80m
+      memory: 192Mi
+    limits:
+      cpu: 250m
+      memory: 384Mi

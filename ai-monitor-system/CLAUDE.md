@@ -46,6 +46,30 @@ Namespace is always `ai-monitor-system`; Helm release defaults to `monitor`.
   Desktop K8s). Requires `bootstrap-local.sh` to have succeeded. Slow; run
   before committing meaningful pipeline or Helm changes, not in tight loops.
 
+## Observability probes (preferred over curl+jq)
+
+To verify the live monitoring stack actually observed a pipeline run, use
+`scripts/probe.py` — never raw `curl | jq`. Probes return single-line JSON
+with `verdict` + `hint`, have built-in polling, and include investigation
+hints on failure.
+
+```bash
+# Run a scenario end-to-end (triggers pipeline + runs all its probes)
+./scripts/run-scenario.sh success-baseline
+
+# Or one-off probe (use --terse for compact output)
+uv run python scripts/probe.py prom-query 'pipeline_records_processed_total' --gte 1 --within 60
+uv run python scripts/probe.py otel-trace --service pyspark-pipeline --has-attr run_id --terse
+```
+
+Subcommands: `prom-query`, `otel-trace`. Run `probe.py <sub> --help` for flags.
+Scenarios live in [scenarios/](scenarios/).
+
+**Prefer delegation**: when verifying monitoring outcomes, spawn the
+[probe-runner](.claude/agents/probe-runner.md) subagent (or use `/verify`)
+rather than running probes inline. The subagent keeps verbose per-probe JSON
+out of the main context and returns a single-paragraph verdict.
+
 ## Self-verification cycle (preferred)
 
 For Python-only changes:

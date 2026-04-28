@@ -1,0 +1,51 @@
+# Scenario: success-baseline
+#
+# Healthy pipeline run with default input. Verifies the monitoring stack
+# observes the run end-to-end:
+#   - Prometheus scrapes pipeline metrics
+#   - OTel collector forwards spans with required attributes
+#   - No alerts firing
+#
+# Used by: scripts/run-scenario.sh success-baseline
+
+name: success-baseline
+description: Baseline healthy pipeline run; everything green.
+
+pipeline:
+  # Driven by run-pipeline.sh env vars; the scenario runner exports these
+  # before invoking the pipeline. `inject_failure: none` is the default.
+  input_records: 1000
+  inject_failure: none
+
+probes:
+  - id: records_processed
+    cmd: prom-query
+    args:
+      query: 'pipeline_records_processed_total'
+      gte: 1
+      within: 60
+
+  - id: run_completed
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_duration_seconds'
+      exists: true
+      within: 60
+
+  - id: traces_present
+    cmd: otel-trace
+    args:
+      service: pyspark-pipeline
+      has_attr:
+        - run_id
+        - job_name
+      within: 30
+
+  - id: failure_alert_silent
+    cmd: prom-query
+    args:
+      # ALERTS{alertname=...,alertstate="firing"} returns 0 series when silent.
+      # We assert "no series" by checking the count() expression equals 0.
+      query: 'count(ALERTS{alertname="PipelineFailureRate",alertstate="firing"}) or vector(0)'
+      eq: 0
+      within: 30
