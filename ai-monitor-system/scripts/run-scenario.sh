@@ -5,18 +5,12 @@
 #   3. emit a per-probe verdict line + final summary; exit non-zero if any FAIL
 #
 # Usage: ./scripts/run-scenario.sh <scenario-name> [--no-pipeline]
-#   <scenario-name>: name (without .yaml) under scenarios/
-#   --no-pipeline:   skip pipeline trigger; only run probes (useful for dev /
-#                    when pipeline already ran or you only want to verify the
-#                    monitoring stack itself)
 #
-# YAML parsing intentionally minimal — uses python via `uv run` to avoid a
-# yq dependency, and to keep the contract with probe.py uniform.
-#
-# Exit codes:
-#   0 — all probes PASS
-#   1 — one or more probes FAIL
-#   2 — runner / probe internal error (couldn't even execute)
+# Implementation note: probe arguments live in YAML and may contain quotes,
+# braces, commas, etc. (e.g. PromQL labels like `{status="succeeded"}`). We
+# never inline JSON into shell heredocs — those break on any quote. Instead,
+# a single Python pass reads the scenario, builds the full argv per probe,
+# and emits NUL-delimited records that bash safely consumes.
 
 set -uo pipefail
 
@@ -50,7 +44,7 @@ if [ "$RUN_PIPELINE" -eq 1 ]; then
   if [ -x "./deploy/scripts/run-pipeline.sh" ]; then
     echo "--- triggering pipeline ---"
     ./deploy/scripts/run-pipeline.sh || {
-      echo "pipeline trigger failed (continuing to probes anyway so we capture state)" >&2
+      echo "pipeline trigger failed (continuing to probes anyway)" >&2
     }
   else
     echo "deploy/scripts/run-pipeline.sh not executable; skipping pipeline trigger" >&2
@@ -59,62 +53,63 @@ fi
 
 echo "--- running probes ---"
 
-# Use python to parse YAML and emit one shell-quoted command per probe.
-# Output format (per line): <probe_id>\t<probe_cmd>\t<json_args>
-PROBE_PLAN="$(uv run python <<PY
-import json, sys, yaml
-with open("${SCENARIO_FILE}") as f:
+# Build per-probe argv lists in a single Python pass. Output format:
+#   <id>\t<cmd>\t<argv0><argv1>...<argvN>\n
+# Using  (Unit Separator) between argv tokens — never appears in PromQL
+# or service names, no escaping needed. \t separates id/cmd/argv-list.
+PROBE_PLAN="$(uv run python <<'PY'
+import json, os, sys, yaml
+
+SCENARIO_FILE = os.environ["SCENARIO_FILE"]
+US = "\x1f"  # unit separator between argv tokens
+
+with open(SCENARIO_FILE) as f:
     spec = yaml.safe_load(f)
+
 for p in spec.get("probes", []):
-    print(f"{p['id']}\t{p['cmd']}\t{json.dumps(p.get('args', {}))}")
+    pid = p["id"]
+    cmd = p["cmd"]
+    args = p.get("args", {}) or {}
+
+    argv = ["--terse"]
+    # prom-query takes the query as a positional first
+    if cmd == "prom-query" and "query" in args:
+        argv.append(str(args["query"]))
+
+    for k, v in args.items():
+        if cmd == "prom-query" and k == "query":
+            continue
+        flag = "--" + k.replace("_", "-")
+        if isinstance(v, list):
+            for item in v:
+                argv += [flag, str(item)]
+        elif isinstance(v, bool):
+            if v:
+                argv.append(flag)
+        else:
+            argv += [flag, str(v)]
+
+    print(f"{pid}\t{cmd}\t{US.join(argv)}")
 PY
 )"
+PROBE_RC=$?
 
-if [ -z "$PROBE_PLAN" ]; then
-  echo "no probes defined in $SCENARIO_FILE" >&2
+if [ $PROBE_RC -ne 0 ] || [ -z "$PROBE_PLAN" ]; then
+  echo "failed to build probe plan from $SCENARIO_FILE" >&2
   exit 2
 fi
 
 PASS=0; FAIL=0; ERROR=0
 SUMMARY=""
 
-while IFS=$'\t' read -r pid pcmd pargs; do
+while IFS=$'\t' read -r pid pcmd argv_packed; do
   [ -z "$pid" ] && continue
-  # Translate JSON args dict → CLI flags. Convention: each key becomes
-  # --key (with underscores → hyphens); list values become repeated --key.
-  CLI_ARGS=$(uv run python <<PY
-import json, shlex, sys
-args = json.loads('''$pargs''')
-out = []
-for k, v in args.items():
-    flag = "--" + k.replace("_", "-")
-    if isinstance(v, list):
-        for item in v:
-            out += [flag, str(item)]
-    elif isinstance(v, bool):
-        if v: out += [flag]
-    else:
-        # query is a positional for prom-query; emit as-is via flag-less below
-        out += [flag, str(v)]
-print(" ".join(shlex.quote(x) for x in out))
-PY
-)
 
-  # prom-query takes the query as a positional. Re-route if present.
-  POSITIONAL=""
-  if [ "$pcmd" = "prom-query" ]; then
-    QUERY=$(uv run python <<PY
-import json
-print(json.loads('''$pargs''').get("query",""))
-PY
-)
-    POSITIONAL=$(printf '%q' "$QUERY")
-    # strip --query <q> from CLI_ARGS
-    CLI_ARGS=$(echo "$CLI_ARGS" | sed -E "s/--query [^ ]+( |$)//")
-  fi
+  # Split packed argv on Unit Separator into a real bash array.
+  IFS=$'\x1f' read -r -a ARGV <<< "$argv_packed"
 
-  printf "  %-28s " "$pid"
-  RESULT=$(eval uv run python scripts/probe.py "$pcmd" --terse $POSITIONAL $CLI_ARGS 2>&1)
+  printf "  %-32s " "$pid"
+  RESULT=$(uv run python scripts/probe.py "$pcmd" "${ARGV[@]}" 2>&1)
   EXIT=$?
 
   case $EXIT in

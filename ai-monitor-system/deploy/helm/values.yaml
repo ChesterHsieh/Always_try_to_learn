@@ -29,7 +29,18 @@ openlineage:
   namespace: ai_monitor_system
   transport:
     type: http
-    url: http://ai-monitor-system-upstream-marquez:9555
+    # Service DNS resolves within the namespace; release name is "monitor".
+    url: http://monitor-upstream-marquez:9555
+
+# Where the pipeline pod sends OTLP traces. Points at the in-cluster
+# OpenTelemetry Collector service (gRPC port 4317).
+otel:
+  endpoint: http://monitor-upstream-otel-collector:4317
+
+# Where the pipeline pod pushes its final metrics before exiting.
+# Pushgateway is part of the upstream-prometheus chart in this stack.
+pushgateway:
+  url: http://monitor-prometheus-pushgateway:9091
 
 "upstream-prometheus":
   server:
@@ -129,7 +140,7 @@ openlineage:
   config:
     exporters:
       prometheusremotewrite:
-        endpoint: "http://ai-monitor-system-upstream-prometheus-server.ai-monitor-system.svc:80/api/v1/write"
+        endpoint: "http://monitor-upstream-prometheus-server.ai-monitor-system.svc:80/api/v1/write"
       logging:
         verbosity: detailed
     service:

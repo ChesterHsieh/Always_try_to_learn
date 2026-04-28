@@ -8,3 +8,11 @@ data:
   OPENLINEAGE_URL: "{{ .Values.openlineage.transport.url }}"
   OPENLINEAGE_TRANSPORT: "{{ .Values.openlineage.transport.type }}"
   OPENLINEAGE_BACKEND_ENABLED: "{{ .Values.upstream.openlineageBackend.enabled }}"
+  # lineage_emitter.py reads MARQUEZ_URL directly (alongside OPENLINEAGE_URL).
+  MARQUEZ_URL: "{{ .Values.openlineage.transport.url }}"
+  # OTel SDK in pipeline pod uses this env. Points at in-cluster collector.
+  OTEL_EXPORTER_OTLP_ENDPOINT: "{{ .Values.otel.endpoint }}"
+  # gRPC export needs explicit insecure flag for plain http endpoint.
+  OTEL_EXPORTER_OTLP_INSECURE: "true"
+  # Batch-job metric path: pipeline pushes final metrics here before exiting.
+  PUSHGATEWAY_URL: "{{ .Values.pushgateway.url }}"
