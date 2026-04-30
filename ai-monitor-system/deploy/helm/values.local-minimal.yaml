@@ -10,6 +10,8 @@ upstream:
     enabled: true
   openlineageBackend:
     enabled: true
+  tempo:
+    enabled: true
 
 pyspark:
   imagePullPolicy: IfNotPresent
@@ -33,10 +35,14 @@ localData:
     resources:
       requests:
         cpu: 80m
-        memory: 192Mi
-      limits:
-        cpu: 250m
         memory: 384Mi
+      limits:
+        cpu: 500m
+        memory: 768Mi
+    service:
+      type: NodePort
+      nodePort: 30090
+      servicePort: 80
   alertmanager:
     fullnameOverride: alertmanager
     persistence:
@@ -54,6 +60,9 @@ localData:
   # Inherit sidecar.dashboards/datasources.enabled from values.yaml (true).
   # Local dev still wants Grafana populated; only persistence-heavy features
   # are turned off in this overlay.
+  service:
+    type: NodePort
+    nodePort: 30300
   resources:
     requests:
       cpu: 80m
@@ -73,13 +82,25 @@ localData:
       cpu: 250m
       memory: 256Mi
 
+"upstream-tempo":
+  fullnameOverride: tempo
+  service:
+    type: NodePort
+    nodePorts:
+      tempo: 30318       # Tempo HTTP query API (probe target)
+      otlp-grpc: 30317   # OTLP gRPC from outside cluster (optional)
+
 "upstream-marquez":
   fullnameOverride: marquez
   service:
-    type: ClusterIP
+    type: NodePort
+    nodePorts:
+      http: 30555
   web:
     service:
-      type: ClusterIP
+      type: NodePort
+      nodePorts:
+        http: 30444
   postgresql:
     enabled: true
     # IMPORTANT: do NOT override this. Marquez's wait-for-db init container

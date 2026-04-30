@@ -12,6 +12,8 @@ upstream:
     enabled: true
   openlineageBackend:
     enabled: true
+  tempo:
+    enabled: true
 
 pyspark:
   image: local/ai-monitor-pyspark:latest
@@ -146,10 +148,13 @@ pushgateway:
       datasources:
         - name: Prometheus
           type: prometheus
-          # Service short name (fullnameOverride collapses sub-chart prefix).
           url: http://prometheus-server
           access: proxy
           isDefault: true
+        - name: Tempo
+          type: tempo
+          url: http://tempo:3100
+          access: proxy
   dashboardsConfigMaps:
     default: "monitor-pipeline-dashboards"
   resources:
@@ -166,6 +171,10 @@ pushgateway:
     exporters:
       prometheusremotewrite:
         endpoint: "http://prometheus-server.ai-monitor-system.svc:80/api/v1/write"
+      otlp/tempo:
+        endpoint: "tempo:4317"
+        tls:
+          insecure: true
       logging:
         verbosity: detailed
     service:
@@ -173,7 +182,7 @@ pushgateway:
         metrics:
           exporters: [prometheusremotewrite]
         traces:
-          exporters: [logging]
+          exporters: [otlp/tempo, logging]
   resources:
     requests:
       cpu: 100m
@@ -198,3 +207,31 @@ pushgateway:
         limits:
           cpu: 300m
           memory: 512Mi
+
+"upstream-tempo":
+  fullnameOverride: tempo
+  tempo:
+    # Accept OTLP gRPC from otel-collector
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
