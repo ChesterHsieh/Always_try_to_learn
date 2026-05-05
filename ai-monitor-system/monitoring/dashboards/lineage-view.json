@@ -1,18 +1,68 @@
 {
   "title": "Lineage Correlation",
+  "uid": "lineage-view",
+  "templating": {
+    "list": [
+      {
+        "name": "pipeline_name",
+        "type": "query",
+        "label": "Pipeline",
+        "query": "label_values(pipeline_run_total, pipeline_name)",
+        "current": {}
+      },
+      {
+        "name": "run_id",
+        "type": "textbox",
+        "label": "Run ID",
+        "current": {}
+      }
+    ]
+  },
   "panels": [
     {
+      "id": 1,
       "title": "Telemetry Freshness",
       "type": "stat",
       "targets": [
-        { "expr": "pipeline_telemetry_freshness_seconds" }
+        { "expr": "pipeline_telemetry_freshness_seconds{pipeline_name=~\"$pipeline_name\"}" }
       ]
     },
     {
+      "id": 2,
       "title": "Lineage Events",
       "type": "stat",
       "targets": [
-        { "expr": "pipeline_records_processed_total" }
+        { "expr": "pipeline_records_processed_total{pipeline_name=~\"$pipeline_name\"}" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Source / Target Dataset Map",
+      "type": "nodeGraph",
+      "description": "Dataset lineage graph for the selected run_id. Data sourced from Marquez API.",
+      "datasource": "Marquez",
+      "targets": [
+        {
+          "url": "/api/v1/lineage?runId=${run_id}",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Open in Marquez",
+      "type": "text",
+      "options": {
+        "content": "[Open lineage for run ${run_id} in Marquez](http://marquez/lineage/jobs/${pipeline_name})"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Failure Category for this Run",
+      "type": "stat",
+      "description": "Failure category from pipeline_failures_total exemplar for the selected run_id.",
+      "targets": [
+        { "expr": "pipeline_failures_total{pipeline_name=~\"$pipeline_name\"}", "exemplarQuery": true }
       ]
     }
   ]

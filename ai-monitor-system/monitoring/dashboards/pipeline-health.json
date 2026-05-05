@@ -1,25 +1,70 @@
 {
   "title": "Pipeline Health",
+  "uid": "pipeline-health",
+  "templating": {
+    "list": [
+      {
+        "name": "pipeline_name",
+        "type": "query",
+        "label": "Pipeline",
+        "query": "label_values(pipeline_run_total, pipeline_name)",
+        "current": {}
+      }
+    ]
+  },
   "panels": [
     {
+      "id": 1,
       "title": "Failed Runs",
       "type": "stat",
       "targets": [
-        { "expr": "pipeline_run_total{status=\"failed\"}" }
+        { "expr": "pipeline_run_total{status=\"failed\", pipeline_name=~\"$pipeline_name\"}" }
       ]
     },
     {
+      "id": 2,
       "title": "Succeeded Runs",
       "type": "stat",
       "targets": [
-        { "expr": "pipeline_run_total{status=\"succeeded\"}" }
+        { "expr": "pipeline_run_total{status=\"succeeded\", pipeline_name=~\"$pipeline_name\"}" }
       ]
     },
     {
+      "id": 3,
       "title": "Run Duration",
       "type": "timeseries",
       "targets": [
-        { "expr": "pipeline_run_duration_seconds" }
+        { "expr": "pipeline_run_duration_seconds{pipeline_name=~\"$pipeline_name\"}" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Telemetry Freshness",
+      "type": "timeseries",
+      "description": "Seconds since last telemetry event. Alert fires when > 300s.",
+      "targets": [
+        { "expr": "pipeline_telemetry_freshness_seconds{pipeline_name=~\"$pipeline_name\"}" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Recent Failed Runs",
+      "type": "table",
+      "description": "Recent failed runs with run_id from Histogram exemplar sampling and Marquez lineage.",
+      "columns": ["run_id", "pipeline_name", "failure_category", "failure_message", "start_time"],
+      "targets": [
+        {
+          "expr": "pipeline_failures_total{pipeline_name=~\"$pipeline_name\"}",
+          "exemplarQuery": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Failure Categories",
+      "type": "piechart",
+      "targets": [
+        { "expr": "pipeline_failures_total{pipeline_name=~\"$pipeline_name\"}" }
       ]
     }
   ]

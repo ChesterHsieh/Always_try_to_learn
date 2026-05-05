@@ -4,14 +4,14 @@ from typing import Protocol
 
 from prometheus_client import (  # noqa: I001 — keep grouped imports below
     REGISTRY,
-    push_to_gateway,
-)
-from prometheus_client import (
     Counter,
     Gauge,
     Histogram,
+    push_to_gateway,
     start_http_server,
 )
+
+from pipeline.failure_classifier import KNOWN_CATEGORIES
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +136,14 @@ class PrometheusMetricsRecorder:
         failure_message: str,
         trace_id: str | None = None,
     ) -> None:
+        # Fail fast on unknown categories: a bad label here would silently
+        # break alert PromQL (which matches on a closed enum) and corrupt
+        # the cardinality bound documented in design.md.
+        if failure_category not in KNOWN_CATEGORIES:
+            raise ValueError(
+                f"failure_category {failure_category!r} is not in KNOWN_CATEGORIES; "
+                f"allowed: {sorted(KNOWN_CATEGORIES)}"
+            )
         try:
             exemplar = {
                 "run_id": run_id,
@@ -174,7 +182,9 @@ def get_metrics_port() -> int:
     return int(os.environ.get("METRICS_PORT", "9095"))
 
 
-def push_metrics_if_configured(*, job_name: str, pipeline_name: str) -> None:
+def push_metrics_if_configured(
+    *, job_name: str, pipeline_name: str, run_id: str
+) -> None:
     """Push collected metrics to the Pushgateway if PUSHGATEWAY_URL is set.
 
     Pipeline pods are batch jobs — by the time Prometheus scrapes the pod, the
@@ -182,8 +192,8 @@ def push_metrics_if_configured(*, job_name: str, pipeline_name: str) -> None:
     job pushes its final metrics before terminating, and Prometheus scrapes
     the gateway instead of ephemeral pod IPs.
 
-    We grouping_key on pipeline_name so re-runs replace prior metrics for the
-    same pipeline (otherwise old runs accumulate forever in the gateway).
+    Grouping key includes run_id so each run gets its own slot in the gateway
+    (no cross-run overwrite during scenario test runs).
     """
     url = os.environ.get("PUSHGATEWAY_URL")
     if not url:
@@ -193,8 +203,8 @@ def push_metrics_if_configured(*, job_name: str, pipeline_name: str) -> None:
             url,
             job=job_name,
             registry=REGISTRY,
-            grouping_key={"pipeline_name": pipeline_name},
+            grouping_key={"pipeline_name": pipeline_name, "run_id": run_id},
         )
-        logger.info("Pushed metrics to %s (job=%s)", url, job_name)
+        logger.info("Pushed metrics to %s (job=%s, run_id=%s)", url, job_name, run_id)
     except Exception:
         logger.exception("push_to_gateway failed (url=%s)", url)

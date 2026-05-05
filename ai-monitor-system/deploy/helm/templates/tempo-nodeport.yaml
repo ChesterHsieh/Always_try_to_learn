@@ -1,0 +1,27 @@
+{{- if .Values.upstream.tempo.enabled }}
+# Separate NodePort service for Tempo HTTP query API so probes can reach it
+# from outside the cluster without kubectl port-forward.
+# The main tempo service (ClusterIP) is used by in-cluster components.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo-query
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: tempo
+    app.kubernetes.io/part-of: ai-monitor-system
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: upstream-tempo
+    app.kubernetes.io/instance: monitor
+  ports:
+    - name: http-query
+      port: 3200
+      targetPort: 3200
+      nodePort: 30318
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      nodePort: 30317
+{{- end }}

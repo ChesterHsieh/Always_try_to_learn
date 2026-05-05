@@ -8,6 +8,7 @@ groups:
           severity: warning
         annotations:
           summary: "OTel collector is unavailable"
+
       - alert: TelemetryFreshnessHigh
         expr: pipeline_telemetry_freshness_seconds > 120
         for: 2m
@@ -15,3 +16,23 @@ groups:
           severity: warning
         annotations:
           summary: "Pipeline telemetry freshness exceeded threshold"
+
+      - alert: PipelineMetricsMissing
+        expr: up{job="pyspark-pipeline"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PySpark pipeline metrics endpoint is unreachable"
+          pipeline_name: "pyspark-pipeline"
+          dashboard_link: "http://grafana/d/pipeline-health?var-pipeline_name=pyspark-pipeline"
+
+      - alert: PipelineTelemetryStaleness
+        expr: pipeline_telemetry_freshness_seconds > 300
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline {{ $labels.pipeline_name }} telemetry is stale (> 5 minutes)"
+          pipeline_name: "{{ $labels.pipeline_name }}"
+          dashboard_link: "http://grafana/d/pipeline-health?var-pipeline_name={{ $labels.pipeline_name }}"

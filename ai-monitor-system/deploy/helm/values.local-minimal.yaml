@@ -14,7 +14,7 @@ upstream:
     enabled: true
 
 pyspark:
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Never
   metricsPort: 9095
 
 localData:
