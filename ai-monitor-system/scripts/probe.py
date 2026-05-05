@@ -190,12 +190,36 @@ def cmd_prom_query(args) -> int:
 # ---------------------------------------------------------------------------
 
 def cmd_otel_trace(args) -> int:
-    """Query Grafana Tempo search API for recent traces from the given service.
+    """Query Grafana Tempo for recent traces from the given service.
 
-    Endpoint: GET /api/search?tags=service.name=<name>&limit=20
-    Tempo returns traces in the TraceQL search response format.
+    Two-step lookup so --has-attr works against the full span payload:
+      1. GET /api/search?tags=service.name=<name>  → recent traceIDs
+      2. GET /api/traces/<traceID>  → full ResourceSpans with all attributes
+
+    Tempo's search endpoint only echoes attributes that match the query,
+    so we must fetch each trace to inspect arbitrary attributes like
+    `pipeline.run_id`.
     """
-    url = args.trace_url.rstrip("/") + "/api/search"
+    base = args.trace_url.rstrip("/")
+    search_url = base + "/api/search"
+    # Cap how many traces we hydrate per attempt to keep latency bounded.
+    HYDRATE_CAP = 5
+
+    def _collect_attrs(trace_payload: dict) -> set[str]:
+        """Walk a /api/traces/<id> response and collect every attribute key."""
+        seen: set[str] = set()
+        for batch in trace_payload.get("batches", []) or []:
+            for attr in (batch.get("resource", {}) or {}).get("attributes", []) or []:
+                k = attr.get("key")
+                if k:
+                    seen.add(k)
+            for ss in batch.get("scopeSpans", []) or []:
+                for span in ss.get("spans", []) or []:
+                    for attr in span.get("attributes", []) or []:
+                        k = attr.get("key")
+                        if k:
+                            seen.add(k)
+        return seen
 
     def attempt():
         params = {
@@ -203,7 +227,7 @@ def cmd_otel_trace(args) -> int:
             "limit": 20,
         }
         try:
-            resp = requests.get(url, params=params, timeout=args.timeout)
+            resp = requests.get(search_url, params=params, timeout=args.timeout)
         except requests.RequestException as e:
             return False, {"error": f"request failed: {e}"}
         if resp.status_code != 200:
@@ -212,22 +236,27 @@ def cmd_otel_trace(args) -> int:
         if not traces:
             return False, {"trace_count": 0}
 
-        # Tempo search response: each entry has rootServiceName + spanSets.
-        # Flatten resource/span attribute keys for --has-attr checking.
+        # Hydrate the most recent N traces to get full attribute set.
         seen_attrs: set[str] = set()
-        for trace in traces:
-            for span_set in trace.get("spanSets", []) or []:
-                for attr in span_set.get("attributes", []) or []:
-                    k = attr.get("key")
-                    if k:
-                        seen_attrs.add(k)
-                for span in span_set.get("spans", []) or []:
-                    for attr in span.get("attributes", []) or []:
-                        k = attr.get("key")
-                        if k:
-                            seen_attrs.add(k)
+        for entry in traces[:HYDRATE_CAP]:
+            tid = entry.get("traceID")
+            if not tid:
+                continue
+            try:
+                tresp = requests.get(f"{base}/api/traces/{tid}", timeout=args.timeout)
+            except requests.RequestException:
+                continue
+            if tresp.status_code != 200:
+                continue
+            seen_attrs |= _collect_attrs(tresp.json())
 
-        missing = [a for a in args.has_attr if a not in seen_attrs]
+        # Match attribute keys by exact name OR by suffix after a dot, so
+        # `--has-attr run_id` matches OTel-style `pipeline.run_id`.
+        def _has(name: str) -> bool:
+            return name in seen_attrs or any(
+                k == name or k.endswith("." + name) for k in seen_attrs
+            )
+        missing = [a for a in args.has_attr if not _has(a)]
         passed = not missing
         return passed, {
             "trace_count": len(traces),

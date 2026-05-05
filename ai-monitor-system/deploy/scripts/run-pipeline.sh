@@ -29,22 +29,44 @@ if [[ -f "${HELM_DIR}/values.local-minimal.yaml" ]]; then
   VALUES_FILE="${HELM_DIR}/values.local-minimal.yaml"
 fi
 
+INJECT_FAILURE_ARGS=""
+if [[ -n "${INJECT_FAILURE:-}" && "${INJECT_FAILURE}" != "none" ]]; then
+  INJECT_FAILURE_ARGS="--set pyspark.injectFailure=${INJECT_FAILURE}"
+fi
+
+SCHEMA_VERSION_ARGS=""
+if [[ -n "${SCHEMA_VERSION:-}" && "${SCHEMA_VERSION}" != "v1" ]]; then
+  SCHEMA_VERSION_ARGS="--set pyspark.schemaVersion=${SCHEMA_VERSION}"
+fi
+
 helm upgrade --install "${RELEASE_NAME}" "${HELM_DIR}" \
   --namespace "${NAMESPACE}" \
   --set global.namespace="${NAMESPACE}" \
   --set-string localData.hostPath="${LOCAL_DATA_DIR}" \
-  -f "${VALUES_FILE}" >/dev/null
+  -f "${VALUES_FILE}" \
+  ${INJECT_FAILURE_ARGS} \
+  ${SCHEMA_VERSION_ARGS} >/dev/null
 
 EXIT_CODE=0
-if ! kubectl wait --for=condition=complete "job/pyspark-pipeline" -n "${NAMESPACE}" --timeout=300s; then
-  # Check if failed
-  if kubectl wait --for=condition=failed "job/pyspark-pipeline" -n "${NAMESPACE}" --timeout=5s 2>/dev/null; then
-    echo "ERROR: Pipeline job FAILED"
-    EXIT_CODE=1
-  else
-    echo "ERROR: Pipeline job TIMED OUT after 300s"
-    EXIT_CODE=2
+# Poll for either complete or failed — don't wait the full 300s on failure scenarios.
+DEADLINE=$(( $(date +%s) + 300 ))
+JOB_DONE=0
+while [ $(date +%s) -lt $DEADLINE ]; do
+  STATUS="$(kubectl get job pyspark-pipeline -n "${NAMESPACE}" \
+    -o jsonpath='{.status.conditions[?(@.status=="True")].type}' 2>/dev/null || true)"
+  if echo "$STATUS" | grep -qE "Complete|Failed"; then
+    JOB_DONE=1
+    break
   fi
+  sleep 3
+done
+
+if [ $JOB_DONE -eq 0 ]; then
+  echo "ERROR: Pipeline job TIMED OUT after 300s"
+  EXIT_CODE=2
+elif echo "$STATUS" | grep -q "Failed"; then
+  echo "ERROR: Pipeline job FAILED"
+  EXIT_CODE=1
 fi
 
 POD_NAME="$(kubectl get pod -n "${NAMESPACE}" -l job-name=pyspark-pipeline -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")"
