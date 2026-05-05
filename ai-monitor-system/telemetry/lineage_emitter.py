@@ -5,7 +5,7 @@ import time
 import requests
 
 from pipeline.failure_classifier import classify_failure
-from pipeline.lineage import build_openlineage_event
+from telemetry.lineage import build_openlineage_event
 
 logger = logging.getLogger(__name__)
 

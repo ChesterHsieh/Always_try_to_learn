@@ -13,7 +13,7 @@ OUTPUT_DIR="${PROJECT_ROOT}/.local-data/coverage"
 mkdir -p "${OUTPUT_DIR}"
 TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 
-exec python -m pipeline.coverage \
+exec python -m utils.coverage \
   --namespace "${NAMESPACE}" \
   --marquez-url "${MARQUEZ_URL}" \
   --prometheus-url "${PROMETHEUS_URL}" \

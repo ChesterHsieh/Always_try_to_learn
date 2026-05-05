@@ -12,7 +12,7 @@ def test_us3_coverage_assets_present() -> None:
 
 def test_coverage_cli_pass_count_and_chart_versions(mock_k8s_helm_secret):
     """Run coverage CLI with mocked backends; assert >= 5 pass checks and 4 chart versions."""
-    from pipeline.coverage import run_coverage
+    from utils.coverage import run_coverage
 
     def mock_get(url, *args, **kwargs):
         m = MagicMock()

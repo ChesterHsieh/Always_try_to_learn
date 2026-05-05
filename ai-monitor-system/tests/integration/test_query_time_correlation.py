@@ -4,12 +4,11 @@ import os
 from contextlib import contextmanager
 from unittest.mock import patch
 
+import telemetry.metrics as metrics_module
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-
-import pipeline.metrics as metrics_module
 
 
 @pytest.fixture()
@@ -65,7 +64,7 @@ def test_run_id_correlation_across_metrics_traces_lineage(
 
     # (c) Shadow emit to mock Marquez
     with patch.dict(os.environ, {"LINEAGE_SHADOW_EMIT": "true", "MARQUEZ_URL": marquez_url}):
-        from pipeline.lineage_emitter import maybe_shadow_emit
+        from telemetry.lineage_emitter import maybe_shadow_emit
 
         maybe_shadow_emit(
             run_id=run_id,

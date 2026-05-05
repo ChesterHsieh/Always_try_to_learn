@@ -10,11 +10,11 @@ from pyspark.sql import functions as F
 
 from pipeline.failure_classifier import classify_failure
 from pipeline.failure_injection import maybe_inject
-from pipeline.io_adapter import read_local_file, write_local_file
-from pipeline.lineage_emitter import maybe_shadow_emit
-from pipeline.metrics import get_metrics_port, get_recorder, push_metrics_if_configured
-from pipeline.telemetry import lifecycle_metric_payload
-from pipeline.tracing import get_current_trace_id, start_run_span
+from telemetry.lineage_emitter import maybe_shadow_emit
+from telemetry.metrics import get_metrics_port, get_recorder, push_metrics_if_configured
+from telemetry.telemetry import lifecycle_metric_payload
+from telemetry.tracing import get_current_trace_id, start_run_span
+from utils.io_adapter import read_local_file, write_local_file
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def create_spark_session():
 
 
 def run_pipeline(input_path: str, output_path: str) -> dict[str, str]:
-    from pipeline import otel_setup
+    from telemetry import otel_setup
 
     run_id = str(uuid.uuid4())
     start_time = time.monotonic()

@@ -1,5 +1,6 @@
-from pipeline.lineage import build_openlineage_event
-from pipeline.telemetry import build_correlation_attributes
+from telemetry.lineage import build_openlineage_event
+
+from telemetry.telemetry import build_correlation_attributes
 
 
 def test_lineage_contains_run_id() -> None:

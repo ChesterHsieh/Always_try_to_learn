@@ -11,7 +11,7 @@ def test_option_b_chart_registry_exists() -> None:
 
 def test_coverage_report_components_contain_four_charts(mock_k8s_helm_secret):
     """CoverageReport.components must include all 4 upstream charts with semver versions."""
-    from pipeline.coverage import run_coverage
+    from utils.coverage import run_coverage
 
     mock_prom = MagicMock()
     mock_prom.get.return_value.status_code = 200
@@ -55,7 +55,7 @@ def test_coverage_report_components_contain_four_charts(mock_k8s_helm_secret):
     }
 
     with patch("requests.get", side_effect=mock_get):
-        with patch("pipeline.coverage._get_k8s_api", return_value=mock_k8s_helm_secret):
+        with patch("utils.coverage._get_k8s_api", return_value=mock_k8s_helm_secret):
             report = run_coverage(
                 namespace="ai-monitor-system",
                 marquez_url="http://marquez:9555",
@@ -87,7 +87,7 @@ def test_coverage_report_components_contain_four_charts(mock_k8s_helm_secret):
 
 
 def test_coverage_report_validation_checks_structure(mock_k8s_helm_secret):
-    from pipeline.coverage import run_coverage
+    from utils.coverage import run_coverage
 
     def mock_get(url, *args, **kwargs):
         m = MagicMock()
@@ -109,7 +109,7 @@ def test_coverage_report_validation_checks_structure(mock_k8s_helm_secret):
         return m
 
     with patch("requests.get", side_effect=mock_get):
-        with patch("pipeline.coverage._get_k8s_api", return_value=mock_k8s_helm_secret):
+        with patch("utils.coverage._get_k8s_api", return_value=mock_k8s_helm_secret):
             report = run_coverage(
                 namespace="ai-monitor-system",
                 marquez_url="http://marquez:9555",

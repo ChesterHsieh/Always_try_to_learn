@@ -13,7 +13,7 @@ import pytest
 
 import pipeline.job as job_module
 from pipeline.failure_classifier import KNOWN_CATEGORIES
-from pipeline.io_adapter import write_local_file
+from utils.io_adapter import write_local_file
 
 
 @pytest.fixture(autouse=True)

@@ -29,7 +29,7 @@ def _get_family_names(output: str) -> set[str]:
 
 
 def test_five_metric_families_present():
-    import pipeline.metrics  # noqa: F401 - registers metrics on import
+    import telemetry.metrics  # noqa: F401 - registers metrics on import
 
     output = _generate_openmetrics()
     registered_names = _get_family_names(output)
@@ -38,7 +38,7 @@ def test_five_metric_families_present():
 
 
 def test_no_forbidden_labels_in_metrics():
-    import pipeline.metrics as m
+    import telemetry.metrics as m
 
     all_collectors = [
         m.pipeline_run_total,
@@ -54,7 +54,7 @@ def test_no_forbidden_labels_in_metrics():
 
 
 def test_counter_exemplar_after_record_run_started():
-    import pipeline.metrics as m
+    import telemetry.metrics as m
 
     recorder = m.PrometheusMetricsRecorder()
     recorder.record_run_started(run_id="test-run-001", pipeline_name="test-pipe")
@@ -65,7 +65,7 @@ def test_counter_exemplar_after_record_run_started():
 
 
 def test_record_run_failed_stores_exemplar():
-    import pipeline.metrics as m
+    import telemetry.metrics as m
 
     recorder = m.PrometheusMetricsRecorder()
     recorder.record_run_failed(
@@ -81,16 +81,15 @@ def test_record_run_failed_stores_exemplar():
 
 
 def test_telemetry_freshness_is_gauge_not_counter():
+    import telemetry.metrics as m
     from prometheus_client import Gauge
-
-    import pipeline.metrics as m
 
     assert isinstance(m.pipeline_telemetry_freshness_seconds, Gauge)
 
 
 def test_freshness_gauge_has_no_exemplar():
     """Gauge does not support exemplars; update_freshness should not use exemplar."""
-    import pipeline.metrics as m
+    import telemetry.metrics as m
 
     recorder = m.PrometheusMetricsRecorder()
     recorder.update_freshness(run_id="r1", pipeline_name="test-pipe", seconds_since_last_event=42.0)
@@ -105,7 +104,7 @@ def test_contract_guard_raises_on_forbidden_label():
     with pytest.raises((ValueError, Exception)):
         bad_counter = Counter("bad_test_counter_xyz", "test", ["run_id"])
         # force registration guard check
-        from pipeline.metrics import _FORBIDDEN_LABELS
+        from telemetry.metrics import _FORBIDDEN_LABELS
 
         for label in bad_counter._labelnames:
             if label in _FORBIDDEN_LABELS:

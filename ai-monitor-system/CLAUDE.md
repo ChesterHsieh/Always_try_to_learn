@@ -6,10 +6,9 @@ or commands. For human-facing setup, see [README.md](README.md).
 
 ## Stack at a glance
 
-- Pipeline: PySpark job in [pipeline/job.py](pipeline/job.py) with telemetry helpers
-  ([metrics.py](pipeline/metrics.py), [tracing.py](pipeline/tracing.py),
-  [otel_setup.py](pipeline/otel_setup.py), [lineage_emitter.py](pipeline/lineage_emitter.py),
-  [failure_classifier.py](pipeline/failure_classifier.py)).
+- **Pipeline** (core logic): [pipeline/job.py](pipeline/job.py) — orchestrator; [pipeline/failure_classifier.py](pipeline/failure_classifier.py) — error categorization; [pipeline/failure_injection.py](pipeline/failure_injection.py) — chaos testing.
+- **Telemetry** (observability tools): [telemetry/metrics.py](telemetry/metrics.py), [telemetry/tracing.py](telemetry/tracing.py), [telemetry/otel_setup.py](telemetry/otel_setup.py), [telemetry/lineage_emitter.py](telemetry/lineage_emitter.py), [telemetry/lineage.py](telemetry/lineage.py).
+- **Utils** (shared utilities): [utils/io_adapter.py](utils/io_adapter.py), [utils/scenario_schema.py](utils/scenario_schema.py), [utils/coverage.py](utils/coverage.py).
 - Deploy: Helm chart in [deploy/helm/](deploy/helm/) — upstream observability
   charts pulled in via `Chart.yaml`; pipeline job template in
   [pipeline-job.yaml](deploy/helm/templates/pipeline-job.yaml).
@@ -17,6 +16,26 @@ or commands. For human-facing setup, see [README.md](README.md).
   [values.local-minimal.yaml](deploy/helm/values.local-minimal.yaml) (local).
 - Monitoring config: [monitoring/](monitoring/) — Grafana dashboards + Prom alert rules.
 - Tests: contract → integration → smoke (see "Test layers" below).
+
+## Directory Navigation for New Engineers
+
+**Start here based on what you need to change:**
+
+1. **Fixing or adding business logic?** → Look in [`pipeline/`](pipeline/)
+   - `job.py` — main orchestrator; modify here for pipeline control flow changes
+   - `failure_classifier.py` — how errors are categorized; modify for classification rules
+   - `failure_injection.py` — chaos testing scenarios; modify to add new failure types
+
+2. **Observability / monitoring not working?** → Look in [`telemetry/`](telemetry/)
+   - `metrics.py` — Prometheus metrics; modify to add new metrics
+   - `tracing.py` — OpenTelemetry spans; modify for span attributes
+   - `lineage_emitter.py` — OpenLineage events to Marquez; modify for lineage data
+   - `otel_setup.py` — OTel configuration; modify for exporter/collector changes
+
+3. **Adding utilities or shared code?** → Look in [`utils/`](utils/)
+   - `io_adapter.py` — file I/O abstraction; modify for new I/O patterns
+   - `scenario_schema.py` — scenario YAML validation; modify for new scenario fields
+   - `coverage.py` — monitoring coverage checks; modify for new coverage rules
 
 ## Common operations (do these via Bash)
 

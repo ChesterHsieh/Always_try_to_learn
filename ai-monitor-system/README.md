@@ -18,7 +18,7 @@
 | **10 個可重現的故障情境** | `scenarios/*.yaml` — 每個情境宣告預期的分類、告警與 Probe；可單獨執行或批次執行 |
 | **Probe 驅動驗證** | `scripts/probe.py` 查詢 Prometheus / Tempo / Marquez，並輸出單行 PASS/FAIL 結論與提示 |
 | **分層測試套件** | Contract（≤ 5 秒，無需叢集）→ Integration（Stub 叢集）→ Smoke（實際叢集） |
-| **Coverage CLI** | `pipeline.coverage` 產生 JSON 報告，將 Chart 版本、告警規則、儀表板與血緣狀態整合為單一發布驗收成品 |
+| **Coverage CLI** | `utils.coverage` 產生 JSON 報告，將 Chart 版本、告警規則、儀表板與血緣狀態整合為單一發布驗收成品 |
 | **運維 Runbook** | 每個故障類別的症狀、重現指令、預期告警與處置路徑 |
 
 ---
@@ -44,9 +44,18 @@
 
 ## 專案結構
 
+### 核心模組（Pipeline Logic）
+
 | 路徑 | 用途 |
 |---|---|
-| [`pipeline/`](pipeline/) | PySpark Job + 遙測 / 追蹤 / 血緣輔助模組 + 故障分類器 + 情境 Schema |
+| [`pipeline/`](pipeline/) | **核心業務邏輯與編排** — Job 執行器 + 故障分類器 + 故障注入 + 執行時上下文 |
+| [`telemetry/`](telemetry/) | **可觀測性工具集** — Prometheus 指標 + OpenTelemetry 追蹤 + OpenLineage 血緣 + Grafana 設定 |
+| [`utils/`](utils/) | **共用工具** — 檔案 I/O 適配器 + 情境 Schema 驗證 + 監控覆蓋檢查 |
+
+### 測試與部署
+
+| 路徑 | 用途 |
+|---|---|
 | [`scenarios/`](scenarios/) | 宣告式故障情境 YAML 檔，由執行器讀取 |
 | [`scripts/`](scripts/) | `run-scenario.sh`、`run-all-failure-scenarios.sh`、`probe.py` |
 | [`deploy/helm/`](deploy/helm/) | Helm Chart、上游 Chart 相依、Values 覆蓋、專案膠合 Template |
@@ -113,7 +122,7 @@ Namespace 預設為 `ai-monitor-system`；Release Name 預設為 `monitor`。
 2. 告警狀態（`ALERTS{alertname="...",alertstate="firing"}`）
 3. 血緣 / 追蹤關聯（適用時）
 
-> **Schema Drift 情境的特殊性**：PySpark Plan 分析器故障（例如 `UNRESOLVED_COLUMN`）在 Spark 啟動 Job 之前就觸發 `AnalysisException`，因此 OpenLineage Spark Listener 永遠觀察不到這次執行。Pipeline 因此從 [`pipeline/lineage_emitter.py`](pipeline/lineage_emitter.py) 發送 Shadow `START`+`FAIL` OpenLineage Event，使用自身的 `run_id` — 以保留三路關聯。這是所有「Spark 引擎啟動前即失敗」類型 Bug 的通用模式。
+> **Schema Drift 情境的特殊性**：PySpark Plan 分析器故障（例如 `UNRESOLVED_COLUMN`）在 Spark 啟動 Job 之前就觸發 `AnalysisException`，因此 OpenLineage Spark Listener 永遠觀察不到這次執行。Pipeline 因此從 [`telemetry/lineage_emitter.py`](telemetry/lineage_emitter.py) 發送 Shadow `START`+`FAIL` OpenLineage Event，使用自身的 `run_id` — 以保留三路關聯。這是所有「Spark 引擎啟動前即失敗」類型 Bug 的通用模式。
 
 ### 情境檔案結構
 

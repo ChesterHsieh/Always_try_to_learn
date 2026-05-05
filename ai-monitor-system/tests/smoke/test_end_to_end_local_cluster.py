@@ -54,7 +54,7 @@ def test_pipeline_run_within_sla():
 
 def test_coverage_report_structure_with_mocks(mock_k8s_helm_secret):
     """Verify coverage report structure and semver chart versions via mocks."""
-    from pipeline.coverage import run_coverage
+    from utils.coverage import run_coverage
 
     def mock_get(url, *args, **kwargs):
         m = MagicMock()

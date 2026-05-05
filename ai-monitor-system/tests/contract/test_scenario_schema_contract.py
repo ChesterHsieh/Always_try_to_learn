@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pipeline.scenario_schema import (
+from utils.scenario_schema import (
     KNOWN_FAILURE_CATEGORIES,
     SUPPORTED_INJECTIONS,
     Scenario,

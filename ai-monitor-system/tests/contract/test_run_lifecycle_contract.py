@@ -1,4 +1,4 @@
-from pipeline.telemetry import lifecycle_metric_payload
+from telemetry.telemetry import lifecycle_metric_payload
 
 
 def test_run_lifecycle_payload_has_required_fields() -> None:

@@ -20,8 +20,8 @@ import pytest
 
 import pipeline.job as job_module
 from pipeline.failure_classifier import KNOWN_CATEGORIES
-from pipeline.io_adapter import write_local_file
-from pipeline.metrics import pipeline_failures_total
+from telemetry.metrics import pipeline_failures_total
+from utils.io_adapter import write_local_file
 
 
 @pytest.fixture(autouse=True)
@@ -100,7 +100,7 @@ def test_failure_run_total_metric(
     category: str,
 ) -> None:
     """pipeline_run_total{status='failed'} must increment for every failure category."""
-    from pipeline.metrics import pipeline_run_total
+    from telemetry.metrics import pipeline_run_total
 
     src = tmp_path / "in.txt"
     dst = tmp_path / "out.txt"

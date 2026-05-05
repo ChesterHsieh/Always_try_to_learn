@@ -7,7 +7,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from pipeline.tracing import build_trace_attributes
+from telemetry.tracing import build_trace_attributes
 
 
 @contextmanager

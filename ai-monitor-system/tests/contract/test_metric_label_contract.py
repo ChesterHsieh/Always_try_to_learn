@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from pipeline.failure_classifier import KNOWN_CATEGORIES
-from pipeline.metrics import (
+from telemetry.metrics import (
     PrometheusMetricsRecorder,
     pipeline_failures_total,
     pipeline_run_duration_seconds,
