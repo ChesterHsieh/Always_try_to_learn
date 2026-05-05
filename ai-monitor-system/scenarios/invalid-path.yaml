@@ -1,0 +1,45 @@
+# Scenario: invalid-path
+#
+# Pipeline fails because the input path is a directory, not a file (IsADirectoryError).
+# Monitoring must detect: failure metric with correct category + alert firing.
+
+name: invalid-path
+description: Input path is a directory; pipeline raises IsADirectoryError classified as invalid_path.
+
+pipeline:
+  input_records: 0
+  inject_failure: invalid_path
+
+expected_run_status: failed
+expected_failure_category: invalid_path
+expected_alerts:
+  - PipelineRunFailed
+
+probes:
+  - id: failure_category_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_failures_total{failure_category="invalid_path"}'
+      gte: 1
+      within: 60
+
+  - id: run_failed_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_total{status="failed"}'
+      gte: 1
+      within: 60
+
+  - id: alert_firing
+    cmd: prom-query
+    args:
+      query: 'ALERTS{alertname="PipelineRunFailed",alertstate="firing"}'
+      gte: 1
+      within: 60
+
+  - id: error_span
+    cmd: otel-trace
+    args:
+      service: pyspark-pipeline
+      has_attr: run_id
+      within: 60

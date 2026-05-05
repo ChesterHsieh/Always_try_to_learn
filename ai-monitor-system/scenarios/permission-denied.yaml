@@ -1,0 +1,45 @@
+# Scenario: permission-denied
+#
+# Pipeline fails because it cannot read the input file (PermissionError).
+# Monitoring must detect: failure metric with correct category + alert firing.
+
+name: permission-denied
+description: Input path not readable; pipeline raises PermissionError classified as permission_denied.
+
+pipeline:
+  input_records: 0
+  inject_failure: permission_denied
+
+expected_run_status: failed
+expected_failure_category: permission_denied
+expected_alerts:
+  - PipelineRunFailed
+
+probes:
+  - id: failure_category_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_failures_total{failure_category="permission_denied"}'
+      gte: 1
+      within: 60
+
+  - id: run_failed_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_total{status="failed"}'
+      gte: 1
+      within: 60
+
+  - id: alert_firing
+    cmd: prom-query
+    args:
+      query: 'ALERTS{alertname="PipelineRunFailed",alertstate="firing"}'
+      gte: 1
+      within: 60
+
+  - id: error_span
+    cmd: otel-trace
+    args:
+      service: pyspark-pipeline
+      has_attr: run_id
+      within: 60

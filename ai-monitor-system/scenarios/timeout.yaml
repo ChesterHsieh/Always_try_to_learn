@@ -1,0 +1,45 @@
+# Scenario: timeout
+#
+# An external call times out during pipeline execution (socket.timeout).
+# Monitoring must detect: failure metric + PipelineRunTimeout alert.
+
+name: timeout
+description: External call times out; classified as timeout, PipelineRunTimeout alert fires.
+
+pipeline:
+  input_records: 100
+  inject_failure: timeout
+
+expected_run_status: failed
+expected_failure_category: timeout
+expected_alerts:
+  - PipelineRunTimeout
+
+probes:
+  - id: failure_category_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_failures_total{failure_category="timeout"}'
+      gte: 1
+      within: 60
+
+  - id: run_failed_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_total{status="failed"}'
+      gte: 1
+      within: 60
+
+  - id: alert_firing
+    cmd: prom-query
+    args:
+      query: 'ALERTS{alertname="PipelineRunTimeout",alertstate="firing"}'
+      gte: 1
+      within: 60
+
+  - id: error_span
+    cmd: otel-trace
+    args:
+      service: pyspark-pipeline
+      has_attr: run_id
+      within: 60

@@ -1,0 +1,45 @@
+# Scenario: input-not-found
+#
+# Pipeline fails because the input file does not exist (FileNotFoundError).
+# Monitoring must detect: failure metric with correct category + alert firing.
+
+name: input-not-found
+description: Input file missing; pipeline raises FileNotFoundError classified as input_not_found.
+
+pipeline:
+  input_records: 0
+  inject_failure: input_not_found
+
+expected_run_status: failed
+expected_failure_category: input_not_found
+expected_alerts:
+  - PipelineRunFailed
+
+probes:
+  - id: failure_category_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_failures_total{failure_category="input_not_found"}'
+      gte: 1
+      within: 60
+
+  - id: run_failed_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_total{status="failed"}'
+      gte: 1
+      within: 60
+
+  - id: alert_firing
+    cmd: prom-query
+    args:
+      query: 'ALERTS{alertname="PipelineRunFailed",alertstate="firing"}'
+      gte: 1
+      within: 60
+
+  - id: error_span
+    cmd: otel-trace
+    args:
+      service: pyspark-pipeline
+      has_attr: run_id
+      within: 60
