@@ -1,0 +1,32 @@
+{
+  "feature_name": "pyspark-monitoring-framework",
+  "created_at": "2026-04-15T00:00:00Z",
+  "updated_at": "2026-04-18T14:00:00Z",
+  "language": "zh-TW",
+  "phase": "tasks-generated",
+  "revisions": [
+    { "date": "2026-04-18", "type": "design-review", "summary": "Cardinality fix (run_id/failure_message → exemplars), coverage CLI Kubernetes API for chart_version, H1 mutex from start" },
+    { "date": "2026-04-18", "type": "tasks-generated", "summary": "14 major tasks / 50 sub-tasks covering Foundation → H1 → H2 → H3 → Docs → Release gate; auto-approved requirements + design via -y" },
+    { "date": "2026-04-18", "type": "tasks-regenerated", "summary": "Regenerated against single-stack design: 14 major / 46 sub-tasks reorganized by Foundation → Classifier → Metrics → Tracing → Lineage → Job integration → Chart values → Helm/bootstrap → Alerts/dashboards → Coverage CLI → Correlation → Resilience/smoke → Docs → Release gate" }
+  ],
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": true,
+  "migration": {
+    "source": "specs/001-pyspark-monitoring-framework/",
+    "migrated_at": "2026-04-17",
+    "note": "Migrated from Speckit-style spec; original artifacts retained in source path."
+  }
+}
