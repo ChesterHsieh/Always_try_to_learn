@@ -1,88 +1,85 @@
 # AI Monitor System
 
-**A monitoring-first reference framework for DataOps teams to validate observability tooling against a real PySpark pipeline.**
+**一個以監控為優先的參考框架，協助 DataOps 團隊驗證可觀測性工具是否能有效應對真實的 PySpark Pipeline 故障。**
 
-This repo is a runnable best-practice template that answers one question:
-**"Can my observability stack actually detect, classify, correlate, and alert on real pipeline failures?"**
+本專案是一個可直接執行的最佳實踐範本，回答一個核心問題：
+**「我的可觀測性堆疊，真的能偵測、分類、關聯並告警真實的 Pipeline 故障嗎？」**
 
-It ships with a deliberately simple PySpark batch pipeline plus 10 reproducible
-failure scenarios and a probe harness that asserts the monitoring stack reacts
-correctly to each one. Use it as-is to evaluate a stack, or fork it as the
-starting point for your own pipeline's monitoring baseline.
+專案內含一個刻意設計為簡單的 PySpark Batch Pipeline，搭配 10 個可重現的故障情境，以及一個 Probe 驗證框架，用以斷言監控堆疊對每個故障的反應是否正確。可直接使用來評估堆疊，或 Fork 作為自有 Pipeline 監控基準的起點。
 
 ---
 
-## What this gives you
+## 提供的能力
 
-| Capability | How |
+| 能力 | 實現方式 |
 |---|---|
-| **End-to-end observability stack on local Kubernetes** | Upstream Helm charts (Prometheus / Grafana / OpenTelemetry Collector / Marquez / Tempo) wired into one chart with sensible defaults |
-| **Run-level correlation across metrics / traces / lineage** | Shared `run_id` propagated through Prometheus exemplars, OTel span attributes, and OpenLineage events |
-| **10 reproducible failure scenarios** | `scenarios/*.yaml` — each declares expected category, alerts, and probes; runnable individually or as a batch |
-| **Probe-driven verification** | `scripts/probe.py` queries Prometheus / Tempo / Marquez and emits single-line PASS/FAIL verdicts with hints |
-| **Layered test suite** | Contract (≤ 5 s, no cluster) → Integration (stubbed cluster) → Smoke (live cluster) |
-| **Coverage CLI** | `pipeline.coverage` produces a JSON report tying chart versions, alert rules, dashboards, and lineage state into one release-gate artifact |
-| **Operator runbook** | Per-category symptoms, reproduction commands, expected alerts, and triage paths |
+| **本地 Kubernetes 上的端對端可觀測性堆疊** | 上游 Helm Charts（Prometheus / Grafana / OpenTelemetry Collector / Marquez / Tempo）整合至單一 Chart，並附合理預設值 |
+| **跨指標 / 追蹤 / 血緣的 Run 層級關聯** | 共用 `run_id`，傳播至 Prometheus Exemplars、OTel Span Attributes 與 OpenLineage Events |
+| **10 個可重現的故障情境** | `scenarios/*.yaml` — 每個情境宣告預期的分類、告警與 Probe；可單獨執行或批次執行 |
+| **Probe 驅動驗證** | `scripts/probe.py` 查詢 Prometheus / Tempo / Marquez，並輸出單行 PASS/FAIL 結論與提示 |
+| **分層測試套件** | Contract（≤ 5 秒，無需叢集）→ Integration（Stub 叢集）→ Smoke（實際叢集） |
+| **Coverage CLI** | `pipeline.coverage` 產生 JSON 報告，將 Chart 版本、告警規則、儀表板與血緣狀態整合為單一發布驗收成品 |
+| **運維 Runbook** | 每個故障類別的症狀、重現指令、預期告警與處置路徑 |
 
 ---
 
-## Required Stack
+## 必要堆疊
 
-| Component | Role | Default version |
+| 元件 | 角色 | 預設版本 |
 |---|---|---|
-| **OpenLineage** | Pipeline-side lineage emission (Spark listener + shadow emitter) | bundled in pipeline image |
-| **Marquez** | OpenLineage backend; queryable run state and dataset versioning | upstream chart `6.7.0` |
-| **Prometheus** | Metric collection + alert evaluation | upstream chart `25.27.0` |
-| **OpenTelemetry Collector** | Trace ingestion → Tempo | upstream chart `0.78.0` |
-| **Grafana Tempo** | Trace storage and query | upstream chart |
-| **Grafana** | Dashboards (`pipeline-health`, `lineage-view`) + alert visualization | upstream chart `8.5.1` |
-| **Helm 3** | Deployment orchestrator | host-provided |
-| **Local Kubernetes** | kind / minikube / Rancher Desktop / Docker Desktop K8s | host-provided |
+| **OpenLineage** | Pipeline 端血緣發送（Spark Listener + Shadow Emitter） | 內建於 Pipeline Image |
+| **Marquez** | OpenLineage Backend；可查詢 Run 狀態與資料集版本 | upstream chart `6.7.0` |
+| **Prometheus** | 指標收集與告警評估 | upstream chart `25.27.0` |
+| **OpenTelemetry Collector** | 追蹤攝入 → Tempo | upstream chart `0.78.0` |
+| **Grafana Tempo** | 追蹤儲存與查詢 | upstream chart |
+| **Grafana** | 儀表板（`pipeline-health`、`lineage-view`）與告警視覺化 | upstream chart `8.5.1` |
+| **Helm 3** | 部署協調器 | 由主機提供 |
+| **本地 Kubernetes** | kind / minikube / Rancher Desktop / Docker Desktop K8s | 由主機提供 |
 
-> The chart is configuration-first. Project-owned templates are minimal —
-> almost everything is upstream chart values. See
-> [docs/chart-version-matrix.md](docs/chart-version-matrix.md).
+> 此 Chart 以設定為優先。專案自有的 Template 極少 —
+> 幾乎所有設定皆來自上游 Chart Values。詳見
+> [docs/chart-version-matrix.md](docs/chart-version-matrix.md)。
 
 ---
 
-## Project Layout
+## 專案結構
 
-| Path | Purpose |
+| 路徑 | 用途 |
 |---|---|
-| [`pipeline/`](pipeline/) | PySpark job + telemetry / tracing / lineage helpers + failure classifier + scenario schema |
-| [`scenarios/`](scenarios/) | Declarative failure-scenario YAML files consumed by the runner |
-| [`scripts/`](scripts/) | `run-scenario.sh`, `run-all-failure-scenarios.sh`, `probe.py` |
-| [`deploy/helm/`](deploy/helm/) | Helm chart, upstream chart deps, values overlays, project glue templates |
-| [`deploy/scripts/`](deploy/scripts/) | `bootstrap-local.sh`, `run-pipeline.sh`, `run-smoke-test.sh`, `check-monitoring-coverage.sh`, `nuke-local.sh` |
-| [`monitoring/`](monitoring/) | Grafana dashboards JSON + Prometheus alert-rule YAML (mounted via chart) |
-| [`tests/contract/`](tests/contract/) | Pure-Python invariants (no cluster) — run on every change |
-| [`tests/integration/`](tests/integration/) | Wiring tests with stubbed cluster components |
-| [`tests/smoke/`](tests/smoke/) | End-to-end smoke against a live local cluster |
-| [`docs/`](docs/) | Onboarding, runbook (per-category triage), validation report |
+| [`pipeline/`](pipeline/) | PySpark Job + 遙測 / 追蹤 / 血緣輔助模組 + 故障分類器 + 情境 Schema |
+| [`scenarios/`](scenarios/) | 宣告式故障情境 YAML 檔，由執行器讀取 |
+| [`scripts/`](scripts/) | `run-scenario.sh`、`run-all-failure-scenarios.sh`、`probe.py` |
+| [`deploy/helm/`](deploy/helm/) | Helm Chart、上游 Chart 相依、Values 覆蓋、專案膠合 Template |
+| [`deploy/scripts/`](deploy/scripts/) | `bootstrap-local.sh`、`run-pipeline.sh`、`run-smoke-test.sh`、`check-monitoring-coverage.sh`、`nuke-local.sh` |
+| [`monitoring/`](monitoring/) | Grafana 儀表板 JSON + Prometheus 告警規則 YAML（透過 Chart 掛載） |
+| [`tests/contract/`](tests/contract/) | 純 Python 不變量（無需叢集）— 每次變更皆執行 |
+| [`tests/integration/`](tests/integration/) | 使用 Stub 叢集元件的配線測試 |
+| [`tests/smoke/`](tests/smoke/) | 針對實際本地叢集的端對端 Smoke 測試 |
+| [`docs/`](docs/) | Onboarding、Runbook（每類別處置） |
 
 ---
 
-## Quick Start
+## 快速開始
 
 ```bash
-# 1. Bootstrap stack (creates namespace, builds pipeline image, helm install)
+# 1. 啟動堆疊（建立 Namespace、建置 Pipeline Image、Helm Install）
 ./deploy/scripts/bootstrap-local.sh
 
-# 2. Trigger one happy-path run
+# 2. 觸發一次正常執行
 ./deploy/scripts/run-pipeline.sh
 
-# 3. Verify the stack actually observed it
+# 3. 驗證堆疊確實觀察到了執行結果
 ./scripts/run-scenario.sh success-baseline
 
-# 4. Run all failure scenarios end-to-end and refresh the validation ledger
+# 4. 執行所有故障情境並更新驗證帳本
 ./scripts/run-all-failure-scenarios.sh --update-report
 ```
 
-Namespace defaults to `ai-monitor-system`; release name defaults to `monitor`.
+Namespace 預設為 `ai-monitor-system`；Release Name 預設為 `monitor`。
 
-### Local UIs (NodePort — no port-forward needed)
+### 本地 UI（NodePort — 無需 port-forward）
 
-| Service | URL |
+| 服務 | URL |
 |---|---|
 | Grafana | http://localhost:30300 |
 | Prometheus | http://localhost:30090 |
@@ -92,56 +89,49 @@ Namespace defaults to `ai-monitor-system`; release name defaults to `monitor`.
 
 ---
 
-## Failure Scenario Catalog
+## 故障情境目錄
 
-Each scenario is a single YAML file declaring (a) what to inject, (b) the
-expected lifecycle outcome, (c) the alerts that must fire, and (d) the probe
-queries that prove the stack saw it. Run individually with `./scripts/run-scenario.sh <name>`.
+每個情境是一個 YAML 檔，宣告（a）要注入的故障、（b）預期的生命週期結果、（c）必須觸發的告警，以及（d）證明堆疊偵測到故障的 Probe 查詢。使用 `./scripts/run-scenario.sh <name>` 單獨執行。
 
-| Scenario | Category | Tests detection of |
+| 情境 | 類別 | 測試偵測對象 |
 |---|---|---|
-| [`success-baseline.yaml`](scenarios/success-baseline.yaml) | _(success)_ | Healthy run baseline; no alerts firing |
-| [`input-not-found.yaml`](scenarios/input-not-found.yaml) | `input_not_found` | `FileNotFoundError` from missing input |
-| [`invalid-path.yaml`](scenarios/invalid-path.yaml) | `invalid_path` | `IsADirectoryError` from path mis-config |
-| [`permission-denied.yaml`](scenarios/permission-denied.yaml) | `permission_denied` | `PermissionError` from RBAC / mount |
-| [`spark-task-failed.yaml`](scenarios/spark-task-failed.yaml) | `spark_task_failed` | Py4JJavaError task failure |
-| [`spark-driver-error.yaml`](scenarios/spark-driver-error.yaml) | `spark_driver_error` | SparkException at driver |
-| [`schema-drift.yaml`](scenarios/schema-drift.yaml) | `spark_driver_error` | **Two-run schema drift** — baseline writes `value: STRING`, drift run reads with mismatched schema → `AnalysisException` (`UNRESOLVED_COLUMN`); proves Marquez records `state=FAILED` with `errorMessage` facet despite OpenLineage Spark listener's plan-time blind spot |
-| [`lineage-emission-failed.yaml`](scenarios/lineage-emission-failed.yaml) | `lineage_emission_failed` | Marquez unreachable / OpenLineage error |
-| [`telemetry-unavailable.yaml`](scenarios/telemetry-unavailable.yaml) | `telemetry_unavailable` | OTel collector / Prometheus unreachable |
+| [`success-baseline.yaml`](scenarios/success-baseline.yaml) | _(成功)_ | 健康執行基準；無告警觸發 |
+| [`input-not-found.yaml`](scenarios/input-not-found.yaml) | `input_not_found` | 輸入缺失導致的 `FileNotFoundError` |
+| [`invalid-path.yaml`](scenarios/invalid-path.yaml) | `invalid_path` | 路徑設定錯誤導致的 `IsADirectoryError` |
+| [`permission-denied.yaml`](scenarios/permission-denied.yaml) | `permission_denied` | RBAC / 掛載導致的 `PermissionError` |
+| [`spark-task-failed.yaml`](scenarios/spark-task-failed.yaml) | `spark_task_failed` | Py4JJavaError Task 失敗 |
+| [`spark-driver-error.yaml`](scenarios/spark-driver-error.yaml) | `spark_driver_error` | Driver 端 SparkException |
+| [`schema-drift.yaml`](scenarios/schema-drift.yaml) | `spark_driver_error` | **兩次執行的 Schema Drift** — 基準執行寫入 `value: STRING`，Drift 執行以不匹配 Schema 讀取 → `AnalysisException`（`UNRESOLVED_COLUMN`）；驗證 Marquez 在 OpenLineage Spark Listener 的 Plan 階段盲點下仍能記錄 `state=FAILED` 並附帶 `errorMessage` facet |
+| [`lineage-emission-failed.yaml`](scenarios/lineage-emission-failed.yaml) | `lineage_emission_failed` | Marquez 無法連線 / OpenLineage 錯誤 |
+| [`telemetry-unavailable.yaml`](scenarios/telemetry-unavailable.yaml) | `telemetry_unavailable` | OTel Collector / Prometheus 無法連線 |
 | [`timeout.yaml`](scenarios/timeout.yaml) | `timeout` | `TimeoutError` / `socket.timeout` |
-| [`runtime-error.yaml`](scenarios/runtime-error.yaml) | `runtime_error` | Catch-all for unclassified exceptions |
+| [`runtime-error.yaml`](scenarios/runtime-error.yaml) | `runtime_error` | 未分類例外的 Catch-all |
 
-Each scenario's probes assert across **three signal paths simultaneously**:
-1. Prometheus metric label (`pipeline_failures_total{failure_category="..."}`)
-2. Alert state (`ALERTS{alertname="...",alertstate="firing"}`)
-3. Lineage / trace correlation (where applicable)
+每個情境的 Probe 同時斷言**三條訊號路徑**：
 
-> **Why the schema-drift scenario is special**: PySpark plan-analyzer
-> failures (e.g. `UNRESOLVED_COLUMN`) raise `AnalysisException` _before_
-> Spark launches a job, so the OpenLineage Spark listener never observes
-> the run. The pipeline therefore emits a shadow `START`+`FAIL` OpenLineage
-> event from [`pipeline/lineage_emitter.py`](pipeline/lineage_emitter.py)
-> using its own `run_id` — preserving the three-way correlation. This is a
-> general pattern for any "fail before Spark engine starts" class of bug.
+1. Prometheus 指標標籤（`pipeline_failures_total{failure_category="..."}`）
+2. 告警狀態（`ALERTS{alertname="...",alertstate="firing"}`）
+3. 血緣 / 追蹤關聯（適用時）
 
-### Anatomy of a scenario file
+> **Schema Drift 情境的特殊性**：PySpark Plan 分析器故障（例如 `UNRESOLVED_COLUMN`）在 Spark 啟動 Job 之前就觸發 `AnalysisException`，因此 OpenLineage Spark Listener 永遠觀察不到這次執行。Pipeline 因此從 [`pipeline/lineage_emitter.py`](pipeline/lineage_emitter.py) 發送 Shadow `START`+`FAIL` OpenLineage Event，使用自身的 `run_id` — 以保留三路關聯。這是所有「Spark 引擎啟動前即失敗」類型 Bug 的通用模式。
+
+### 情境檔案結構
 
 ```yaml
 name: input-not-found
 description: Input file missing; pipeline raises FileNotFoundError
 pipeline:
   input_records: 0
-  inject_failure: input_not_found     # one of pipeline.failure_injection.SUPPORTED_INJECTIONS
-  schema_version: v1                  # optional — drives schema-drift mode
-  pre_runs:                           # optional — multi-run scenarios (baseline → drift)
+  inject_failure: input_not_found     # pipeline.failure_injection.SUPPORTED_INJECTIONS 之一
+  schema_version: v1                  # 選填 — 驅動 schema-drift 模式
+  pre_runs:                           # 選填 — 多次執行情境（基準 → Drift）
     - schema_version: v1
       inject_failure: none
 expected_run_status: failed           # succeeded | failed
-expected_failure_category: input_not_found  # one of KNOWN_CATEGORIES, or null
+expected_failure_category: input_not_found  # KNOWN_CATEGORIES 之一，或 null
 expected_alerts:
   - PipelineRunFailed
-probes:                               # validated against the live monitoring stack
+probes:                               # 針對實際監控堆疊驗證
   - id: failure_category_metric
     cmd: prom-query
     args:
@@ -158,37 +148,36 @@ probes:                               # validated against the live monitoring st
 
 ### Probes
 
-Defined in [`scripts/probe.py`](scripts/probe.py). Use them inline in
-scenarios or one-off from the CLI.
+定義於 [`scripts/probe.py`](scripts/probe.py)。可內嵌於情境中或從 CLI 單次執行。
 
-| `cmd` | Backend | Asserts |
+| `cmd` | Backend | 斷言內容 |
 |---|---|---|
-| `prom-query` | Prometheus | a PromQL expression evaluates to ≥ N / ≤ N / == N within a window |
-| `otel-trace` | Tempo | recent trace from a service exists and contains specified attributes (suffix-matched, so `--has-attr run_id` matches `pipeline.run_id`) |
-| `lineage-run-state` | Marquez (OpenLineage) | a given `run_id` reaches a target state (e.g. `FAILED`) within a window |
+| `prom-query` | Prometheus | PromQL 表達式在指定時間窗口內評估為 ≥ N / ≤ N / == N |
+| `otel-trace` | Tempo | 來自指定服務的最新追蹤存在，且包含指定屬性（後綴匹配，`--has-attr run_id` 可匹配 `pipeline.run_id`） |
+| `lineage-run-state` | Marquez (OpenLineage) | 指定 `run_id` 在時間窗口內達到目標狀態（例如 `FAILED`） |
 
-Each probe emits a single-line JSON verdict with `verdict`, `actual`, `latency_ms`, and a `hint` on failure.
+每個 Probe 輸出單行 JSON 結論，包含 `verdict`、`actual`、`latency_ms`，以及失敗時的 `hint`。
 
 ---
 
-## Test Layers
+## 測試層次
 
-| Layer | When to run | Time | Cluster needed? | Asserts |
+| 層次 | 執行時機 | 時間 | 需要叢集？ | 斷言內容 |
 |---|---|---|---|---|
-| **Contract** ([`tests/contract/`](tests/contract/)) | Every code change | < 5 s | No | Type-level invariants: KNOWN_CATEGORIES stable, scenario YAML schema valid, classifier deterministic, metric labels frozen, three-way alignment between scenarios / runbook / alerts |
-| **Integration** ([`tests/integration/`](tests/integration/)) | Before declaring code change "done" | ~10 s | No (stubbed) | Wiring: failure injection → metric increment, OTel span attributes set, alert YAML structure, lifecycle payload shape, lineage-run-state probe behavior |
-| **Smoke** ([`tests/smoke/`](tests/smoke/)) | Before committing pipeline / Helm / script changes | minutes | **Yes** | End-to-end: bootstrap → pipeline → probes → coverage; nuke + rebuild idempotency |
-| **Live scenario harness** (`./scripts/run-all-failure-scenarios.sh`) | Release gate; recurring monitoring health check | minutes | **Yes** | Every failure category produces matching metric label, alert, and lineage state in real Marquez/Prometheus/Tempo |
+| **Contract**（[`tests/contract/`](tests/contract/)） | 每次程式碼變更 | < 5 秒 | 否 | 型別層級不變量：KNOWN_CATEGORIES 穩定、情境 YAML Schema 有效、分類器確定性、指標標籤凍結、情境 / Runbook / 告警三路對齊 |
+| **Integration**（[`tests/integration/`](tests/integration/)） | 宣告程式碼變更完成前 | ~10 秒 | 否（Stub） | 配線：故障注入 → 指標累加、OTel Span 屬性設置、告警 YAML 結構、生命週期 Payload 形狀、血緣 Run 狀態 Probe 行為 |
+| **Smoke**（[`tests/smoke/`](tests/smoke/)） | 提交 Pipeline / Helm / Script 變更前 | 數分鐘 | **是** | 端對端：啟動 → Pipeline → Probe → Coverage；Nuke + 重建冪等性 |
+| **Live 情境執行框架**（`./scripts/run-all-failure-scenarios.sh`） | 發布驗收；定期監控健康檢查 | 數分鐘 | **是** | 每個故障類別在真實 Marquez / Prometheus / Tempo 中產生對應的指標標籤、告警與血緣狀態 |
 
 ```bash
-# Inner loop (fastest)
+# 內迴圈（最快）
 uv run ruff format . && uv run ruff check . --fix
 uv run pytest -q tests/contract
 
-# Pre-commit
+# 提交前
 uv run pytest -q tests/contract tests/integration
 
-# Pre-release
+# 發布前
 ./deploy/scripts/run-smoke-test.sh
 ./scripts/run-all-failure-scenarios.sh --update-report
 ./deploy/scripts/check-monitoring-coverage.sh
@@ -196,7 +185,7 @@ uv run pytest -q tests/contract tests/integration
 
 ---
 
-## Coverage CLI — release-gate artifact
+## Coverage CLI — 發布驗收成品
 
 ```bash
 python -m pipeline.coverage \
@@ -207,76 +196,46 @@ python -m pipeline.coverage \
   --output .local-data/coverage/release.json
 ```
 
-| Exit code | Meaning |
+| 退出碼 | 含義 |
 |---|---|
-| `0` | All checks pass |
-| `1` | Warning (stale lineage, datasource latency) |
-| `2` | Critical (Prometheus unreachable, rules not loaded, Grafana / Marquez down) |
+| `0` | 所有檢查通過 |
+| `1` | 警告（血緣過期、Datasource 延遲） |
+| `2` | 嚴重（Prometheus 無法連線、規則未載入、Grafana / Marquez 離線） |
 
-The JSON report includes pinned chart versions for all four upstream charts,
-a list of validation checks (each `pass`/`warn`/`fail` with detail), and
-`last_verified_at` — meant to be archived per release.
+JSON 報告包含所有四個上游 Chart 的版本、各驗證檢查的結果（每項 `pass`/`warn`/`fail` 含細節）以及 `last_verified_at` — 設計上應於每次發布時歸檔。
 
 ---
 
-## Adapting this to your own pipeline
+## 調整為自有 Pipeline
 
-1. **Replace [`pipeline/job.py`](pipeline/job.py)** with your Spark job. Keep
-   the lifecycle envelope — `record_run_started`, `record_run_succeeded` /
-   `record_run_failed`, `start_run_span`, `maybe_shadow_emit` — so all three
-   signal paths share the same `run_id`.
-2. **Reuse [`pipeline/failure_classifier.py`](pipeline/failure_classifier.py)**
-   as-is. The 9 categories cover most generic batch failure modes; extend
-   `KNOWN_CATEGORIES` only when a category needs a separate alert routing.
-3. **Author scenarios** for whatever failure modes matter to your team — the
-   YAML schema is in [`pipeline/scenario_schema.py`](pipeline/scenario_schema.py).
-4. **Run the harness in CI** against an ephemeral local cluster
-   (`./scripts/run-all-failure-scenarios.sh --update-report`) and treat
-   anything less than full pass as a release block.
-5. **Read [`docs/runbook.md`](docs/runbook.md)** before customizing alerts —
-   the alert/dashboard/runbook three-way alignment is enforced by
-   [`tests/contract/test_coverage_alignment_contract.py`](tests/contract/test_coverage_alignment_contract.py),
-   so additions must update all three.
+1. **替換 [`pipeline/job.py`](pipeline/job.py)** 為你的 Spark Job。保留生命週期封裝 — `record_run_started`、`record_run_succeeded` / `record_run_failed`、`start_run_span`、`maybe_shadow_emit` — 以確保三條訊號路徑共用同一個 `run_id`。
+2. **直接重用 [`pipeline/failure_classifier.py`](pipeline/failure_classifier.py)**。9 個類別涵蓋大多數通用 Batch 故障模式；僅在某個類別需要獨立告警路由時才擴展 `KNOWN_CATEGORIES`。
+3. **為你的團隊關注的故障模式撰寫情境** — YAML Schema 定義於 [`pipeline/scenario_schema.py`](pipeline/scenario_schema.py)。
+4. **在 CI 中針對臨時本地叢集執行框架**（`./scripts/run-all-failure-scenarios.sh --update-report`），並將任何未全數通過的結果視為發布阻斷條件。
+5. **自訂告警前閱讀 [`docs/runbook.md`](docs/runbook.md)** — 告警 / 儀表板 / Runbook 三路對齊由 [`tests/contract/test_coverage_alignment_contract.py`](tests/contract/test_coverage_alignment_contract.py) 強制執行，新增項目必須同步更新三者。
 
 ---
 
-## Design principles (why it looks like this)
+## 設計原則（為何如此設計）
 
-- **Configuration-first integration.** Upstream Helm charts are the source
-  of truth for stack components; project templates are glue only.
-- **One `run_id` across signals.** Pipeline generates a single UUID; metrics
-  exemplars, OTel span attrs, OpenLineage events all carry it. This is what
-  makes alert → trace → lineage triage work in three hops.
-- **Cardinality discipline.** `run_id` and `failure_message` live in
-  Prometheus _exemplars_, never in metric labels — keeps `pipeline_failures_total`
-  cardinality bounded as scenarios grow.
-- **Probes assert what humans care about.** Probes query the live backends
-  rather than internal mocks, so a green run is real evidence the stack would
-  catch that failure in production.
-- **Three-way alignment is a contract.** A failure category exists only if
-  `scenarios/<x>.yaml` + `monitoring/alerts/...` + `docs/runbook.md` all
-  reference it. Drift between them is a contract-test failure.
-- **Plan-time failures need shadow emission.** The OpenLineage Spark
-  listener cannot observe failures before a Spark job is launched (e.g.
-  schema drift). The pipeline backstops this by emitting OpenLineage events
-  itself on the failure path — preserving lineage detection coverage.
+- **設定優先整合。** 上游 Helm Charts 是堆疊元件的事實來源；專案 Template 僅為膠合層。
+- **訊號間共用單一 `run_id`。** Pipeline 產生一個 UUID；指標 Exemplars、OTel Span Attributes、OpenLineage Events 全部帶有此 ID。這是讓告警 → 追蹤 → 血緣三跳處置得以運作的關鍵。
+- **基數管控。** `run_id` 與 `failure_message` 存於 Prometheus _Exemplars_，絕不進入指標標籤 — 確保 `pipeline_failures_total` 的基數隨情境增長仍受控。
+- **Probe 斷言人類真正關心的事。** Probe 查詢實際 Backend 而非內部 Mock，因此綠燈執行是堆疊能在生產中捕捉該故障的真實佐證。
+- **三路對齊是一份契約。** 一個故障類別必須同時存在於 `scenarios/<x>.yaml`、`monitoring/alerts/...` 與 `docs/runbook.md` 中。三者之間的漂移是 Contract 測試失敗。
+- **Plan 階段故障需要 Shadow Emission。** OpenLineage Spark Listener 無法觀察 Spark Job 啟動前的故障（例如 Schema Drift）。Pipeline 透過在故障路徑上自行發送 OpenLineage Events 來補足這個盲點 — 保留血緣偵測覆蓋率。
 
 ---
 
-## Validation ledger
+## 驗證帳本
 
-[`docs/validation-report.md`](docs/validation-report.md) is updated by
-`./scripts/run-all-failure-scenarios.sh --update-report` and tracks
-per-scenario `last_run_at` + result. Use it as the release-gate witness.
+`./scripts/run-all-failure-scenarios.sh --update-report` 自動更新 `docs/validation-report.md`（若存在），追蹤每個情境的 `last_run_at` 與結果，作為發布驗收的見證文件。
 
 ---
 
-## Operational notes
+## 運維備註
 
-- Pipeline image is built locally as `local/ai-monitor-pyspark:latest` by
-  `bootstrap-local.sh` (uses `imagePullPolicy: IfNotPresent` to avoid registry pulls).
-- Helm `--create-namespace` is used; reuses existing namespace if present.
-- `nuke-local.sh` tears down the namespace + PV/PVC; treat as destructive
-  and confirm before invoking.
-- For deeper agent context (CLI shortcuts, common failures, probe usage),
-  see [`CLAUDE.md`](CLAUDE.md).
+- Pipeline Image 由 `bootstrap-local.sh` 在本地建置為 `local/ai-monitor-pyspark:latest`（使用 `imagePullPolicy: IfNotPresent` 避免 Registry 拉取）。
+- Helm 使用 `--create-namespace`；若 Namespace 已存在則重用。
+- `nuke-local.sh` 會刪除 Namespace + PV/PVC；視為破壞性操作，執行前請確認。
+- 更深入的 Agent 上下文（CLI 捷徑、常見故障、Probe 使用方式），詳見 [`CLAUDE.md`](CLAUDE.md)。

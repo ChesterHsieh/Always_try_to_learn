@@ -120,7 +120,6 @@ If you believe one is needed, ask the user before invoking.
 - Helm rendered outputs from prior runs: `deploy/helm/tmpcharts-*/` (transient)
 - Runbook: [docs/runbook.md](docs/runbook.md)
 - Onboarding: [docs/onboarding-monitoring.md](docs/onboarding-monitoring.md)
-- Validation report: [docs/validation-report.md](docs/validation-report.md)
 
 ## Failure triage shortcuts
 

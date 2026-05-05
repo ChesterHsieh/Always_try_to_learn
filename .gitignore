@@ -16,6 +16,11 @@ secrets/
 kubeconfig*
 *.key
 *.crt
+.mypy_cache
+
+# Python tool caches
+ai-monitor-system/.pytest_cache/
+ai-monitor-system/.ruff_cache/
 
 # Build/runtime artifacts
 .metals/
