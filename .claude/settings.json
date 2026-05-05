@@ -21,7 +21,6 @@
       "Bash(uv pip*)",
       "Bash(uv sync*)",
       "Bash(ruff*)",
-      "Bash(pytest*)",
       "Bash(make *)",
 
       "Bash(helm lint*)",
@@ -32,6 +31,7 @@
       "Bash(helm show*)",
       "Bash(helm repo*)",
       "Bash(helm dependency*)",
+      "Bash(helm upgrade*)",
 
       "Bash(kubectl get*)",
       "Bash(kubectl describe*)",
@@ -42,6 +42,7 @@
       "Bash(kubectl explain*)",
       "Bash(kubectl version*)",
       "Bash(kubectl api-resources*)",
+      "Bash(kubectl rollout*)",
 
       "Bash(docker images*)",
       "Bash(docker ps*)",
@@ -60,6 +61,7 @@
 
       "Bash(curl -s http://localhost:*)",
       "Bash(curl -fsS http://localhost:*)",
+      "Bash(curl -sf http://localhost:*)",
       "Bash(timeout * kubectl*)",
       "Bash(echo *)"
     ],
@@ -75,7 +77,7 @@
       "Bash(cat *.env*)",
       "Bash(type *.env*)",
       "Read(**/.env*)",
-      "Bash(kubectl delete*)",
+
       "Bash(helm uninstall*)",
       "Bash(helm delete*)",
       "Bash(docker rm*)",
