@@ -8,6 +8,27 @@
 - 2026-04-17 — initial generation
 - 2026-04-18 — design-review revision: (1) `run_id`/`failure_message` 移出 metric labels，改以 OpenMetrics exemplars + alert annotation drilldown 承載；(2) coverage CLI 取消 `helm` CLI 依賴，改讀 Helm release Secret；(3) H1 雙堆疊收斂為 same-PR spike 並自 H1 起 enforce mutex。
 - 2026-04-18 — single-stack pivot: 放棄 H1→H2→H3 漸進遷移。Dev 階段允許直接 nuke namespace + PV/PVC；self-managed stack 相關模板、flag、mutex 守門全部移除；上游 chart 為唯一部署路徑。本文件保留 4 個 pipeline 子模組新增/擴充範圍，但 migration 段收斂為單堆疊直切。
+- 2026-05-05 — post-restructure path map: commit `6ab73f1` 將 `pipeline/{telemetry,tracing,lineage,lineage_emitter,metrics,otel_setup}.py` 移至 `telemetry/`，將 `pipeline/{io_adapter,scenario_schema,coverage}.py` 移至 `utils/`。本文件保留設計時刻的模組命名（`pipeline.coverage`、`pipeline.tracing` 等）作為設計脈絡；當前實作位置請參照下方 Path Map。
+
+---
+
+## Path Map (post-restructure, commit `6ab73f1`)
+
+設計時本文件描述的所有 `pipeline.<name>` / `pipeline/<name>.py` 引用已遷移；表內為設計階段名稱與當前實作位置的對照。閱讀本文件時請以下表覆寫當前定位。
+
+| Design-time reference         | Current location                                       |
+| ----------------------------- | ------------------------------------------------------ |
+| `pipeline.telemetry`          | `telemetry/telemetry.py`                               |
+| `pipeline.tracing`            | `telemetry/tracing.py`                                 |
+| `pipeline.lineage`            | `telemetry/lineage.py`                                 |
+| `pipeline.lineage_emitter`    | `telemetry/lineage_emitter.py`                         |
+| `pipeline.metrics`            | `telemetry/metrics.py`                                 |
+| `pipeline.otel_setup`         | `telemetry/otel_setup.py`                              |
+| `pipeline.io_adapter`         | `utils/io_adapter.py`                                  |
+| `pipeline.scenario_schema`    | `utils/scenario_schema.py`                             |
+| `pipeline.coverage`           | `utils/coverage.py` (CLI: `python -m utils.coverage`)  |
+
+模組行為、責任與契約皆未變動；僅 import path 與檔案位置改變。Contract / integration / smoke tests 已同步更新。
 
 ---
 

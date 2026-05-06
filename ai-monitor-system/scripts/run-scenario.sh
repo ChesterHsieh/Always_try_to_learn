@@ -92,7 +92,7 @@ LIFECYCLE_RUN_ID=""
 
 if [ "$RUN_PIPELINE" -eq 1 ]; then
   if [ -x "./deploy/scripts/run-pipeline.sh" ]; then
-    # Optional pre-runs (e.g. baseline schema_v1 run for schema-drift).
+    # Optional pre-runs (e.g. baseline schema_v1 run for schema-mismatch).
     # Output is logged for transparency but lifecycle/probes are not
     # captured — only the main run's payload feeds expected vs actual.
     if [ -n "$PRE_RUNS_TSV" ]; then

@@ -146,6 +146,6 @@ If you believe one is needed, ask the user before invoking.
 - Image not found → rebuild via `bootstrap-local.sh` (it builds
   `local/ai-monitor-pyspark:latest` before deploy); `imagePullPolicy: IfNotPresent`.
 - Missing telemetry → check OTel collector pod logs and
-  [pipeline/otel_setup.py](pipeline/otel_setup.py) endpoint config.
+  [telemetry/otel_setup.py](telemetry/otel_setup.py) endpoint config.
 - Failure-classifier behavior → contract spec lives in
   [tests/contract/test_failure_classifier_contract.py](tests/contract/test_failure_classifier_contract.py).

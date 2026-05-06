@@ -11,7 +11,7 @@ data:
   # lineage_emitter.py reads MARQUEZ_URL directly (alongside OPENLINEAGE_URL).
   MARQUEZ_URL: "{{ .Values.openlineage.transport.url }}"
   # Enables pipeline-side shadow OpenLineage events so plan-analyzer
-  # failures (e.g. AnalysisException in schema-drift) reach Marquez.
+  # failures (e.g. AnalysisException in schema-mismatch) reach Marquez.
   # The OpenLineage Spark listener cannot observe these failures because
   # no Spark job is launched when plan analysis fails.
   LINEAGE_SHADOW_EMIT: "{{ .Values.openlineage.shadowEmit | default "true" }}"

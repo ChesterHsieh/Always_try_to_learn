@@ -16,7 +16,7 @@ bash deploy/scripts/run-pipeline.sh
 
 # Verify coverage
 bash deploy/scripts/check-monitoring-coverage.sh
-# OR: python -m pipeline.coverage --output .local-data/coverage/report.json
+# OR: python -m utils.coverage --output .local-data/coverage/report.json
 
 # Run smoke tests
 bash deploy/scripts/run-smoke-test.sh
@@ -31,7 +31,7 @@ NUKE_BEFORE_BOOTSTRAP=true bash deploy/scripts/bootstrap-local.sh
 ## Coverage CLI
 
 ```bash
-python -m pipeline.coverage \
+python -m utils.coverage \
   --namespace ai-monitor-system \
   --marquez-url http://ai-monitor-system-upstream-marquez:9555 \
   --prometheus-url http://ai-monitor-system-upstream-prometheus-server:80 \
@@ -59,7 +59,7 @@ All 9 categories are defined in `pipeline.failure_classifier.KNOWN_CATEGORIES`:
 | `invalid_path` | `IsADirectoryError` | Verify `INPUT_PATH` points to file, not directory |
 | `permission_denied` | `PermissionError` | Check pod ServiceAccount + volume mount permissions |
 | `spark_task_failed` | `Py4JJavaError` (task failure) | Check Spark logs for task exception; reduce data skew |
-| `spark_driver_error` | `Py4JJavaError` (driver/SparkException) **or** `pyspark.errors.AnalysisException` (plan-analyzer failure such as schema drift) | Check JVM logs; verify OL JAR path. For plan-time failures see `failure-spark_driver_error` § *Schema drift sub-case* |
+| `spark_driver_error` | `Py4JJavaError` (driver/SparkException) **or** `pyspark.errors.AnalysisException` (plan-analyzer failure such as a schema mismatch between runs) | Check JVM logs; verify OL JAR path. For plan-time failures see `failure-spark_driver_error` § *Schema mismatch sub-case* |
 | `lineage_emission_failed` | `ConnectionError` to Marquez / OL error | Verify Marquez service DNS; check `OPENLINEAGE_URL` |
 | `telemetry_unavailable` | OTel/Prometheus `ConnectionError` | Verify OTel Collector and Prometheus services |
 | `timeout` | `TimeoutError` / `socket.timeout` / requests timeout | Check service latency; increase timeout env vars |
@@ -240,23 +240,23 @@ INJECT_FAILURE=spark_driver_error ./deploy/scripts/run-pipeline.sh
    uv run python scripts/probe.py lineage-run-state --run-id <run_id> --state-eq FAILED
    ```
 
-#### Schema drift sub-case
+#### Schema mismatch sub-case
 
 PySpark plan-analyzer errors (`UNRESOLVED_COLUMN`, type mismatch, missing
 column) are surfaced as `pyspark.errors.exceptions.captured.AnalysisException`
-and classified as `spark_driver_error`. The `schema-drift` scenario
-reproduces this end-to-end with two sequential runs (baseline schema v1 →
-drift schema v2 fails analysis).
+and classified as `spark_driver_error`. The `schema-mismatch` scenario
+reproduces this end-to-end with two sequential runs (baseline writes with
+schema v1 → second run reads with schema v2 expectations and fails analysis).
 
 **Reproduce**:
 ```bash
-./scripts/run-scenario.sh schema-drift
+./scripts/run-scenario.sh schema-mismatch
 ```
 
 **OpenLineage Spark listener blind spot**: when plan analysis fails, no
 Spark job is launched, so the listener never observes the run. The
 pipeline therefore emits a shadow OpenLineage `START`+`FAIL` pair from
-[lineage_emitter.py](../pipeline/lineage_emitter.py) so Marquez records
+[lineage_emitter.py](../telemetry/lineage_emitter.py) so Marquez records
 the run with state `FAILED` and an `errorMessage` facet (gated by the
 `LINEAGE_SHADOW_EMIT` configmap key). The shadow event uses the
 pipeline-side `run_id`, identical to the metric exemplar and trace

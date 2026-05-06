@@ -49,7 +49,7 @@ class Probe:
 class PreRun:
     """Optional baseline run executed before the main run.
 
-    Used by multi-run scenarios (e.g. schema-drift) to seed the lineage
+    Used by multi-run scenarios (e.g. schema-mismatch) to seed the lineage
     backend with a prior dataset version before the failing run is observed.
     """
 

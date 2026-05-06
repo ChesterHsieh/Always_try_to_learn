@@ -4,6 +4,7 @@
 > **Companion docs**: `requirements.md`、`design.md`、`research.md`、`gap-analysis.md`
 > **Deployment model**: 單堆疊直切（上游 Helm chart 為唯一部署路徑；無 H1/H2/H3 漸進、無 self-managed fallback、無 feature flag mutex）
 > **Boundary 對齊**：依 `.kiro/steering/structure.md` 之 `pipeline/` / `deploy/helm/` / `deploy/scripts/` / `monitoring/` / `tests/` / `docs/` 邊界
+> **Path map (post-restructure, 2026-05-05, commit `6ab73f1`)**：本 plan 中所有 `pipeline.<name>` / `pipeline/<name>.py` 引用已遷移至 `telemetry/`（telemetry 與 lineage 模組）與 `utils/`（io_adapter、scenario_schema、coverage）。完整對照表見 `design.md` 開頭的 Path Map 區塊。模組行為與契約皆未變動。
 
 ---
 

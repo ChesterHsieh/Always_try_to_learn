@@ -1,5 +1,7 @@
 # Research & Design Decisions
 
+> **Path map (post-restructure, 2026-05-05, commit `6ab73f1`)**：本 research 中所有 `pipeline/<name>.py` 引用已遷移至 `telemetry/` 與 `utils/`。完整對照表見 `design.md` 開頭的 Path Map 區塊。
+
 ## Summary
 
 - **Feature**: `pyspark-monitoring-framework`

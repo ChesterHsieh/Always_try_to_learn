@@ -108,7 +108,7 @@ Treat anything less than full pass as a release block.
 
 The 10 failure scenarios cover every category in
 `pipeline.failure_classifier.KNOWN_CATEGORIES` plus one **two-run schema
-drift** case (`schema-drift`) — see [README.md § Failure Scenario Catalog](../README.md#failure-scenario-catalog) for the full list.
+mismatch** case (`schema-mismatch`) — see [README.md § Failure Scenario Catalog](../README.md#failure-scenario-catalog) for the full list.
 
 ---
 
@@ -117,7 +117,7 @@ drift** case (`schema-drift`) — see [README.md § Failure Scenario Catalog](..
 ```bash
 ./deploy/scripts/check-monitoring-coverage.sh
 # OR directly:
-python -m pipeline.coverage --output .local-data/coverage/latest.json
+python -m utils.coverage --output .local-data/coverage/latest.json
 ```
 
 Exit codes:
@@ -226,7 +226,7 @@ Two lineage event sources cooperate to give Marquez complete coverage:
 | Source | Driven by | Run ID | Covers |
 |---|---|---|---|
 | **OpenLineage Spark listener** | `spark.extraListeners` config in pipeline | listener-generated UUID | normal Spark execution (job submitted, plan analyzed, tasks run, COMPLETE/FAIL emitted) |
-| **Pipeline shadow emitter** ([`pipeline/lineage_emitter.py`](../pipeline/lineage_emitter.py)) | `LINEAGE_SHADOW_EMIT=true` (configmap default) | pipeline's own `run_id` | failures **before** Spark launches a job (e.g. plan-analyzer failures like schema drift); preserves three-way correlation |
+| **Pipeline shadow emitter** ([`telemetry/lineage_emitter.py`](../telemetry/lineage_emitter.py)) | `LINEAGE_SHADOW_EMIT=true` (configmap default) | pipeline's own `run_id` | failures **before** Spark launches a job (e.g. plan-analyzer failures like a schema mismatch between runs); preserves three-way correlation |
 
 **Why both are needed**: PySpark plan-analyzer failures
 (`AnalysisException`, `UNRESOLVED_COLUMN`, type mismatch) raise before

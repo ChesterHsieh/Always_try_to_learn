@@ -49,7 +49,10 @@ specs/001-pyspark-monitoring-framework/
 
 ### Source Code (repository root)
 
+> **Note (post-restructure, commit `6ab73f1`)**: The original layout below described `pipeline/{telemetry,tracing,lineage,io_adapter,scenario_schema,coverage}.py`. Those modules were split into `telemetry/` (observability emitters) and `utils/` (shared helpers). The current canonical layout is shown second.
+
 ```text
+# Original (pre-restructure) layout — kept for historical traceability
 ai-monitor-system/
 ├── pipeline/
 │   ├── job.py
@@ -81,7 +84,55 @@ ai-monitor-system/
     └── smoke/
 ```
 
-**Structure Decision**: Keep `ai-monitor-system` as a single project, but shift observability component ownership from custom in-repo manifests to upstream Helm charts configured through values and minimal overlays. Project-owned templates remain for pipeline-specific wiring and explicit contracts.
+```text
+# Current (post-restructure) layout — authoritative
+ai-monitor-system/
+├── pipeline/
+│   ├── job.py
+│   ├── failure_classifier.py
+│   ├── failure_injection.py
+│   └── run_context.py
+├── telemetry/
+│   ├── telemetry.py
+│   ├── tracing.py
+│   ├── lineage.py
+│   ├── lineage_emitter.py
+│   ├── metrics.py
+│   └── otel_setup.py
+├── utils/
+│   ├── io_adapter.py
+│   ├── scenario_schema.py
+│   └── coverage.py
+├── deploy/
+│   ├── helm/
+│   └── scripts/
+├── monitoring/
+│   ├── dashboards/
+│   ├── alerts/
+│   └── grafana/
+├── scenarios/
+├── scripts/
+└── tests/
+    ├── contract/
+    ├── integration/
+    └── smoke/
+```
+
+**Path Mapping (legacy → current)**:
+
+| Legacy reference (in this spec)   | Current location                                       |
+| --------------------------------- | ------------------------------------------------------ |
+| `pipeline/telemetry.py`           | `telemetry/telemetry.py`                               |
+| `pipeline/tracing.py`             | `telemetry/tracing.py`                                 |
+| `pipeline/lineage.py`             | `telemetry/lineage.py`                                 |
+| `pipeline/lineage_emitter.py`     | `telemetry/lineage_emitter.py`                         |
+| `pipeline/metrics.py`             | `telemetry/metrics.py`                                 |
+| `pipeline/otel_setup.py`          | `telemetry/otel_setup.py`                              |
+| `pipeline/io_adapter.py`          | `utils/io_adapter.py`                                  |
+| `pipeline/scenario_schema.py`     | `utils/scenario_schema.py`                             |
+| `pipeline/coverage.py`            | `utils/coverage.py` (CLI: `python -m utils.coverage`)  |
+
+**Structure Decision**: Keep `ai-monitor-system` as a single project, but shift observability component ownership from custom in-repo manifests to upstream Helm charts configured through values and minimal overlays. Project-owned templates remain for pipeline-specific wiring and explicit contracts. Source modules are split by concern (`pipeline/` orchestration, `telemetry/` emitters, `utils/` shared helpers) per the post-restructure layout above.
 
 ## Phase Design Approach
 

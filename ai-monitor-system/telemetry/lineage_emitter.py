@@ -32,7 +32,7 @@ def maybe_shadow_emit(
     For failed runs (especially plan-analyzer errors that the OpenLineage
     Spark listener cannot observe), call with event_type="FAIL" plus
     error_message/failure_category so the lineage backend records the
-    correct terminal state — this is the only way the schema-drift
+    correct terminal state — this is the only way the schema-mismatch
     scenario can verify R3.5/R3.6's "lineage detection path".
     """
 

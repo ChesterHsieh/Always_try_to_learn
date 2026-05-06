@@ -38,7 +38,7 @@ def test_coverage_cli_pass_count_and_chart_versions(mock_k8s_helm_secret):
         return m
 
     with patch("requests.get", side_effect=mock_get):
-        with patch("pipeline.coverage._get_k8s_api", return_value=mock_k8s_helm_secret):
+        with patch("utils.coverage._get_k8s_api", return_value=mock_k8s_helm_secret):
             report = run_coverage(
                 namespace="ai-monitor-system",
                 marquez_url="http://marquez:9555",

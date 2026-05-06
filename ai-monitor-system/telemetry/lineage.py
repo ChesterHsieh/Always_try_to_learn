@@ -18,7 +18,7 @@ def build_openlineage_event(
     `event_type` should be one of START / RUNNING / COMPLETE / ABORT / FAIL.
     For FAIL/ABORT events, `error_message` and `failure_category` populate
     an errorMessage facet so downstream lineage backends can surface why
-    the run terminated — this is how the schema-drift scenario gets
+    the run terminated — this is how the schema-mismatch scenario gets
     visibility on plan-analyzer failures that the OpenLineage Spark
     listener never observes (because no Spark job is launched).
     """

@@ -110,7 +110,7 @@ Namespace 預設為 `ai-monitor-system`；Release Name 預設為 `monitor`。
 | [`permission-denied.yaml`](scenarios/permission-denied.yaml) | `permission_denied` | RBAC / 掛載導致的 `PermissionError` |
 | [`spark-task-failed.yaml`](scenarios/spark-task-failed.yaml) | `spark_task_failed` | Py4JJavaError Task 失敗 |
 | [`spark-driver-error.yaml`](scenarios/spark-driver-error.yaml) | `spark_driver_error` | Driver 端 SparkException |
-| [`schema-drift.yaml`](scenarios/schema-drift.yaml) | `spark_driver_error` | **兩次執行的 Schema Drift** — 基準執行寫入 `value: STRING`，Drift 執行以不匹配 Schema 讀取 → `AnalysisException`（`UNRESOLVED_COLUMN`）；驗證 Marquez 在 OpenLineage Spark Listener 的 Plan 階段盲點下仍能記錄 `state=FAILED` 並附帶 `errorMessage` facet |
+| [`schema-mismatch.yaml`](scenarios/schema-mismatch.yaml) | `spark_driver_error` | **兩次執行間的 Schema Mismatch** — 基準執行以 schema v1 寫入 `value: STRING`，第二次執行以 schema v2 期望讀取（選擇 v1 不存在的欄位）→ `AnalysisException`（`UNRESOLVED_COLUMN`）；驗證 Marquez 在 OpenLineage Spark Listener 的 Plan 階段盲點下仍能記錄 `state=FAILED` 並附帶 `errorMessage` facet |
 | [`lineage-emission-failed.yaml`](scenarios/lineage-emission-failed.yaml) | `lineage_emission_failed` | Marquez 無法連線 / OpenLineage 錯誤 |
 | [`telemetry-unavailable.yaml`](scenarios/telemetry-unavailable.yaml) | `telemetry_unavailable` | OTel Collector / Prometheus 無法連線 |
 | [`timeout.yaml`](scenarios/timeout.yaml) | `timeout` | `TimeoutError` / `socket.timeout` |
@@ -122,7 +122,7 @@ Namespace 預設為 `ai-monitor-system`；Release Name 預設為 `monitor`。
 2. 告警狀態（`ALERTS{alertname="...",alertstate="firing"}`）
 3. 血緣 / 追蹤關聯（適用時）
 
-> **Schema Drift 情境的特殊性**：PySpark Plan 分析器故障（例如 `UNRESOLVED_COLUMN`）在 Spark 啟動 Job 之前就觸發 `AnalysisException`，因此 OpenLineage Spark Listener 永遠觀察不到這次執行。Pipeline 因此從 [`telemetry/lineage_emitter.py`](telemetry/lineage_emitter.py) 發送 Shadow `START`+`FAIL` OpenLineage Event，使用自身的 `run_id` — 以保留三路關聯。這是所有「Spark 引擎啟動前即失敗」類型 Bug 的通用模式。
+> **Schema Mismatch 情境的特殊性**：PySpark Plan 分析器故障（例如 `UNRESOLVED_COLUMN`）在 Spark 啟動 Job 之前就觸發 `AnalysisException`，因此 OpenLineage Spark Listener 永遠觀察不到這次執行。Pipeline 因此從 [`telemetry/lineage_emitter.py`](telemetry/lineage_emitter.py) 發送 Shadow `START`+`FAIL` OpenLineage Event，使用自身的 `run_id` — 以保留三路關聯。這是所有「Spark 引擎啟動前即失敗」類型 Bug 的通用模式。
 
 ### 情境檔案結構
 
@@ -132,8 +132,8 @@ description: Input file missing; pipeline raises FileNotFoundError
 pipeline:
   input_records: 0
   inject_failure: input_not_found     # pipeline.failure_injection.SUPPORTED_INJECTIONS 之一
-  schema_version: v1                  # 選填 — 驅動 schema-drift 模式
-  pre_runs:                           # 選填 — 多次執行情境（基準 → Drift）
+  schema_version: v1                  # 選填 — 驅動 schema-mismatch 模式
+  pre_runs:                           # 選填 — 多次執行情境（基準 → 後續執行的 schema 不匹配）
     - schema_version: v1
       inject_failure: none
 expected_run_status: failed           # succeeded | failed
@@ -197,7 +197,7 @@ uv run pytest -q tests/contract tests/integration
 ## Coverage CLI — 發布驗收成品
 
 ```bash
-python -m pipeline.coverage \
+python -m utils.coverage \
   --namespace ai-monitor-system \
   --marquez-url http://ai-monitor-system-upstream-marquez:9555 \
   --prometheus-url http://ai-monitor-system-upstream-prometheus-server:80 \
@@ -219,7 +219,7 @@ JSON 報告包含所有四個上游 Chart 的版本、各驗證檢查的結果�
 
 1. **替換 [`pipeline/job.py`](pipeline/job.py)** 為你的 Spark Job。保留生命週期封裝 — `record_run_started`、`record_run_succeeded` / `record_run_failed`、`start_run_span`、`maybe_shadow_emit` — 以確保三條訊號路徑共用同一個 `run_id`。
 2. **直接重用 [`pipeline/failure_classifier.py`](pipeline/failure_classifier.py)**。9 個類別涵蓋大多數通用 Batch 故障模式；僅在某個類別需要獨立告警路由時才擴展 `KNOWN_CATEGORIES`。
-3. **為你的團隊關注的故障模式撰寫情境** — YAML Schema 定義於 [`pipeline/scenario_schema.py`](pipeline/scenario_schema.py)。
+3. **為你的團隊關注的故障模式撰寫情境** — YAML Schema 定義於 [`utils/scenario_schema.py`](utils/scenario_schema.py)。
 4. **在 CI 中針對臨時本地叢集執行框架**（`./scripts/run-all-failure-scenarios.sh --update-report`），並將任何未全數通過的結果視為發布阻斷條件。
 5. **自訂告警前閱讀 [`docs/runbook.md`](docs/runbook.md)** — 告警 / 儀表板 / Runbook 三路對齊由 [`tests/contract/test_coverage_alignment_contract.py`](tests/contract/test_coverage_alignment_contract.py) 強制執行，新增項目必須同步更新三者。
 
@@ -232,7 +232,7 @@ JSON 報告包含所有四個上游 Chart 的版本、各驗證檢查的結果�
 - **基數管控。** `run_id` 與 `failure_message` 存於 Prometheus _Exemplars_，絕不進入指標標籤 — 確保 `pipeline_failures_total` 的基數隨情境增長仍受控。
 - **Probe 斷言人類真正關心的事。** Probe 查詢實際 Backend 而非內部 Mock，因此綠燈執行是堆疊能在生產中捕捉該故障的真實佐證。
 - **三路對齊是一份契約。** 一個故障類別必須同時存在於 `scenarios/<x>.yaml`、`monitoring/alerts/...` 與 `docs/runbook.md` 中。三者之間的漂移是 Contract 測試失敗。
-- **Plan 階段故障需要 Shadow Emission。** OpenLineage Spark Listener 無法觀察 Spark Job 啟動前的故障（例如 Schema Drift）。Pipeline 透過在故障路徑上自行發送 OpenLineage Events 來補足這個盲點 — 保留血緣偵測覆蓋率。
+- **Plan 階段故障需要 Shadow Emission。** OpenLineage Spark Listener 無法觀察 Spark Job 啟動前的故障（例如 Schema Mismatch）。Pipeline 透過在故障路徑上自行發送 OpenLineage Events 來補足這個盲點 — 保留血緣偵測覆蓋率。
 
 ---
 

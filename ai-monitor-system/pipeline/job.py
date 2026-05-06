@@ -88,7 +88,7 @@ def run_pipeline(input_path: str, output_path: str) -> dict[str, str]:
 
             maybe_inject(inject_failure, stage="during_spark")
 
-            # Schema selection — drives the schema-drift scenario.
+            # Schema selection — drives the schema-mismatch scenario.
             # v1 (default) reads `value` as a STRING and uppercases it.
             # v2 selects a column that does not exist in the input dataset,
             # so Spark's plan analyzer raises AnalysisException at runtime —

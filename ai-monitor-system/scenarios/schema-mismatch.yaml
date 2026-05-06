@@ -1,23 +1,27 @@
-# Scenario: schema-drift
+# Scenario: schema-mismatch
 #
 # Two pipeline runs against the same dataset with incompatible schemas.
 # Run 1 (pre-run, baseline) writes the dataset with schema v1 (`value: STRING`).
 # Run 2 (main run) reads that dataset but selects a column that schema v1
-# does not expose, so Spark's plan analyzer raises AnalysisException.
+# does not expose, so Spark's plan analyzer raises AnalysisException — i.e.
+# a schema mismatch between what the reader expects and what was persisted.
 #
 # Detection paths verified:
 #   1. Prometheus metric label failure_category="spark_driver_error"
 #   2. PipelineSparkDriverError alert fires
 #   3. Lineage backend records the *baseline* run as COMPLETED and the
-#      *drift* run as FAILED (real OpenLineage Spark listener events; the
-#      run_id used here is the pipeline-emitted run_id from the second run)
+#      *mismatch* run as FAILED (real OpenLineage Spark listener events;
+#      the run_id used here is the pipeline-emitted run_id from the second
+#      run)
 #   4. Lineage dataset has at least 1 schema version recorded for the input
-#      dataset (proves the prior run's schema persisted before the drift)
+#      dataset (proves the prior run's schema persisted before the mismatch
+#      run reads it)
 
-name: schema-drift
+name: schema-mismatch
 description: >
-  Two-run schema drift: baseline writes dataset, drift run selects missing
-  column and fails with AnalysisException. Verifies metric label, alert,
+  Two-run schema mismatch: baseline writes dataset with schema v1; the
+  mismatch run reads it with schema v2 expectations, selects a missing
+  column, and fails with AnalysisException. Verifies metric label, alert,
   and lineage detection of FAILED state on the second run.
 
 pipeline:
@@ -55,7 +59,7 @@ probes:
       gte: 1
       within: 60
 
-  - id: lineage_drift_run_failed
+  - id: lineage_mismatch_run_failed
     cmd: lineage-run-state
     args:
       run_id: "{{ run_id }}"

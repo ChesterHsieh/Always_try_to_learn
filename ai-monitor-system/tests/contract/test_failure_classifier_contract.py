@@ -156,10 +156,10 @@ def test_schema_mismatch_injection_maps_to_spark_driver_error() -> None:
 
 
 def test_pyspark_native_analysis_exception_maps_to_spark_driver_error() -> None:
-    """PySpark-native AnalysisException (e.g. UNRESOLVED_COLUMN from schema drift)
-    must classify as spark_driver_error.
+    """PySpark-native AnalysisException (e.g. UNRESOLVED_COLUMN from a schema
+    mismatch between runs) must classify as spark_driver_error.
 
-    This guards the schema-drift scenario where a real Spark plan analyzer
+    This guards the schema-mismatch scenario where a real Spark plan analyzer
     error surfaces as `pyspark.errors.exceptions.captured.AnalysisException`
     rather than Py4JJavaError. Without this, the failure regresses to
     runtime_error and the failure-category metric label is wrong.
@@ -178,5 +178,5 @@ def test_pyspark_native_analysis_exception_maps_to_spark_driver_error() -> None:
     result = classify_failure(err)
     assert result == "spark_driver_error", (
         f"AnalysisException was classified as {result!r}; "
-        "schema-drift scenario requires spark_driver_error"
+        "schema-mismatch scenario requires spark_driver_error"
     )

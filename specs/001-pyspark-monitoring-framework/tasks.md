@@ -32,8 +32,8 @@
 **⚠️ CRITICAL**: No user story work starts until this phase completes.
 
 - [x] T006 Implement strict run context validation and lifecycle schema in `ai-monitor-system/pipeline/run_context.py`
-- [x] T007 [P] Harden local file I/O checks for deterministic failure categories in `ai-monitor-system/pipeline/io_adapter.py`
-- [x] T008 [P] Implement correlation-first telemetry envelope helpers in `ai-monitor-system/pipeline/telemetry.py`
+- [x] T007 [P] Harden local file I/O checks for deterministic failure categories in `ai-monitor-system/utils/io_adapter.py` _(post-restructure path; originally `pipeline/io_adapter.py`)_
+- [x] T008 [P] Implement correlation-first telemetry envelope helpers in `ai-monitor-system/telemetry/telemetry.py` _(post-restructure path; originally `pipeline/telemetry.py`)_
 - [x] T009 [P] Add contract fixtures for lifecycle/alert/lineage payloads in `ai-monitor-system/tests/contract/fixtures/monitoring_payloads.json`
 - [x] T010 Create project-owned integration bridge templates in `ai-monitor-system/deploy/helm/templates/openlineage-configmap.yaml` and `ai-monitor-system/deploy/helm/templates/spark-defaults-configmap.yaml`
 - [x] T011 Add migration-safe namespace and pipeline job templates in `ai-monitor-system/deploy/helm/templates/namespace.yaml` and `ai-monitor-system/deploy/helm/templates/pipeline-job.yaml`
@@ -58,7 +58,7 @@
 
 ### Implementation for User Story 1
 
-- [x] T017 [US1] Implement runtime lifecycle emission path in `ai-monitor-system/pipeline/job.py` and `ai-monitor-system/pipeline/telemetry.py`
+- [x] T017 [US1] Implement runtime lifecycle emission path in `ai-monitor-system/pipeline/job.py` and `ai-monitor-system/telemetry/telemetry.py` _(post-restructure path; originally `pipeline/telemetry.py`)_
 - [x] T018 [US1] Implement deterministic failure categorization and message mapping in `ai-monitor-system/pipeline/failure_classifier.py`
 - [x] T019 [US1] Migrate Prometheus to upstream chart values/overrides in `ai-monitor-system/deploy/helm/values.yaml` and `ai-monitor-system/deploy/helm/values.local-minimal.yaml`
 - [x] T020 [US1] Migrate Grafana to upstream chart values and datasource/dashboard provisioning in `ai-monitor-system/deploy/helm/values.yaml` and `ai-monitor-system/monitoring/grafana/datasources.yaml`
@@ -84,8 +84,8 @@
 ### Implementation for User Story 2
 
 - [x] T026 [US2] Integrate OpenLineage Spark listener runtime wiring in `ai-monitor-system/pipeline/job.py` and `ai-monitor-system/deploy/scripts/run-pipeline.sh`
-- [x] T027 [US2] Implement trace span attributes and run metadata propagation in `ai-monitor-system/pipeline/tracing.py`
-- [x] T028 [US2] Add cross-signal correlation fields in `ai-monitor-system/pipeline/telemetry.py` and `ai-monitor-system/pipeline/lineage.py`
+- [x] T027 [US2] Implement trace span attributes and run metadata propagation in `ai-monitor-system/telemetry/tracing.py` _(post-restructure path; originally `pipeline/tracing.py`)_
+- [x] T028 [US2] Add cross-signal correlation fields in `ai-monitor-system/telemetry/telemetry.py` and `ai-monitor-system/telemetry/lineage.py` _(post-restructure paths; originally under `pipeline/`)_
 - [x] T029 [US2] Migrate OTel Collector to upstream chart values/overrides in `ai-monitor-system/deploy/helm/values.yaml` and `ai-monitor-system/deploy/helm/values.local-minimal.yaml`
 - [x] T030 [US2] Expand lineage-focused dashboard panels for root-cause flow in `ai-monitor-system/monitoring/dashboards/lineage-view.json`
 
