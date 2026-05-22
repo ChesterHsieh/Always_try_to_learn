@@ -1,0 +1,1157 @@
+[
+  {
+    "step": 0,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 1,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 2,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 3,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 4,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 5,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 6,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 7,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 1
+  },
+  {
+    "step": 8,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 9,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 10,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 11,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 12,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 13,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 14,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 15,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 16,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 17,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 18,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 19,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 20,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 21,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 22,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 23,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 24,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 25,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 26,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 27,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 28,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 29,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 30,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 31,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 32,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 33,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 34,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 35,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 36,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 37,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 38,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 39,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 40,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 41,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 42,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 43,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 44,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 45,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 46,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 47,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 48,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 49,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 50,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 51,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 52,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 53,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 54,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 55,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 56,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 57,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 58,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 59,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 60,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 61,
+    "state": "descend",
+    "rule": "steer",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 62,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 63,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 64,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 65,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 66,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 67,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 68,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 69,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 70,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 71,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 72,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 73,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 74,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 3
+  },
+  {
+    "step": 75,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 76,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 77,
+    "state": "align",
+    "rule": "align",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 78,
+    "state": "touchdown",
+    "rule": "<macro>",
+    "macro_active": true,
+    "action": 2
+  },
+  {
+    "step": 79,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 80,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 81,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 82,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 83,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 84,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 85,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 86,
+    "state": "touchdown",
+    "rule": "damp",
+    "macro_active": false,
+    "action": 2
+  },
+  {
+    "step": 87,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 88,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 89,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 90,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 91,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 92,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 93,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 94,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 95,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 96,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 97,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 98,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 99,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 100,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 101,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 102,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 103,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 104,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 105,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 106,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 107,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 108,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 109,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 110,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 111,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 112,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 113,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 114,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 115,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 116,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 117,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 118,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 119,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 120,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 121,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 122,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 123,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 124,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 125,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 126,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 127,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 128,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 129,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 130,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 131,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 132,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 133,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 134,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 135,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 136,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 137,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 138,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 139,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 140,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 141,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 142,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 143,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 144,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 145,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 146,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 147,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 148,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 149,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 150,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 151,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 152,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 153,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 154,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 155,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 156,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 157,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 158,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 159,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 160,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 161,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 162,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 163,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  },
+  {
+    "step": 164,
+    "state": "touchdown",
+    "rule": "default",
+    "macro_active": false,
+    "action": 0
+  }
+]
