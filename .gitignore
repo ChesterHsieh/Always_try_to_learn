@@ -26,3 +26,6 @@ ai-monitor-system/.ruff_cache/
 .metals/
 ai-monitor-system/.local-data/
 ai-monitor-system/deploy/helm/tmpcharts-*/
+
+# External repos
+learn-jax/purejaxrl/
