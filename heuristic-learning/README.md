@@ -70,3 +70,13 @@ make test                                     # 執行測試
 ## 參考資料
 
 - 原文：[Learning Beyond Gradients](https://trinkle23897.github.io/learning-beyond-gradients/#zh)
+- GitHub 版本：[learning-beyond-gradient.md](https://github.com/Trinkle23897/learning-beyond-gradients/blob/main/learning-beyond-gradient.md)
+- 詳細筆記：[learning-beyond-gradients-reference.md](notes/learning-beyond-gradients-reference.md)
+
+## Credits
+
+This project is inspired by and implements the Heuristic Learning paradigm from:
+- **Author**: Jiayi Weng ([@Trinkle23897](https://github.com/Trinkle23897))
+- **Original Work**: [Learning Beyond Gradients](https://github.com/Trinkle23897/learning-beyond-gradients)
+
+The core thesis—that hand-crafted rules without gradient training can match RL baselines when maintained by coding agents—is demonstrated empirically in this repo through LunarLander experiments.

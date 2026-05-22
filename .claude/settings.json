@@ -2,20 +2,13 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(git status*)",
-      "Bash(git diff*)",
-      "Bash(git log*)",
-      "Bash(git branch*)",
-      "Bash(git rev-parse*)",
       "Bash(ls *)",
       "Bash(dir *)",
       "Bash(cat *)",
       "Bash(find *)",
       "Bash(grep *)",
       "Bash(rg *)",
-      "Bash(python -m json.tool*)",
       "Bash(python -m pytest*)",
-      "Bash(py -m pytest*)",
 
       "Bash(uv run*)",
       "Bash(uv pip*)",
@@ -63,7 +56,8 @@
       "Bash(curl -fsS http://localhost:*)",
       "Bash(curl -sf http://localhost:*)",
       "Bash(timeout * kubectl*)",
-      "Bash(echo *)"
+
+      "Bash(openspec *)"
     ],
     "deny": [
       "Bash(rm -rf *)",

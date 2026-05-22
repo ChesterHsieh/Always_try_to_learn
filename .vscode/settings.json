@@ -42,5 +42,12 @@
   "java.compile.nullAnalysis.mode": "automatic",
   "files.watcherExclude": {
     "**/target": true
-  }
+  },
+  "python-envs.pythonProjects": [
+    {
+      "path": "heuristic-learning",
+      "envManager": "ms-python.python:venv",
+      "packageManager": "ms-python.python:pip"
+    }
+  ]
 }
