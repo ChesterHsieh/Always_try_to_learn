@@ -1,0 +1,46 @@
+# Scenario: runtime-error
+#
+# An unclassified runtime exception occurs during pipeline execution.
+# Classified as runtime_error (catch-all category).
+# Monitoring must detect: failure metric + PipelineRunFailed alert.
+
+name: runtime-error
+description: Unclassified RuntimeError; falls through to runtime_error category, PipelineRunFailed alert fires.
+
+pipeline:
+  input_records: 100
+  inject_failure: runtime_error
+
+expected_run_status: failed
+expected_failure_category: runtime_error
+expected_alerts:
+  - PipelineRunFailed
+
+probes:
+  - id: failure_category_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_failures_total{failure_category="runtime_error"}'
+      gte: 1
+      within: 60
+
+  - id: run_failed_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_total{status="failed"}'
+      gte: 1
+      within: 60
+
+  - id: alert_firing
+    cmd: prom-query
+    args:
+      query: 'ALERTS{alertname="PipelineRunFailed",alertstate="firing"}'
+      gte: 1
+      within: 60
+
+  - id: error_span
+    cmd: otel-trace
+    args:
+      service: pyspark-pipeline
+      has_attr: run_id
+      within: 60

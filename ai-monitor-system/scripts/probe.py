@@ -16,7 +16,7 @@ Design rules (see CLAUDE.md / phase-2 design):
 Usage examples:
   probe prom-query 'pipeline_records_processed_total' --gte 1 --within 60
   probe prom-query 'up{job="otel-collector"}' --eq 1
-  probe otel-trace --service pyspark-pipeline --has-attr run_id --within 30
+  probe otel-trace --service pyspark-pipeline --has-attr run_id --within 30  # queries Grafana Tempo
 
 Verdict JSON schema:
   {
@@ -53,8 +53,10 @@ except ImportError:
     sys.exit(2)
 
 
-DEFAULT_PROM_URL = "http://localhost:9090"
-DEFAULT_TRACE_URL = "http://localhost:16686"  # Jaeger query API; OTel collector exporters often land here
+# NodePort URLs — match deploy/helm/values.local-minimal.yaml; no port-forward needed
+DEFAULT_PROM_URL = "http://localhost:30090"    # Prometheus
+DEFAULT_TRACE_URL = "http://localhost:30318"   # Grafana Tempo HTTP query API
+DEFAULT_LINEAGE_URL = "http://localhost:30555"  # Marquez
 DEFAULT_POLL_INTERVAL = 2.0
 
 
@@ -184,44 +186,77 @@ def cmd_prom_query(args) -> int:
 
 
 # ---------------------------------------------------------------------------
-# otel-trace (Jaeger query API; works with OTel collector → Jaeger exporter)
+# otel-trace (Grafana Tempo search API; OTel collector → Tempo via OTLP gRPC)
 # ---------------------------------------------------------------------------
 
 def cmd_otel_trace(args) -> int:
-    """Query Jaeger HTTP API for a recent trace from the given service.
+    """Query Grafana Tempo for recent traces from the given service.
 
-    Endpoint: GET /api/traces?service=<name>&limit=20&lookback=<within>m
+    Two-step lookup so --has-attr works against the full span payload:
+      1. GET /api/search?tags=service.name=<name>  → recent traceIDs
+      2. GET /api/traces/<traceID>  → full ResourceSpans with all attributes
+
+    Tempo's search endpoint only echoes attributes that match the query,
+    so we must fetch each trace to inspect arbitrary attributes like
+    `pipeline.run_id`.
     """
-    url = args.trace_url.rstrip("/") + "/api/traces"
+    base = args.trace_url.rstrip("/")
+    search_url = base + "/api/search"
+    # Cap how many traces we hydrate per attempt to keep latency bounded.
+    HYDRATE_CAP = 5
+
+    def _collect_attrs(trace_payload: dict) -> set[str]:
+        """Walk a /api/traces/<id> response and collect every attribute key."""
+        seen: set[str] = set()
+        for batch in trace_payload.get("batches", []) or []:
+            for attr in (batch.get("resource", {}) or {}).get("attributes", []) or []:
+                k = attr.get("key")
+                if k:
+                    seen.add(k)
+            for ss in batch.get("scopeSpans", []) or []:
+                for span in ss.get("spans", []) or []:
+                    for attr in span.get("attributes", []) or []:
+                        k = attr.get("key")
+                        if k:
+                            seen.add(k)
+        return seen
 
     def attempt():
-        params = {"service": args.service, "limit": 20, "lookback": "1h"}
+        params = {
+            "tags": f"service.name={args.service}",
+            "limit": 20,
+        }
         try:
-            resp = requests.get(url, params=params, timeout=args.timeout)
+            resp = requests.get(search_url, params=params, timeout=args.timeout)
         except requests.RequestException as e:
             return False, {"error": f"request failed: {e}"}
         if resp.status_code != 200:
             return False, {"error": f"http {resp.status_code}", "body": resp.text[:200]}
-        traces = resp.json().get("data", []) or []
+        traces = resp.json().get("traces", []) or []
         if not traces:
             return False, {"trace_count": 0}
 
-        # Flatten span attribute keys across all returned traces
+        # Hydrate the most recent N traces to get full attribute set.
         seen_attrs: set[str] = set()
-        for trace in traces:
-            for span in trace.get("spans", []) or []:
-                for tag in span.get("tags", []) or []:
-                    k = tag.get("key")
-                    if k:
-                        seen_attrs.add(k)
-                # OTel-style attributes sometimes nested under "process" tags
-            for proc in (trace.get("processes") or {}).values():
-                for tag in proc.get("tags", []) or []:
-                    k = tag.get("key")
-                    if k:
-                        seen_attrs.add(k)
+        for entry in traces[:HYDRATE_CAP]:
+            tid = entry.get("traceID")
+            if not tid:
+                continue
+            try:
+                tresp = requests.get(f"{base}/api/traces/{tid}", timeout=args.timeout)
+            except requests.RequestException:
+                continue
+            if tresp.status_code != 200:
+                continue
+            seen_attrs |= _collect_attrs(tresp.json())
 
-        missing = [a for a in args.has_attr if a not in seen_attrs]
+        # Match attribute keys by exact name OR by suffix after a dot, so
+        # `--has-attr run_id` matches OTel-style `pipeline.run_id`.
+        def _has(name: str) -> bool:
+            return name in seen_attrs or any(
+                k == name or k.endswith("." + name) for k in seen_attrs
+            )
+        missing = [a for a in args.has_attr if not _has(a)]
         passed = not missing
         return passed, {
             "trace_count": len(traces),
@@ -243,9 +278,74 @@ def cmd_otel_trace(args) -> int:
         if isinstance(value, dict) and value.get("error"):
             v.hint = f"trace backend unreachable at {args.trace_url}"
         elif isinstance(value, dict) and value.get("trace_count") == 0:
-            v.hint = f"no spans for service={args.service} — check OTEL endpoint + collector pipeline"
+            v.hint = (
+                f"no spans for service={args.service} — "
+                "check OTEL_EXPORTER_OTLP_ENDPOINT + otel-collector → tempo pipeline"
+            )
         elif isinstance(value, dict) and value.get("missing_attrs"):
-            v.hint = f"missing span attrs {value['missing_attrs']} — check tracing.py set_attribute calls"
+            missing = value["missing_attrs"]
+            v.hint = f"missing span attrs {missing} — check tracing.py set_attribute calls"
+    return v.emit()
+
+
+# ---------------------------------------------------------------------------
+# lineage-run-state
+# ---------------------------------------------------------------------------
+
+def cmd_lineage_run_state(args) -> int:
+    """Query the Marquez-compatible lineage backend for a run's terminal state.
+
+    Two-state only: PASS when state equals `--state-eq`, FAIL otherwise.
+    Backend unavailability = FAIL (no SKIP state).
+
+    Endpoint: GET <lineage_url>/api/v1/jobs/runs/<run_id>
+    """
+    import os
+
+    lineage_url = getattr(args, "lineage_url", None) or os.environ.get(
+        "LINEAGE_BACKEND_URL", DEFAULT_LINEAGE_URL
+    )
+    url = lineage_url.rstrip("/") + f"/api/v1/jobs/runs/{args.run_id}"
+    target_state = args.state_eq.upper()
+
+    def attempt():
+        try:
+            resp = requests.get(url, timeout=args.timeout)
+        except requests.RequestException as e:
+            return False, {"error": f"request failed: {e}"}
+        if resp.status_code == 404:
+            return False, {"error": f"run {args.run_id!r} not found (404)"}
+        if resp.status_code != 200:
+            return False, {"error": f"http {resp.status_code}", "body": resp.text[:200]}
+        body = resp.json()
+        run = body.get("run") or body  # Marquez wraps in {"run": {...}}
+        actual_state = (run.get("state") or "").upper()
+        passed = actual_state == target_state
+        return passed, {"state": actual_state}
+
+    passed, value, elapsed_ms = poll_until(attempt, within_s=args.within)
+
+    v = Verdict(
+        probe="lineage-run-state",
+        verdict="PASS" if passed else "FAIL",
+        expected=f"state == {target_state}",
+        actual=value,
+        latency_ms=elapsed_ms,
+        terse=args.terse,
+    )
+    v.extra["run_id"] = args.run_id
+    if not passed:
+        if isinstance(value, dict) and "error" in value:
+            v.hint = (
+                f"lineage backend unreachable or run not found at {url}; "
+                "check LINEAGE_BACKEND_URL and that Marquez is running"
+            )
+        else:
+            actual = value.get("state", "unknown") if isinstance(value, dict) else value
+            v.hint = (
+                f"run state is {actual!r}, expected {target_state!r}; "
+                "check that the pipeline emitted a terminal lineage event"
+            )
     return v.emit()
 
 
@@ -275,16 +375,36 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(pp)
     pp.set_defaults(func=cmd_prom_query)
 
-    op = sub.add_parser("otel-trace", help="Verify traces present in Jaeger-compatible backend")
+    op = sub.add_parser("otel-trace", help="Verify traces present in Grafana Tempo")
     op.add_argument("--service", required=True, help="OTel service.name to look for")
     op.add_argument("--has-attr", action="append", default=[],
-                    help="repeatable; assert this span/process attribute key exists")
+                    help="repeatable; assert this span attribute key exists")
     op.add_argument("--trace-url", default=DEFAULT_TRACE_URL,
-                    help="Jaeger query API base (e.g. http://localhost:16686)")
+                    help="Tempo HTTP query API base (e.g. http://localhost:30318)")
     op.add_argument("--within", type=float, default=30.0, help="poll budget seconds")
     op.add_argument("--timeout", type=float, default=5.0)
     _add_common(op)
     op.set_defaults(func=cmd_otel_trace)
+
+    lp = sub.add_parser(
+        "lineage-run-state",
+        help="Assert a pipeline run reached a terminal state in the lineage backend",
+    )
+    lp.add_argument("--run-id", required=True, help="Pipeline run ID to query")
+    lp.add_argument(
+        "--state-eq",
+        default="FAILED",
+        help="Expected terminal state (default: FAILED)",
+    )
+    lp.add_argument(
+        "--lineage-url",
+        default=None,
+        help=f"Lineage backend base URL (default: $LINEAGE_BACKEND_URL or {DEFAULT_LINEAGE_URL})",
+    )
+    lp.add_argument("--within", type=float, default=60.0, help="poll budget seconds")
+    lp.add_argument("--timeout", type=float, default=5.0)
+    _add_common(lp)
+    lp.set_defaults(func=cmd_lineage_run_state)
 
     return p
 

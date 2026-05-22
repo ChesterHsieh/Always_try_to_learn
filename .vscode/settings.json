@@ -38,5 +38,9 @@
     "*.toml": "toml",
     "Cargo.toml": "toml",
     "Cargo.lock": "toml"
+  },
+  "java.compile.nullAnalysis.mode": "automatic",
+  "files.watcherExclude": {
+    "**/target": true
   }
 }

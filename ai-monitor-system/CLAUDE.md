@@ -6,10 +6,9 @@ or commands. For human-facing setup, see [README.md](README.md).
 
 ## Stack at a glance
 
-- Pipeline: PySpark job in [pipeline/job.py](pipeline/job.py) with telemetry helpers
-  ([metrics.py](pipeline/metrics.py), [tracing.py](pipeline/tracing.py),
-  [otel_setup.py](pipeline/otel_setup.py), [lineage_emitter.py](pipeline/lineage_emitter.py),
-  [failure_classifier.py](pipeline/failure_classifier.py)).
+- **Pipeline** (core logic): [pipeline/job.py](pipeline/job.py) — orchestrator; [pipeline/failure_classifier.py](pipeline/failure_classifier.py) — error categorization; [pipeline/failure_injection.py](pipeline/failure_injection.py) — chaos testing.
+- **Telemetry** (observability tools): [telemetry/metrics.py](telemetry/metrics.py), [telemetry/tracing.py](telemetry/tracing.py), [telemetry/otel_setup.py](telemetry/otel_setup.py), [telemetry/lineage_emitter.py](telemetry/lineage_emitter.py), [telemetry/lineage.py](telemetry/lineage.py).
+- **Utils** (shared utilities): [utils/io_adapter.py](utils/io_adapter.py), [utils/scenario_schema.py](utils/scenario_schema.py), [utils/coverage.py](utils/coverage.py).
 - Deploy: Helm chart in [deploy/helm/](deploy/helm/) — upstream observability
   charts pulled in via `Chart.yaml`; pipeline job template in
   [pipeline-job.yaml](deploy/helm/templates/pipeline-job.yaml).
@@ -17,6 +16,26 @@ or commands. For human-facing setup, see [README.md](README.md).
   [values.local-minimal.yaml](deploy/helm/values.local-minimal.yaml) (local).
 - Monitoring config: [monitoring/](monitoring/) — Grafana dashboards + Prom alert rules.
 - Tests: contract → integration → smoke (see "Test layers" below).
+
+## Directory Navigation for New Engineers
+
+**Start here based on what you need to change:**
+
+1. **Fixing or adding business logic?** → Look in [`pipeline/`](pipeline/)
+   - `job.py` — main orchestrator; modify here for pipeline control flow changes
+   - `failure_classifier.py` — how errors are categorized; modify for classification rules
+   - `failure_injection.py` — chaos testing scenarios; modify to add new failure types
+
+2. **Observability / monitoring not working?** → Look in [`telemetry/`](telemetry/)
+   - `metrics.py` — Prometheus metrics; modify to add new metrics
+   - `tracing.py` — OpenTelemetry spans; modify for span attributes
+   - `lineage_emitter.py` — OpenLineage events to Marquez; modify for lineage data
+   - `otel_setup.py` — OTel configuration; modify for exporter/collector changes
+
+3. **Adding utilities or shared code?** → Look in [`utils/`](utils/)
+   - `io_adapter.py` — file I/O abstraction; modify for new I/O patterns
+   - `scenario_schema.py` — scenario YAML validation; modify for new scenario fields
+   - `coverage.py` — monitoring coverage checks; modify for new coverage rules
 
 ## Common operations (do these via Bash)
 
@@ -46,6 +65,27 @@ Namespace is always `ai-monitor-system`; Helm release defaults to `monitor`.
   Desktop K8s). Requires `bootstrap-local.sh` to have succeeded. Slow; run
   before committing meaningful pipeline or Helm changes, not in tight loops.
 
+## Local cluster endpoints (NodePort — no port-forward needed)
+
+All services are exposed as NodePort on `localhost`. No `kubectl port-forward` required.
+
+| Service | URL | Notes |
+|---|---|---|
+| Prometheus | http://localhost:30090 | NodePort 30090 → svc port 80 → pod :9090 |
+| Grafana | http://localhost:30300 | Anonymous admin; dashboards auto-loaded |
+| Grafana Tempo | http://localhost:30318 | HTTP query API (`/api/search`, `/api/traces/{id}`) |
+| Marquez API | http://localhost:30555 | OpenLineage-compatible lineage backend |
+| Marquez Web UI | http://localhost:30444 | DAG lineage viewer |
+| Pushgateway | in-cluster only | Pipeline pushes to `http://pushgateway:9091` |
+| OTel Collector | in-cluster only | Pipeline sends OTLP to `http://otel-collector:4317` |
+
+**Probe defaults** (`scripts/probe.py`) already point to these NodePorts:
+- `prom-query` → `http://localhost:30090`
+- `otel-trace` → `http://localhost:30318` (Tempo search API)
+- `lineage-run-state` → `http://localhost:30555`
+
+To apply NodePort settings: `helm upgrade monitor deploy/helm -f deploy/helm/values.local-minimal.yaml -n ai-monitor-system --set localData.hostPath=<path>`
+
 ## Observability probes (preferred over curl+jq)
 
 To verify the live monitoring stack actually observed a pipeline run, use
@@ -62,7 +102,7 @@ uv run python scripts/probe.py prom-query 'pipeline_records_processed_total' --g
 uv run python scripts/probe.py otel-trace --service pyspark-pipeline --has-attr run_id --terse
 ```
 
-Subcommands: `prom-query`, `otel-trace`. Run `probe.py <sub> --help` for flags.
+Subcommands: `prom-query`, `otel-trace` (Tempo), `lineage-run-state`. Run `probe.py <sub> --help` for flags.
 Scenarios live in [scenarios/](scenarios/).
 
 **Prefer delegation**: when verifying monitoring outcomes, spawn the
@@ -99,7 +139,6 @@ If you believe one is needed, ask the user before invoking.
 - Helm rendered outputs from prior runs: `deploy/helm/tmpcharts-*/` (transient)
 - Runbook: [docs/runbook.md](docs/runbook.md)
 - Onboarding: [docs/onboarding-monitoring.md](docs/onboarding-monitoring.md)
-- Validation report: [docs/validation-report.md](docs/validation-report.md)
 
 ## Failure triage shortcuts
 
@@ -107,6 +146,6 @@ If you believe one is needed, ask the user before invoking.
 - Image not found → rebuild via `bootstrap-local.sh` (it builds
   `local/ai-monitor-pyspark:latest` before deploy); `imagePullPolicy: IfNotPresent`.
 - Missing telemetry → check OTel collector pod logs and
-  [pipeline/otel_setup.py](pipeline/otel_setup.py) endpoint config.
+  [telemetry/otel_setup.py](telemetry/otel_setup.py) endpoint config.
 - Failure-classifier behavior → contract spec lives in
   [tests/contract/test_failure_classifier_contract.py](tests/contract/test_failure_classifier_contract.py).

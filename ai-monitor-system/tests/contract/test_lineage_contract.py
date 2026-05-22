@@ -1,4 +1,4 @@
-from pipeline.lineage import build_openlineage_event
+from telemetry.lineage import build_openlineage_event
 
 
 def test_lineage_event_has_required_fields() -> None:

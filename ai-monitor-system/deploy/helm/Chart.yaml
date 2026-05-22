@@ -20,8 +20,13 @@ dependencies:
     version: "0.78.0"
     repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
     condition: upstream.otelCollector.enabled
-  - name: marquez
+  - name: ilum-marquez
     alias: upstream-marquez
-    version: "0.43.0"
-    repository: "https://marquezproject.github.io/marquez/"
+    version: "6.7.0"
+    repository: "https://charts.ilum.cloud"
     condition: upstream.openlineageBackend.enabled
+  - name: tempo
+    alias: upstream-tempo
+    version: "1.24.4"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: upstream.tempo.enabled

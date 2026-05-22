@@ -1,0 +1,39 @@
+# Scenario: telemetry-unavailable
+#
+# OTel collector is unreachable (simulated). Pipeline failure is classified
+# and recorded via Prometheus metrics — proving the monitor system still
+# catches the error even when the telemetry path is degraded.
+
+name: telemetry-unavailable
+description: OTel collector unreachable; pipeline classified as telemetry_unavailable, lifecycle metric still recorded.
+
+pipeline:
+  input_records: 100
+  inject_failure: telemetry_unavailable
+
+expected_run_status: failed
+expected_failure_category: telemetry_unavailable
+expected_alerts:
+  - PipelineTelemetryUnavailable
+
+probes:
+  - id: failure_category_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_failures_total{failure_category="telemetry_unavailable"}'
+      gte: 1
+      within: 60
+
+  - id: run_failed_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_total{status="failed"}'
+      gte: 1
+      within: 60
+
+  - id: alert_firing
+    cmd: prom-query
+    args:
+      query: 'ALERTS{alertname="PipelineTelemetryUnavailable",alertstate="firing"}'
+      gte: 1
+      within: 60

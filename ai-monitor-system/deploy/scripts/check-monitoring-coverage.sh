@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
+# Thin wrapper: delegates all logic to Python coverage CLI.
 set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-ai-monitor-system}"
+MARQUEZ_URL="${MARQUEZ_URL:-http://ai-monitor-system-upstream-marquez:9555}"
+PROMETHEUS_URL="${PROMETHEUS_URL:-http://ai-monitor-system-upstream-prometheus-server:80}"
+GRAFANA_URL="${GRAFANA_URL:-http://ai-monitor-system-upstream-grafana:80}"
 
-echo "Checking required stack: OpenLineage, Prometheus, OTel Collector, Grafana"
-test -f monitoring/otel/collector-config.yaml
-test -f monitoring/prometheus/prometheus.yml
-test -f monitoring/grafana/datasources.yaml
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+OUTPUT_DIR="${PROJECT_ROOT}/.local-data/coverage"
+mkdir -p "${OUTPUT_DIR}"
+TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 
-echo "Checking in-cluster service discovery in namespace: ${NAMESPACE}"
-kubectl get svc -n "${NAMESPACE}" prometheus >/dev/null
-kubectl get svc -n "${NAMESPACE}" grafana >/dev/null
-kubectl get svc -n "${NAMESPACE}" otel-collector >/dev/null
-
-echo "Coverage checks passed"
+exec python -m utils.coverage \
+  --namespace "${NAMESPACE}" \
+  --marquez-url "${MARQUEZ_URL}" \
+  --prometheus-url "${PROMETHEUS_URL}" \
+  --grafana-url "${GRAFANA_URL}" \
+  --output "${OUTPUT_DIR}/${TIMESTAMP}.json"

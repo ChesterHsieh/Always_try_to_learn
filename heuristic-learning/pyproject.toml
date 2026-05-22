@@ -1,0 +1,30 @@
+[project]
+name = "heuristic-learning"
+version = "0.1.0"
+description = "Heuristic Learning (HL) research — gradient-free, code-as-policy experiments. JAX-only ecosystem; no TensorFlow / PyTorch."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "jax>=0.4.26,<0.5.0",
+    "jaxlib>=0.4.26,<0.5.0",
+    "flax",
+    "optax",
+    "gymnax",
+    "gymnasium[box2d]>=1.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.6.0",
+    "ipython>=8.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hl_lander", "src/hl_core"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

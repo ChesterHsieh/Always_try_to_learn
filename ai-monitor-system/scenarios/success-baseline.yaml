@@ -12,10 +12,12 @@ name: success-baseline
 description: Baseline healthy pipeline run; everything green.
 
 pipeline:
-  # Driven by run-pipeline.sh env vars; the scenario runner exports these
-  # before invoking the pipeline. `inject_failure: none` is the default.
   input_records: 1000
   inject_failure: none
+
+expected_run_status: succeeded
+expected_failure_category: null
+expected_alerts: []
 
 probes:
   - id: records_processed
@@ -28,17 +30,10 @@ probes:
   - id: run_completed
     cmd: prom-query
     args:
-      # Histogram base name has no samples; use _count which increments per
-      # observe(). Filter on status=succeeded so this also asserts the run
-      # finished successfully (not just that any run happened).
       query: 'pipeline_run_duration_seconds_count{status="succeeded"}'
       gte: 1
       within: 60
 
-  # We don't deploy Jaeger in the local profile, so we can't query traces
-  # directly. Instead we verify the OTel Collector accepted spans from the
-  # pipeline — this is the strongest signal we have that the OTLP path
-  # (pipeline → collector) is wired up correctly.
   - id: spans_accepted_by_collector
     cmd: prom-query
     args:
@@ -49,8 +44,6 @@ probes:
   - id: failure_alert_silent
     cmd: prom-query
     args:
-      # ALERTS{alertname=...,alertstate="firing"} returns 0 series when silent.
-      # We assert "no series" by checking the count() expression equals 0.
       query: 'count(ALERTS{alertname="PipelineRunFailed",alertstate="firing"}) or vector(0)'
       eq: 0
       within: 30

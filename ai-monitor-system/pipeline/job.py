@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import shutil
@@ -8,11 +9,12 @@ from datetime import datetime, timezone
 from pyspark.sql import functions as F
 
 from pipeline.failure_classifier import classify_failure
-from pipeline.io_adapter import read_local_file, write_local_file
-from pipeline.lineage_emitter import maybe_shadow_emit
-from pipeline.metrics import get_metrics_port, get_recorder, push_metrics_if_configured
-from pipeline.telemetry import lifecycle_metric_payload
-from pipeline.tracing import get_current_trace_id, start_run_span
+from pipeline.failure_injection import maybe_inject
+from telemetry.lineage_emitter import maybe_shadow_emit
+from telemetry.metrics import get_metrics_port, get_recorder, push_metrics_if_configured
+from telemetry.telemetry import lifecycle_metric_payload
+from telemetry.tracing import get_current_trace_id, start_run_span
+from utils.io_adapter import read_local_file, write_local_file
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +48,11 @@ def create_spark_session():
 
 
 def run_pipeline(input_path: str, output_path: str) -> dict[str, str]:
-    from pipeline import otel_setup
+    from telemetry import otel_setup
 
     run_id = str(uuid.uuid4())
     start_time = time.monotonic()
+    inject_failure = os.environ.get("INJECT_FAILURE", "none")
 
     # Initialize OTel tracer (fail-fast on error)
     otel_setup.configure_tracer()
@@ -76,14 +79,31 @@ def run_pipeline(input_path: str, output_path: str) -> dict[str, str]:
             trace_id = get_current_trace_id()
             recorder.record_run_started(run_id=run_id, pipeline_name=PIPELINE_NAME)
 
+            maybe_inject(inject_failure, stage="pre_spark")
+
             spark = create_spark_session()
             spark_output_dir = f"{output_path}.spark"
             if os.path.exists(spark_output_dir):
                 shutil.rmtree(spark_output_dir)
 
-            transformed_df = spark.read.text(input_path).select(
-                F.upper(F.col("value")).alias("value")
-            )
+            maybe_inject(inject_failure, stage="during_spark")
+
+            # Schema selection — drives the schema-mismatch scenario.
+            # v1 (default) reads `value` as a STRING and uppercases it.
+            # v2 selects a column that does not exist in the input dataset,
+            # so Spark's plan analyzer raises AnalysisException at runtime —
+            # OpenLineage Spark listener then emits a FAIL event with the
+            # offending schema in its dataset facet.
+            schema_version = os.environ.get("SCHEMA_VERSION", "v1")
+            base_df = spark.read.text(input_path)
+            if schema_version == "v2":
+                transformed_df = base_df.select(
+                    F.upper(F.col("nonexistent_column")).alias("value")
+                )
+            else:
+                transformed_df = base_df.select(
+                    F.upper(F.col("value")).alias("value")
+                )
             transformed_df.write.mode("overwrite").text(spark_output_dir)
 
             output_part_files = [
@@ -101,6 +121,8 @@ def run_pipeline(input_path: str, output_path: str) -> dict[str, str]:
             spark.stop()
             duration = time.monotonic() - start_time
             record_count = len(text.strip().splitlines())
+
+            maybe_inject(inject_failure, stage="post_spark")
 
             recorder.record_run_succeeded(
                 run_id=run_id,
@@ -156,7 +178,16 @@ def run_pipeline(input_path: str, output_path: str) -> dict[str, str]:
             source_dataset=input_path,
             target_dataset=output_path,
             trace_id=trace_id,
+            event_type="FAIL",
+            error_message=failure_message,
+            failure_category=failure_category,
         )
+
+    push_metrics_if_configured(
+        job_name="pyspark-pipeline",
+        pipeline_name=PIPELINE_NAME,
+        run_id=run_id,
+    )
 
     if failure_info:
         return lifecycle_metric_payload(
@@ -176,11 +207,8 @@ if __name__ == "__main__":
     try:
         payload = run_pipeline(input_path, output_path)
         payload["timestamp"] = datetime.now(timezone.utc).isoformat()
-        print(payload)
+        print(json.dumps(payload))
     finally:
         from pipeline import otel_setup
 
         otel_setup.force_flush(timeout_millis=2000)
-        # Batch jobs exit before Prometheus can scrape — push final metrics
-        # to the Pushgateway if PUSHGATEWAY_URL is set in the env.
-        push_metrics_if_configured(job_name="pyspark-pipeline", pipeline_name=PIPELINE_NAME)

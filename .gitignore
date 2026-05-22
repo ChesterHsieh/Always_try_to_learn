@@ -16,3 +16,13 @@ secrets/
 kubeconfig*
 *.key
 *.crt
+.mypy_cache
+
+# Python tool caches
+ai-monitor-system/.pytest_cache/
+ai-monitor-system/.ruff_cache/
+
+# Build/runtime artifacts
+.metals/
+ai-monitor-system/.local-data/
+ai-monitor-system/deploy/helm/tmpcharts-*/

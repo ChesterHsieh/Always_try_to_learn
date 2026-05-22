@@ -1,3 +1,37 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pyspark-pipeline
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: pyspark-pipeline
+    app.kubernetes.io/part-of: ai-monitor-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pyspark-pipeline-helm-secret-reader
+  namespace: {{ .Values.global.namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+    resourceNames: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pyspark-pipeline-helm-secret-reader
+  namespace: {{ .Values.global.namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: pyspark-pipeline
+    namespace: {{ .Values.global.namespace }}
+roleRef:
+  kind: Role
+  name: pyspark-pipeline-helm-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -12,18 +46,49 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: pyspark-pipeline
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.pyspark.metricsPort }}"
+        pipeline-monitoring/run-id: ""
     spec:
+      serviceAccountName: pyspark-pipeline
       restartPolicy: Never
       containers:
         - name: pipeline
           image: {{ .Values.pyspark.image }}
           imagePullPolicy: {{ .Values.pyspark.imagePullPolicy }}
           command: ["python", "-m", "pipeline.job"]
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.pyspark.metricsPort }}
+              protocol: TCP
+          volumeMounts:
+            - name: local-data
+              mountPath: /app/.local-data
           env:
             - name: INPUT_PATH
               value: {{ .Values.pyspark.inputPath | quote }}
             - name: OUTPUT_PATH
               value: {{ .Values.pyspark.outputPath | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.pyspark.metricsPort | quote }}
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            {{- if .Values.pyspark.injectFailure }}
+            - name: INJECT_FAILURE
+              value: {{ .Values.pyspark.injectFailure | quote }}
+            {{- end }}
+            {{- if .Values.pyspark.schemaVersion }}
+            - name: SCHEMA_VERSION
+              value: {{ .Values.pyspark.schemaVersion | quote }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: openlineage-config
+      volumes:
+        - name: local-data
+          hostPath:
+            path: {{ required "localData.hostPath must be set" .Values.localData.hostPath | quote }}
+            type: DirectoryOrCreate

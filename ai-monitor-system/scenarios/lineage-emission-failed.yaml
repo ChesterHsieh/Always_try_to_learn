@@ -1,0 +1,46 @@
+# Scenario: lineage-emission-failed
+#
+# Lineage backend rejects the emit (simulated). Pipeline failure is still
+# classified and reported via metrics — proving the monitor system catches the
+# error even when the lineage path itself is what fails.
+
+name: lineage-emission-failed
+description: OpenLineage emit rejected; pipeline classified as lineage_emission_failed, metric recorded.
+
+pipeline:
+  input_records: 100
+  inject_failure: lineage_emission_failed
+
+expected_run_status: failed
+expected_failure_category: lineage_emission_failed
+expected_alerts:
+  - PipelineLineageEmissionFailed
+
+probes:
+  - id: failure_category_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_failures_total{failure_category="lineage_emission_failed"}'
+      gte: 1
+      within: 60
+
+  - id: run_failed_metric
+    cmd: prom-query
+    args:
+      query: 'pipeline_run_total{status="failed"}'
+      gte: 1
+      within: 60
+
+  - id: alert_firing
+    cmd: prom-query
+    args:
+      query: 'ALERTS{alertname="PipelineLineageEmissionFailed",alertstate="firing"}'
+      gte: 1
+      within: 60
+
+  - id: error_span
+    cmd: otel-trace
+    args:
+      service: pyspark-pipeline
+      has_attr: run_id
+      within: 60
