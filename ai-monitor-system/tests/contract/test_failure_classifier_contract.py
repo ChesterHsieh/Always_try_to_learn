@@ -145,16 +145,6 @@ def test_spark_driver_error_not_degraded_to_runtime_error() -> None:
     assert result == "spark_driver_error"
 
 
-def test_schema_mismatch_injection_maps_to_spark_driver_error() -> None:
-    """schema_mismatch injection must classify as spark_driver_error (AnalysisException path)."""
-    with pytest.raises(BaseException) as exc_info:
-        maybe_inject("schema_mismatch", stage="during_spark")
-    result = classify_failure(exc_info.value)
-    assert result == "spark_driver_error", (
-        f"schema_mismatch injection produced {result!r}; expected 'spark_driver_error'"
-    )
-
-
 def test_pyspark_native_analysis_exception_maps_to_spark_driver_error() -> None:
     """PySpark-native AnalysisException (e.g. UNRESOLVED_COLUMN from a schema
     mismatch between runs) must classify as spark_driver_error.

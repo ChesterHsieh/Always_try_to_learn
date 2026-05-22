@@ -26,7 +26,6 @@ ALL_STAGES = ("pre_spark", "during_spark", "post_spark")
 def test_supported_injections_includes_none_and_all_known() -> None:
     assert "none" in SUPPORTED_INJECTIONS
     assert KNOWN_CATEGORIES.issubset(SUPPORTED_INJECTIONS)
-    assert "schema_mismatch" in SUPPORTED_INJECTIONS
 
 
 def test_injection_stages_constant() -> None:
@@ -71,14 +70,13 @@ def test_wrong_stage_is_noop(category: str) -> None:
 @pytest.mark.parametrize("category", sorted(SUPPORTED_INJECTIONS - {"none"}))
 def test_correct_stage_raises_classifiable_exception(category: str) -> None:
     """Each category must raise an exception that classify_failure maps
-    back to the same category (or to spark_driver_error for schema_mismatch).
+    back to the same category.
     """
     assigned = STAGE_FOR_CATEGORY[category]
     with pytest.raises(BaseException) as exc_info:
         maybe_inject(category, stage=assigned)
     actual = classify_failure(exc_info.value)
-    expected = "spark_driver_error" if category == "schema_mismatch" else category
-    assert actual == expected, (
+    assert actual == category, (
         f"injection {category!r} at stage {assigned!r} produced "
-        f"exception classified as {actual!r}, expected {expected!r}"
+        f"exception classified as {actual!r}, expected {category!r}"
     )

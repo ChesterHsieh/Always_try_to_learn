@@ -1,14 +1,10 @@
-"""Integration tests: failure alert + metric label verification (Tasks 6.1, 6.2).
+"""Integration tests: failure alert + metric label verification.
 
 For each KNOWN_CATEGORY:
   - Sets INJECT_FAILURE=<category>
   - Runs run_pipeline() with mocked Spark
   - Asserts lifecycle payload failure_category equals expected category
   - Asserts pipeline_failures_total counter incremented with correct label
-
-For schema-mismatch (Task 6.2):
-  - Injects schema_mismatch
-  - Asserts classification = spark_driver_error (three detection paths in lifecycle)
 """
 
 from __future__ import annotations
@@ -126,91 +122,3 @@ def test_failure_run_total_metric(
     )
 
 
-# ---------------------------------------------------------------------------
-# Task 6.2: schema-mismatch E2E — three detection paths
-# ---------------------------------------------------------------------------
-
-
-def test_schema_mismatch_classified_as_spark_driver_error(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """schema_mismatch injection must produce failure_category=spark_driver_error in payload."""
-    src = tmp_path / "in.txt"
-    dst = tmp_path / "out.txt"
-    write_local_file(str(src), "hello\n")
-    monkeypatch.setenv("INJECT_FAILURE", "schema_mismatch")
-
-    spark_mock = _make_spark_mock(str(dst))
-
-    with (
-        patch.object(job_module, "create_spark_session", return_value=spark_mock),
-        patch("pipeline.job.F") as mock_f,
-    ):
-        mock_f.upper.return_value = MagicMock()
-        mock_f.col.return_value = MagicMock()
-        payload = job_module.run_pipeline(str(src), str(dst))
-
-    assert payload["status"] == "failed"
-    assert payload["failure_category"] == "spark_driver_error", (
-        f"schema_mismatch must map to spark_driver_error, got {payload.get('failure_category')!r}"
-    )
-
-
-def test_schema_mismatch_increments_spark_driver_error_metric(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """pipeline_failures_total spark_driver_error increments on schema_mismatch injection."""
-    src = tmp_path / "in.txt"
-    dst = tmp_path / "out.txt"
-    write_local_file(str(src), "hello\n")
-    monkeypatch.setenv("INJECT_FAILURE", "schema_mismatch")
-
-    pipeline_name = job_module.PIPELINE_NAME
-    before = _failures_value(failure_category="spark_driver_error", pipeline_name=pipeline_name)
-
-    spark_mock = _make_spark_mock(str(dst))
-
-    with (
-        patch.object(job_module, "create_spark_session", return_value=spark_mock),
-        patch("pipeline.job.F") as mock_f,
-    ):
-        mock_f.upper.return_value = MagicMock()
-        mock_f.col.return_value = MagicMock()
-        job_module.run_pipeline(str(src), str(dst))
-
-    after = _failures_value(failure_category="spark_driver_error", pipeline_name=pipeline_name)
-    assert after - before >= 1.0, (
-        "pipeline_failures_total{failure_category='spark_driver_error'} did not increment "
-        "for schema_mismatch injection"
-    )
-
-
-def test_schema_mismatch_failure_message_contains_analysis_exception(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The failure_message in the payload must reference AnalysisException for schema_mismatch."""
-    src = tmp_path / "in.txt"
-    dst = tmp_path / "out.txt"
-    write_local_file(str(src), "hello\n")
-    monkeypatch.setenv("INJECT_FAILURE", "schema_mismatch")
-
-    spark_mock = _make_spark_mock(str(dst))
-
-    with (
-        patch.object(job_module, "create_spark_session", return_value=spark_mock),
-        patch("pipeline.job.F") as mock_f,
-    ):
-        mock_f.upper.return_value = MagicMock()
-        mock_f.col.return_value = MagicMock()
-        payload = job_module.run_pipeline(str(src), str(dst))
-
-    failure_message = payload.get("failure_message", "")
-    has_analysis_exc = "AnalysisException" in failure_message
-    has_schema_mismatch = "schema mismatch" in failure_message.lower()
-    assert has_analysis_exc or has_schema_mismatch, (
-        f"schema_mismatch failure_message should reference AnalysisException; "
-        f"got: {failure_message!r}"
-    )

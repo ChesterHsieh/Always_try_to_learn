@@ -27,10 +27,8 @@ INJECTION_STAGES: Final[tuple[InjectionStage, ...]] = (
     "post_spark",
 )
 
-# `schema_mismatch` is an alias injection that surfaces as `spark_driver_error`
-# from the classifier — it does not introduce a new KNOWN_CATEGORY.
 SUPPORTED_INJECTIONS: Final[frozenset[str]] = frozenset(
-    {"none", "schema_mismatch", *KNOWN_CATEGORIES}
+    {"none", *KNOWN_CATEGORIES}
 )
 
 STAGE_FOR_CATEGORY: Final[Mapping[str, InjectionStage]] = {
@@ -41,7 +39,6 @@ STAGE_FOR_CATEGORY: Final[Mapping[str, InjectionStage]] = {
     "runtime_error": "pre_spark",
     "spark_task_failed": "during_spark",
     "spark_driver_error": "during_spark",
-    "schema_mismatch": "during_spark",
     "lineage_emission_failed": "post_spark",
     "telemetry_unavailable": "post_spark",
 }
@@ -70,12 +67,6 @@ def _raise_for_category(category: str) -> None:
         raise Py4JJavaError("injected: org.apache.spark TaskFailed in stage 0.0")
     if category == "spark_driver_error":
         raise Py4JJavaError("injected: org.apache.spark.SparkException at driver")
-    if category == "schema_mismatch":
-        # AnalysisException-style message → classifier returns spark_driver_error
-        raise RuntimeError(
-            "injected: org.apache.spark.SparkException: "
-            "AnalysisException schema mismatch on column 'amount'"
-        )
     if category == "lineage_emission_failed":
         raise RuntimeError("injected: openlineage emit rejected by backend")
     if category == "telemetry_unavailable":

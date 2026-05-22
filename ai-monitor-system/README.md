@@ -110,7 +110,7 @@ Namespace 預設為 `ai-monitor-system`；Release Name 預設為 `monitor`。
 | [`permission-denied.yaml`](scenarios/permission-denied.yaml) | `permission_denied` | RBAC / 掛載導致的 `PermissionError` |
 | [`spark-task-failed.yaml`](scenarios/spark-task-failed.yaml) | `spark_task_failed` | Py4JJavaError Task 失敗 |
 | [`spark-driver-error.yaml`](scenarios/spark-driver-error.yaml) | `spark_driver_error` | Driver 端 SparkException |
-| [`schema-mismatch.yaml`](scenarios/schema-mismatch.yaml) | `spark_driver_error` | **兩次執行間的 Schema Mismatch** — 基準執行以 schema v1 寫入 `value: STRING`，第二次執行以 schema v2 期望讀取（選擇 v1 不存在的欄位）→ `AnalysisException`（`UNRESOLVED_COLUMN`）；驗證 Marquez 在 OpenLineage Spark Listener 的 Plan 階段盲點下仍能記錄 `state=FAILED` 並附帶 `errorMessage` facet |
+| [`schema-mismatch.yaml`](scenarios/schema-mismatch.yaml) | `spark_driver_error` | **真實 Schema Mismatch** — 基準執行以 `SCHEMA_VERSION=v1` 寫入 `value: STRING` 資料集，主要執行以 `SCHEMA_VERSION=v2` 嘗試讀取不存在的欄位 → Spark 計畫分析器拋出 `AnalysisException`（`UNRESOLVED_COLUMN`）；驗證 Pipeline 透過 Shadow OpenLineage Event 確保血緣能記錄 `state=FAILED` |
 | [`lineage-emission-failed.yaml`](scenarios/lineage-emission-failed.yaml) | `lineage_emission_failed` | Marquez 無法連線 / OpenLineage 錯誤 |
 | [`telemetry-unavailable.yaml`](scenarios/telemetry-unavailable.yaml) | `telemetry_unavailable` | OTel Collector / Prometheus 無法連線 |
 | [`timeout.yaml`](scenarios/timeout.yaml) | `timeout` | `TimeoutError` / `socket.timeout` |

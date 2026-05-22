@@ -23,7 +23,7 @@ from pipeline.failure_classifier import KNOWN_CATEGORIES
 KNOWN_FAILURE_CATEGORIES: Final[frozenset[str]] = KNOWN_CATEGORIES
 
 SUPPORTED_INJECTIONS: Final[frozenset[str]] = frozenset(
-    {"none", "schema_mismatch", *KNOWN_CATEGORIES}
+    {"none", *KNOWN_CATEGORIES}
 )
 
 RunStatus = Literal["succeeded", "failed"]
