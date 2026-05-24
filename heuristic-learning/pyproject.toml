@@ -12,6 +12,7 @@ dependencies = [
     "optax",
     "gymnax",
     "gymnasium[box2d]>=1.0",
+    "rich",
 ]
 
 [tool.uv]
@@ -20,10 +21,12 @@ dev-dependencies = [
     "pytest-cov>=5.0.0",
     "ruff>=0.6.0",
     "ipython>=8.0.0",
+    "imageio>=2.37.3",
+    "imageio-ffmpeg>=0.6.0",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hl_lander", "src/hl_core"]
+packages = ["src/hl_lander", "src/hl_core", "src/hl_gobblet"]
 
 [build-system]
 requires = ["hatchling"]
