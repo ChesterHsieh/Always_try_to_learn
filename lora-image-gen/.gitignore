@@ -15,6 +15,10 @@ dataset_prep/cards.csv
 *.pt
 *.bin
 
+# 機密 / 環境設定（含 API key、rclone token），只提交範本
+.env
+!.env.example
+
 # Python
 __pycache__/
 *.pyc

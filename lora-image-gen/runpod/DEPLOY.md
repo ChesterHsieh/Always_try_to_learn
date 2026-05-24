@@ -110,15 +110,79 @@ scp -P <ssh-port> /path/to/DreamShaperXL.safetensors \
 
 ---
 
-## 階段 7：訓練 LoRA（之後展開）
+## 階段 7：一鍵訓練 LoRA（launcher 自動化）
 
-訓練建議另開一個帶訓練框架的 pod（**kohya_ss** 或 **ai-toolkit**），同樣掛 `/workspace`：
+訓練不再手動點 Console，改用 `launcher/`：讀一個 `.env` 就建 pod、上傳資料、訓練、
+同步產出到 Google Drive、依設定回收 pod（ephemeral）。架構決策見 [README.md](./README.md)。
 
-- 資料集放 `/workspace/datasets/<my-concept>/`
-- 訓練輸出寫 `/workspace/models/loras/`
-- 訓完的 LoRA 立刻能被推論 pod 用（共享 Volume）
+### 7.1 一次性前置
 
-詳細訓練設定（rank/alpha/lr、打標）待開訓練 pod 時補上 `scripts/train_lora.sh` 與 `configs/`。
+```bash
+# 把官方 runpod SDK 裝進 lora-image-gen 既有的 uv venv
+uv pip install -r runpod/requirements.txt --python .venv/bin/python
+
+# 複製設定範本並填值
+cp runpod/.env.example runpod/.env
+```
+
+`.env` 必填：`RUNPOD_API_KEY`、`RUNPOD_NETWORK_VOLUME_ID`、`RUNPOD_DATA_CENTER_ID`、
+`RUNPOD_GPU_TYPE`、`RCLONE_DRIVE_CONFIG`、`GDRIVE_DEST_PATH`。缺任一 launcher 會列出鍵名並中止。
+
+### 7.2 取得 rclone → Google Drive 的設定（路線 A：user OAuth）
+
+pod 是 headless（無瀏覽器），授權要在**本機**做，再把設定（含 token）注入 pod：
+
+```bash
+brew install rclone                       # 本機裝 rclone
+rclone config                             # 新建一個 remote：
+                                          #   name 填 gdrive，storage 選 Google Drive，
+                                          #   scope 選 drive.file，auto config 選 y（會開瀏覽器授權）
+rclone lsd gdrive:                        # 驗證能連
+rclone config file                        # 印出 rclone.conf 路徑
+```
+
+打開 `rclone.conf`，把 `[gdrive]` 那整段（含標頭那幾行）原樣貼進 `.env` 的
+`RCLONE_DRIVE_CONFIG=`（多行可保留，或用 `\n` 接成單行）。`GDRIVE_DEST_PATH` 設成
+`gdrive:lora-outputs` 之類。
+
+> 建議自己申請 Google OAuth client_id（Cloud Console → 啟用 Drive API → 建 Desktop OAuth client，
+> consent screen 設 Published），rclone config 時填入，避免共用 app 的 token 約 7 天就過期。
+> 細節見 rclone 官方 "Making your own client_id"。
+
+### 7.3 註冊 SSH public key（上傳資料 / 輪詢完成都靠它）
+
+launcher 從本機**直連 SSH** 操作 pod：用 `rsync` 上傳資料集、用 `ssh ... test -f`
+輪詢 pod 上的完成標記。（RunPod 的 proxy SSH 不支援 scp/rsync，runpodctl 也沒有可遠端
+觸發的傳檔或任意 shell exec，所以走直連 SSH。）建 pod 時已開 22 port + `start_ssh=True`，
+你只需把本機 public key 註冊到 RunPod：
+
+```bash
+# 沒有 key 就先產一把
+ls ~/.ssh/id_ed25519.pub || ssh-keygen -t ed25519
+
+# 把 public key 貼到 RunPod Console → Settings → SSH Public Keys
+cat ~/.ssh/id_ed25519.pub
+```
+
+> 直連 SSH 需要 pod 有對外 IP:port 映射到內部 22。launcher 會從 RunPod 解析該位址；
+> 若某 pod 只給 proxy SSH（無公開 22 映射），rsync 會失敗——換個 pod / GPU 重開即可。
+
+### 7.4 啟動訓練
+
+```bash
+cd lora-image-gen/runpod
+../.venv/bin/python -m launcher.launch --env .env --dataset ../dataset_prep/cropped
+# 若 ssh 沒自動選對私鑰，加 --ssh-key ~/.ssh/id_ed25519
+```
+
+launcher 會：建 pod → 印出 **ComfyUI proxy URL 與 SSH 連線指令**（除錯用）→ 用 rsync 上傳
+`dataset_prep/cropped/` → pod 端跑 `pod_bootstrap.sh`（訓練 → 同步）→ SSH 輪詢完成標記 →
+成功則回收 pod、產出已在 Google Drive。
+
+- 資料集上 `/workspace/datasets/<concept>/`，輸出 LoRA 寫 `/workspace/models/loras/<concept>.safetensors`。
+- **訓練或同步失敗時 pod 不回收**，產出仍在 Network Volume，可 SSH 進去取或重跑同步。
+- 要保留 pod 除錯：`.env` 設 `KEEP_POD=true`（記得自行回收以免持續計費）。
+- 訓完的 LoRA 共享同一 Volume，可直接用 ComfyUI（階段 5）載入產圖，肉眼驗證風格。
 
 ---
 

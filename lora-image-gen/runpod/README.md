@@ -27,10 +27,12 @@ InvokeAI 是單體架構（web server + 推論引擎 + model manager 綁在一�
 
 | 路徑 | 用途 |
 |------|------|
-| `scripts/` | Pod 端啟動 / 模型下載 / 環境設定腳本（在 RunPod 上執行） |
+| `launcher/` | 本機一鍵訓練 launcher：讀 `.env` 建 pod、上傳資料、訓練、同步產出到 Google Drive、回收 pod |
+| `scripts/` | Pod 端啟動 / 模型下載 / 訓練 / 同步腳本（在 RunPod 上執行） |
 | `client/` | 本機端連遠端 ComfyUI API 的腳本 |
 | `workflows/` | ComfyUI workflow（API 格式 JSON），給 client 提交用 |
-| `DEPLOY.md` | 完整部署步驟（從建 Network Volume 到第一次產圖） |
+| `.env.example` | launcher 設定範本（API key、Volume、GPU、rclone、訓練超參數） |
+| `DEPLOY.md` | 完整部署步驟（從建 Network Volume 到一鍵訓練） |
 
 ## 快速開始
 
