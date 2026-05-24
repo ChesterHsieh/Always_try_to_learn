@@ -40,15 +40,12 @@ MarkerCheck = Callable[[str, str], str | None]
 
 
 def build_start_command(concept: str) -> str:
-    """組 docker start command：把 repo 上的 pod_bootstrap.sh 跑起來。"""
-    return (
-        "bash -c '"
-        "cd /workspace && "
-        "[ -d runpod-scripts ] || git clone --depth 1 "
-        "https://github.com/ChesterHsieh/Always_try_to_learn repo-tmp 2>/dev/null || true; "
-        "bash /workspace/runpod/scripts/pod_bootstrap.sh"
-        "'"
-    )
+    """docker start command 留空：pod 用 template 預設開機（含 ComfyUI）。
+
+    訓練不從這裡觸發——RunPod 這版 SDK 走舊 GraphQL 且不跳脫字串，含引號 / 換行的
+    指令會破壞 mutation 語法。改在 pod 就緒後經 SSH 上傳腳本並觸發 pod_bootstrap.sh。
+    """
+    return ""
 
 
 @dataclass
@@ -59,6 +56,7 @@ class Launcher:
     client: RunpodClient
     uploader: DatasetUploader
     marker_check: MarkerCheck
+    kickoff: Callable[[LauncherConfig], None] = lambda _cfg: None
     on_ready: Callable[[PodEndpoints], None] = lambda _ep: None
     log: Callable[[str], None] = print
     poll_interval: float = 30.0
@@ -82,12 +80,13 @@ class Launcher:
             pod = self.client.create_training_pod(
                 name=f"lora-train-{cfg.concept}",
                 image=cfg.image,
-                gpu_type=cfg.gpu_type,
+                gpu_types=cfg.gpu_types,
                 network_volume_id=cfg.network_volume_id,
                 data_center_id=cfg.data_center_id,
                 container_disk_gb=cfg.container_disk_gb,
-                env=self._pod_env(),
+                env={},  # 訓練參數 / rclone 設定改經 SSH 注入，避免破壞 SDK 的 GraphQL
                 start_command=build_start_command(cfg.concept),
+                cloud_type=cfg.cloud_type,
             )
         except PodError as exc:
             return RunResult(
@@ -119,6 +118,13 @@ class Launcher:
         except DatasetError as exc:
             return self._finish_keep_pod(pod, f"資料集上傳失敗：{exc}")
 
+        # 經 SSH 上傳 pod 腳本 + 注入訓練參數與 rclone 設定，並觸發訓練流程。
+        try:
+            self.kickoff(cfg)
+            self.log("==> 已在 pod 上觸發訓練流程")
+        except Exception as exc:  # noqa: BLE001
+            return self._finish_keep_pod(pod, f"觸發訓練失敗：{exc}")
+
         # 輪詢 pod 端訓練+同步流程的完成標記。
         outcome = self._poll_run(pod)
         if outcome != RunOutcome.SUCCESS:
@@ -133,20 +139,6 @@ class Launcher:
         self.client.terminate(pod.pod_id)
         self.log(f"==> 訓練成功，已回收 pod {pod.pod_id}。")
         return RunResult(RunOutcome.SUCCESS, pod.pod_id, True, "訓練成功，產出已同步至 Google Drive。")
-
-    def _pod_env(self) -> dict[str, str]:
-        cfg = self.config
-        return {
-            "TRAIN_CONCEPT": cfg.concept,
-            "TRAIN_TRIGGER": cfg.trigger,
-            "TRAIN_RANK": str(cfg.rank),
-            "TRAIN_ALPHA": str(cfg.alpha),
-            "TRAIN_LR": cfg.lr,
-            "TRAIN_STEPS": str(cfg.steps),
-            "TRAIN_BASE_MODEL": cfg.base_model,
-            "GDRIVE_DEST_PATH": cfg.gdrive_dest_path,
-            "RCLONE_DRIVE_CONFIG": cfg.rclone_drive_config,
-        }
 
     def _poll_run(self, pod: PodHandle) -> RunOutcome:
         deadline = self.now() + self.run_timeout
@@ -179,6 +171,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--env", type=Path, default=Path(".env"), help=".env 設定檔路徑")
     parser.add_argument("--dataset", type=Path, required=True, help="本機訓練資料集目錄（圖 + 同名 .txt）")
     parser.add_argument("--ssh-key", help="連 pod 用的 SSH 私鑰路徑（預設用 ssh 自動選；需先把 public key 註冊到 RunPod）")
+    parser.add_argument("--create-retries", type=int, default=20,
+                        help="配不到 GPU 容量時的重試次數（預設 20）")
+    parser.add_argument("--retry-wait", type=float, default=15.0,
+                        help="每次重試前等待秒數（預設 15）")
     args = parser.parse_args(argv)
 
     try:
@@ -192,18 +188,27 @@ def main(argv: list[str] | None = None) -> int:
     from .transport import SshTarget, SshTransport
 
     runpod.api_key = cfg.runpod_api_key
-    client = RunpodClient(api=runpod)
+    client = RunpodClient(
+        api=runpod,
+        create_retries=args.create_retries,
+        create_retry_wait=args.retry_wait,
+        log=print,
+    )
 
     # transport 的 SSH 目標要等 pod 就緒才知道；用一個 holder 在 on_ready 時填入。
     holder: dict[str, SshTransport] = {}
     key_path = Path(args.ssh_key).expanduser() if args.ssh_key else None
+    scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
 
     def on_ready(endpoints: PodEndpoints) -> None:
         target = SshTarget.from_ssh_command(endpoints.ssh_command, key_path=key_path)
-        holder["transport"] = SshTransport(target=target)
+        holder["transport"] = SshTransport(target=target, scripts_dir=scripts_dir)
 
     def transfer(source: Path, dest: str) -> bool:
         return holder["transport"].upload(source, dest)
+
+    def kickoff(c: LauncherConfig) -> None:
+        holder["transport"].kickoff(c)
 
     def marker_check(pod_id: str, concept: str) -> str | None:
         return holder["transport"].marker_status(concept)
@@ -211,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     uploader = DatasetUploader(transfer=transfer)
     launcher = Launcher(
         config=cfg, client=client, uploader=uploader,
-        marker_check=marker_check, on_ready=on_ready,
+        marker_check=marker_check, kickoff=kickoff, on_ready=on_ready,
     )
     result = launcher.run(args.dataset)
     print(f"\n結果：{result.message}")

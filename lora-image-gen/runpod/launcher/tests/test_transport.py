@@ -96,3 +96,50 @@ def test_key_path_added_to_ssh_opts() -> None:
     t = SshTarget("root", "h", 22, key_path=Path("/k.pem"))
     opts = t._ssh_opts()
     assert "-i" in opts and "/k.pem" in opts
+
+
+class _Cfg:
+    """kickoff 用到的最小設定假物件。"""
+    rclone_drive_config = "[gdrive]\ntype = drive\ntoken = {\"a\":1}"
+    concept = "stcklnd"
+    trigger = "stcklnd"
+    rank = 16
+    alpha = 8
+    lr = "1e-4"
+    steps = 1500
+    base_model = "models/checkpoints/m.safetensors"
+    gdrive_dest_path = "gdrive:out"
+
+
+@pytest.mark.unit
+def test_kickoff_uploads_writes_config_and_launches(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    def runner(cmd):
+        calls.append(" ".join(cmd))
+        return _ok(cmd)
+
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    t = SshTransport(SshTarget("root", "h", 22), scripts_dir=scripts, runner=runner)
+    t.kickoff(_Cfg())
+
+    joined = "\n".join(calls)
+    assert any(c.startswith("rsync") for c in calls)              # 上傳腳本
+    assert "base64 -d" in joined and "rclone.conf" in joined      # 寫 rclone 設定
+    assert "run.env" in joined                                    # 寫訓練參數
+    assert "pod_bootstrap.sh" in joined and "nohup" in joined     # 背景觸發
+
+
+@pytest.mark.unit
+def test_kickoff_rclone_write_failure_raises(tmp_path: Path) -> None:
+    # 讓 rclone.conf 寫入那步失敗
+    def runner(cmd):
+        s = " ".join(cmd)
+        if "rclone.conf" in s:
+            return _fail(cmd)
+        return _ok(cmd)
+
+    t = SshTransport(SshTarget("root", "h", 22), scripts_dir=None, runner=runner)
+    with pytest.raises(TransportError, match="rclone"):
+        t.kickoff(_Cfg())

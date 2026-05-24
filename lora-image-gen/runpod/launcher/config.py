@@ -51,6 +51,7 @@ class LauncherConfig:
     network_volume_id: str
     data_center_id: str
     gpu_type: str
+    cloud_type: str
     rclone_drive_config: str = field(metadata={"secret": True})
     gdrive_dest_path: str
     image: str
@@ -63,6 +64,11 @@ class LauncherConfig:
     steps: int
     base_model: str
     keep_pod: bool
+
+    @property
+    def gpu_types(self) -> list[str]:
+        """GPU 候選清單：RUNPOD_GPU_TYPE 可用逗號分隔多款，依序嘗試。"""
+        return [g.strip() for g in self.gpu_type.split(",") if g.strip()]
 
     def __repr__(self) -> str:  # 避免機密被印進日誌 / 例外追蹤
         parts = []
@@ -95,6 +101,7 @@ def load_config(env_path: Path) -> LauncherConfig:
         network_volume_id=values["RUNPOD_NETWORK_VOLUME_ID"],
         data_center_id=values["RUNPOD_DATA_CENTER_ID"],
         gpu_type=values["RUNPOD_GPU_TYPE"],
+        cloud_type=values.get("RUNPOD_CLOUD_TYPE", "COMMUNITY").strip().upper(),
         rclone_drive_config=values["RCLONE_DRIVE_CONFIG"],
         gdrive_dest_path=values["GDRIVE_DEST_PATH"],
         image=values.get("RUNPOD_IMAGE", "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04"),

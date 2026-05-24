@@ -53,6 +53,7 @@ def test_load_config_full(tmp_path: Path) -> None:
     # 未指定的有預設
     assert cfg.alpha == 8
     assert cfg.trigger == "stcklnd"
+    assert cfg.cloud_type == "COMMUNITY"
 
 
 @pytest.mark.unit

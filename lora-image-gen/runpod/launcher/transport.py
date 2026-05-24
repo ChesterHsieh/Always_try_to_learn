@@ -1,12 +1,17 @@
-"""從本機透過直接 SSH 操作遠端 pod：上傳資料夾、輪詢完成標記。
+"""從本機透過直接 SSH 操作遠端 pod：上傳資料夾、注入設定並觸發訓練、輪詢完成標記。
 
 RunPod 的 proxy SSH 不支援 scp/rsync，runpodctl 也沒有可遠端觸發的傳檔 / 任意
 shell exec，故採直接 SSH（pod 須開 22 port + 註冊本機 public key）。連線資訊
 （ip/port）由 RunpodClient.extract_endpoints 解析出的 ssh_command 提供。
+
+訓練參數與 rclone 設定不走 pod 建立時的 env / docker_args——這版 SDK 走舊 GraphQL
+且不跳脫字串，含引號 / 換行的值會破壞 mutation。改在 pod 就緒後經 SSH 注入。
 """
 from __future__ import annotations
 
+import base64
 import re
+import shlex
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,11 +52,59 @@ class SshTransport:
     """本機 SSH 操作 pod 的實作；以注入的 runner 執行子行程，方便測試。"""
 
     target: SshTarget
+    scripts_dir: Path | None = None  # 本機 runpod/scripts/，kickoff 會 rsync 上 pod
     runner: "Runner" = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         if self.runner is None:
             self.runner = _subprocess_runner
+
+    def kickoff(self, cfg) -> None:
+        """把腳本與設定送上 pod、注入訓練參數與 rclone 設定，背景觸發訓練流程。"""
+        # 1. 上傳 pod 端腳本
+        if self.scripts_dir is not None:
+            if not self.upload(self.scripts_dir, "/workspace/runpod/scripts/"):
+                raise TransportError("上傳 pod 腳本失敗")
+            self._remote("chmod +x /workspace/runpod/scripts/*.sh")
+
+        # 2. rclone 設定用 base64 傳，避開引號 / 換行問題；寫進 pod 的 rclone.conf
+        b64 = base64.b64encode(cfg.rclone_drive_config.encode("utf-8")).decode("ascii")
+        conf = "$HOME/.config/rclone/rclone.conf"
+        if self._remote(
+            f"mkdir -p $HOME/.config/rclone && echo {b64} | base64 -d > {conf} && chmod 600 {conf}"
+        ).returncode != 0:
+            raise TransportError("寫入 rclone 設定失敗")
+
+        # 3. 訓練參數寫成 pod 上的 env 檔（值經 shell 跳脫），由 bootstrap source
+        env_lines = "\n".join(
+            f"export {k}={shlex.quote(v)}"
+            for k, v in {
+                "COMFY_VOLUME": "/workspace",
+                "TRAIN_CONCEPT": cfg.concept,
+                "TRAIN_TRIGGER": cfg.trigger,
+                "TRAIN_RANK": str(cfg.rank),
+                "TRAIN_ALPHA": str(cfg.alpha),
+                "TRAIN_LR": cfg.lr,
+                "TRAIN_STEPS": str(cfg.steps),
+                "TRAIN_BASE_MODEL": cfg.base_model,
+                "GDRIVE_DEST_PATH": cfg.gdrive_dest_path,
+            }.items()
+        )
+        env_b64 = base64.b64encode(env_lines.encode("utf-8")).decode("ascii")
+        env_file = "/workspace/training/run.env"
+        if self._remote(
+            f"mkdir -p /workspace/training && echo {env_b64} | base64 -d > {env_file}"
+        ).returncode != 0:
+            raise TransportError("寫入訓練參數失敗")
+
+        # 4. 背景觸發 bootstrap（source env 後跑），不阻塞；之後靠 marker 輪詢
+        bootstrap = "/workspace/runpod/scripts/pod_bootstrap.sh"
+        launch = (
+            f"set -a && . {env_file} && set +a && "
+            f"nohup bash {bootstrap} > /workspace/training/bootstrap.log 2>&1 &"
+        )
+        if self._remote(launch).returncode != 0:
+            raise TransportError("觸發 bootstrap 失敗")
 
     def upload(self, source: Path, dest: str) -> bool:
         """rsync 本機資料夾到 pod 的 dest，回傳是否成功。"""

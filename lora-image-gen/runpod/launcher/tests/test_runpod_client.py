@@ -38,12 +38,13 @@ def test_create_pod_passes_volume_and_ports() -> None:
     api = FakeApi()
     client = RunpodClient(api=api)
     handle = client.create_training_pod(
-        name="lora-train-x", image="img", gpu_type="A6000",
+        name="lora-train-x", image="img", gpu_types=["A6000"],
         network_volume_id="vol-1", data_center_id="EU-RO-1",
         container_disk_gb=30, env={"K": "V"}, start_command="bash run.sh",
     )
     assert handle.pod_id == "pod-1"
     kw = api.create_kwargs
+    assert kw["gpu_type_id"] == "A6000"
     assert kw["network_volume_id"] == "vol-1"
     assert kw["volume_mount_path"] == VOLUME_MOUNT_PATH
     assert kw["cloud_type"] == "SECURE"
@@ -53,11 +54,110 @@ def test_create_pod_passes_volume_and_ports() -> None:
 
 
 @pytest.mark.unit
+def test_empty_start_command_omits_docker_args() -> None:
+    # 空 start_command 不應送 docker_args（會讓 SDK 產生破壞語法的 dockerArgs: ""）。
+    api = FakeApi()
+    RunpodClient(api=api).create_training_pod(
+        name="x", image="i", gpu_types=["g"], network_volume_id="v",
+        data_center_id="d", container_disk_gb=10, env={}, start_command="",
+    )
+    assert "docker_args" not in api.create_kwargs
+
+
+class _CapacityApi:
+    """前 fail_times 次拋無容量錯，之後成功。"""
+
+    def __init__(self, fail_times: int):
+        self.fail_times = fail_times
+        self.calls = 0
+
+    def create_pod(self, **kwargs):
+        self.calls += 1
+        if self.calls <= self.fail_times:
+            raise RuntimeError("There are no longer any instances available")
+        return {"id": "pod-ok"}
+
+    def get_pod(self, pod_id):
+        return {"id": pod_id, "runtime": {"ports": []}}
+
+    def terminate_pod(self, pod_id):
+        pass
+
+
+def _create(client: RunpodClient):
+    return client.create_training_pod(
+        name="x", image="i", gpu_types=["RTX 3090"], network_volume_id="v",
+        data_center_id="EU-CZ-1", container_disk_gb=10, env={}, start_command="",
+    )
+
+
+@pytest.mark.unit
+def test_retry_succeeds_after_capacity_frees() -> None:
+    api = _CapacityApi(fail_times=2)
+    waits: list[float] = []
+    client = RunpodClient(api=api, create_retries=5, create_retry_wait=1, sleep=waits.append)
+    handle = _create(client)
+    assert handle.pod_id == "pod-ok"
+    assert api.calls == 3
+    assert waits == [1, 1]  # 失敗兩次、各等一次
+
+
+@pytest.mark.unit
+def test_retry_exhausted_raises_capacity_error() -> None:
+    api = _CapacityApi(fail_times=99)
+    client = RunpodClient(api=api, create_retries=3, create_retry_wait=0, sleep=lambda _: None)
+    with pytest.raises(PodError, match="容量不足"):
+        _create(client)
+    assert api.calls == 3
+
+
+@pytest.mark.unit
+def test_second_candidate_used_when_first_out_of_stock() -> None:
+    # 第一款配不到、第二款有貨：同一輪內就該搶到第二款，不需等待。
+    class TwoGpuApi:
+        def __init__(self):
+            self.tried: list[str] = []
+
+        def create_pod(self, **kwargs):
+            gpu = kwargs["gpu_type_id"]
+            self.tried.append(gpu)
+            if gpu == "RTX 4090":
+                raise RuntimeError("no instances available")
+            return {"id": "pod-ok"}
+
+    api = TwoGpuApi()
+    waits: list[float] = []
+    client = RunpodClient(api=api, create_retries=3, create_retry_wait=5, sleep=waits.append)
+    handle = client.create_training_pod(
+        name="x", image="i", gpu_types=["RTX 4090", "RTX 3090"],
+        network_volume_id="v", data_center_id="EU-CZ-1",
+        container_disk_gb=10, env={}, start_command="",
+    )
+    assert handle.pod_id == "pod-ok"
+    assert api.tried == ["RTX 4090", "RTX 3090"]  # 第一款失敗、立刻試第二款
+    assert waits == []  # 同輪搶到，不需等待
+
+
+@pytest.mark.unit
+def test_non_capacity_error_not_retried() -> None:
+    class BadApi(_CapacityApi):
+        def create_pod(self, **kwargs):
+            self.calls += 1
+            raise RuntimeError("invalid gpu type")
+
+    api = BadApi(fail_times=0)
+    client = RunpodClient(api=api, create_retries=5, create_retry_wait=0, sleep=lambda _: None)
+    with pytest.raises(PodError, match="建立 pod 失敗"):
+        _create(client)
+    assert api.calls == 1  # 非容量錯不重試
+
+
+@pytest.mark.unit
 def test_create_pod_without_id_raises() -> None:
     client = RunpodClient(api=FakeApi(create_result={"error": "no capacity"}))
     with pytest.raises(PodError, match="未含 pod id"):
         client.create_training_pod(
-            name="x", image="i", gpu_type="g", network_volume_id="v",
+            name="x", image="i", gpu_types=["g"], network_volume_id="v",
             data_center_id="d", container_disk_gb=10, env={}, start_command="c",
         )
 

@@ -14,7 +14,8 @@ from launcher.runpod_client import PodEndpoints, PodError, PodHandle
 def _config(**overrides) -> LauncherConfig:
     base = LauncherConfig(
         runpod_api_key="k", network_volume_id="vol", data_center_id="EU-RO-1",
-        gpu_type="A6000", rclone_drive_config="[gdrive]", gdrive_dest_path="gdrive:o",
+        gpu_type="A6000", cloud_type="COMMUNITY",
+        rclone_drive_config="[gdrive]", gdrive_dest_path="gdrive:o",
         image="img", container_disk_gb=30, concept="stcklnd", trigger="stcklnd",
         rank=16, alpha=8, lr="1e-4", steps=1500,
         base_model="models/checkpoints/m.safetensors", keep_pod=False,
@@ -194,6 +195,36 @@ def test_on_ready_receives_endpoints(dataset: Path) -> None:
 
 
 @pytest.mark.unit
-def test_build_start_command_runs_bootstrap() -> None:
-    cmd = build_start_command("stcklnd")
-    assert "pod_bootstrap.sh" in cmd
+def test_build_start_command_is_empty() -> None:
+    # 訓練改經 SSH 觸發，start command 留空避免破壞 SDK 的 GraphQL。
+    assert build_start_command("stcklnd") == ""
+
+
+@pytest.mark.unit
+def test_kickoff_called_on_success(dataset: Path) -> None:
+    seen: list = []
+    client = FakeClient()
+    l = Launcher(
+        config=_config(), client=client, uploader=FakeUploader(),
+        marker_check=lambda pid, c: "done", kickoff=seen.append,
+        log=lambda *_: None, sleep=lambda *_: None, poll_interval=0, now=lambda: 0.0,
+    )
+    l.run(dataset)
+    assert seen and seen[0].concept == "stcklnd"
+
+
+@pytest.mark.unit
+def test_kickoff_failure_keeps_pod(dataset: Path) -> None:
+    client = FakeClient()
+
+    def boom(cfg):
+        raise RuntimeError("ssh kickoff failed")
+
+    l = Launcher(
+        config=_config(), client=client, uploader=FakeUploader(),
+        marker_check=lambda pid, c: "done", kickoff=boom,
+        log=lambda *_: None, sleep=lambda *_: None, poll_interval=0, now=lambda: 0.0,
+    )
+    result = l.run(dataset)
+    assert result.outcome == RunOutcome.POD_ERROR
+    assert client.terminated == []
