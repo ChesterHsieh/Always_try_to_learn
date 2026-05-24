@@ -2,13 +2,16 @@ PY := ./.venv/bin/python
 PIP := ./.venv/bin/pip
 
 .PHONY: doctor list view propose-help hl-lander-deps-check hl-lander-smoke \
-        hl-lander-eval hl-lander-watch hl-lander-train test
+        hl-lander-eval hl-lander-watch hl-lander-train hl-gobblet-watch test
 
 CONTROLLER ?= baseline_v1
 SEEDS      ?= 5
 EPISODES   ?= 10
 SEED       ?= 0
 STEPS      ?= 2000000
+P0         ?= random
+P1         ?= random
+DELAY      ?= 0.6
 
 doctor:
 	@echo "Python: $$($(PY) -c 'import sys; print(sys.executable)')"
@@ -42,6 +45,11 @@ hl-lander-watch:
 # make hl-lander-train [STEPS=2000000] [SEED=0]
 hl-lander-train:
 	$(PY) experiments/hl-lunar-lander/train_rl.py --total-steps $(STEPS) --seed $(SEED)
+
+# make hl-gobblet-watch [P0=random] [P1=random] [SEED=0] [DELAY=0.6]
+# Watch two AIs play 奇迹连连 (Gobblet Gobblers) step by step in the terminal.
+hl-gobblet-watch:
+	$(PY) experiments/hl-gobblet/watch_match.py --p0 $(P0) --p1 $(P1) --seed $(SEED) --delay $(DELAY)
 
 test:
 	$(PY) -m pytest

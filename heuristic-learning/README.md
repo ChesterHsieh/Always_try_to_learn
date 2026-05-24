@@ -67,6 +67,39 @@ make test                                     # 執行測試
 
 可用的 `CONTROLLER`：`baseline_v1`、`fsm_macro_v1`、`random`、`noop`、`rl_ppo`。
 
+## 第二個環境：奇迹连连（Gobblet Gobblers）
+
+為了驗證 HL 命題在「結構迥異」環境上的普適性，本 repo 另有一個離散、回合制、雙人對弈、含隱藏資訊的環境 `hl_gobblet`。它是 3×3 井字棋的進階版：每方 6 子（大／中／小各 2），大子可「吃」（蓋住）較小子；最快讓自己的子（盤面最上層）連成三線者獲勝。移動大子會重新揭露底下被蓋住的子——記憶／隱藏資訊正是這遊戲的 tricky 核心。
+
+環境本體採不可變狀態 + 純函式推進：
+
+```text
+src/hl_gobblet/
+├── state.py        # GobbletState（frozen）：每格 size→格主的堆疊、雙方手牌
+├── moves.py        # Move 值物件 + 穩定的 move<->index 全動作空間編碼
+├── rules.py        # legal_moves / apply_move / 連線勝負判定（含 reveal_loses 變體）
+├── env.py          # GobbletEnv：gymnasium 風格、P0 視角 + 注入式對手 hook
+├── render.py       # 純函式：state + 上一步 → rich 可渲染物件（無 I/O）
+└── opponents/      # RandomOpponent（決定性、吃 seed）
+experiments/hl-gobblet/watch_match.py  # CLI 對戰觀戰器（rich.live 逐步刷新）
+```
+
+勝負判定預設用官方規則（落子完成後才檢查連線）；另有可設定旗標 `reveal_loses` 實作進階 touch-move 變體：拿起一子的瞬間若揭露對方已連線，則拿起者判負。
+
+### 看兩個 AI 對戰
+
+用 `rich` 渲染的 CLI 觀戰器逐步播放整局 AI vs AI：
+
+```bash
+make hl-gobblet-watch                       # 兩個 random AI 對打（自動播放）
+make hl-gobblet-watch P0=random P1=random SEED=3 DELAY=0.3
+# 直接呼叫腳本可用更多選項：
+./.venv/bin/python experiments/hl-gobblet/watch_match.py --step          # 按 Enter 逐步
+./.venv/bin/python experiments/hl-gobblet/watch_match.py --reveal-loses  # 進階變體
+```
+
+畫面以大小寫＋顏色區分雙方（P0 大寫青色、P1 小寫洋紅），格子尾端 `*` 表示底下還蓋著別的子，並逐步顯示每一步動作與被揭露的子。目前對手只有 `random`；手寫規則 controller 與 greedy 前瞻、勝率評估管線留待後續 change。
+
 ## 參考資料
 
 - 原文：[Learning Beyond Gradients](https://trinkle23897.github.io/learning-beyond-gradients/#zh)
