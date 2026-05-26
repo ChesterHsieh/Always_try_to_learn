@@ -107,17 +107,23 @@ class SshTransport:
             raise TransportError("觸發 bootstrap 失敗")
 
     def upload(self, source: Path, dest: str) -> bool:
-        """rsync 本機資料夾到 pod 的 dest，回傳是否成功。"""
-        ssh = "ssh " + " ".join(self.target._ssh_opts())
-        # 先確保目的目錄存在
+        """把本機資料夾打包經 SSH 傳到 pod 的 dest，回傳是否成功。
+
+        用 tar over ssh（不依賴 rsync——RunPod base image 不一定裝 rsync，但 tar 一定有）。
+        """
         if self._remote(f"mkdir -p {dest}").returncode != 0:
             return False
-        cmd = [
-            "rsync", "-az", "-e", ssh,
-            f"{str(source).rstrip('/')}/",
-            f"{self.target.user}@{self.target.host}:{dest}",
-        ]
-        return self.runner(cmd).returncode == 0
+        ssh_opts = " ".join(self.target._ssh_opts())
+        target = f"{self.target.user}@{self.target.host}"
+        src = str(source).rstrip("/")
+        # 本機 tar 打包 stdout → ssh → pod 端 tar 解到 dest。
+        # COPYFILE_DISABLE=1 + 排除 ._*：避免 macOS AppleDouble metadata。
+        # 解壓 --no-same-owner：避開 macOS 寫入的 uid/gid 在 pod 上無權還原。
+        pipeline = (
+            f"COPYFILE_DISABLE=1 tar -C {shlex.quote(src)} --exclude='._*' -czf - . | "
+            f"ssh {ssh_opts} {target} tar --no-same-owner -xzf - -C {shlex.quote(dest)}"
+        )
+        return self.runner(["bash", "-c", pipeline]).returncode == 0
 
     def marker_status(self, concept: str) -> str | None:
         """查 pod 上的完成標記：done / failed / None（尚在進行）。"""

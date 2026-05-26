@@ -1,4 +1,4 @@
-"""直連 SSH transport 測試：解析連線、rsync 上傳、查完成標記。"""
+"""直連 SSH transport 測試：解析連線、tar 上傳、查完成標記。"""
 from __future__ import annotations
 
 import subprocess
@@ -36,7 +36,7 @@ def test_parse_garbage_raises() -> None:
 
 
 @pytest.mark.unit
-def test_upload_success_runs_mkdir_then_rsync(tmp_path: Path) -> None:
+def test_upload_success_runs_mkdir_then_tar(tmp_path: Path) -> None:
     calls: list[list[str]] = []
 
     def runner(cmd):
@@ -45,9 +45,9 @@ def test_upload_success_runs_mkdir_then_rsync(tmp_path: Path) -> None:
 
     t = SshTransport(SshTarget("root", "1.2.3.4", 22), runner=runner)
     assert t.upload(tmp_path, "/workspace/datasets/x/") is True
-    # 第一個是遠端 mkdir，第二個是 rsync
+    # 第一個是遠端 mkdir，第二個是 tar over ssh（不依賴 rsync）
     assert any("mkdir -p" in " ".join(c) for c in calls)
-    assert any(c[0] == "rsync" for c in calls)
+    assert any("tar -C" in " ".join(c) and "ssh" in " ".join(c) for c in calls)
 
 
 @pytest.mark.unit
@@ -57,8 +57,8 @@ def test_upload_mkdir_failure_returns_false(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_upload_rsync_failure_returns_false(tmp_path: Path) -> None:
-    seq = iter([_ok, _fail])  # mkdir 成功、rsync 失敗
+def test_upload_transfer_failure_returns_false(tmp_path: Path) -> None:
+    seq = iter([_ok, _fail])  # mkdir 成功、tar 失敗
 
     def runner(cmd):
         return next(seq)(cmd)
@@ -125,7 +125,7 @@ def test_kickoff_uploads_writes_config_and_launches(tmp_path: Path) -> None:
     t.kickoff(_Cfg())
 
     joined = "\n".join(calls)
-    assert any(c.startswith("rsync") for c in calls)              # 上傳腳本
+    assert any("tar -C" in c for c in calls)                      # 上傳腳本（tar over ssh）
     assert "base64 -d" in joined and "rclone.conf" in joined      # 寫 rclone 設定
     assert "run.env" in joined                                    # 寫訓練參數
     assert "pod_bootstrap.sh" in joined and "nohup" in joined     # 背景觸發

@@ -53,7 +53,26 @@ def test_load_config_full(tmp_path: Path) -> None:
     # 未指定的有預設
     assert cfg.alpha == 8
     assert cfg.trigger == "stcklnd"
-    assert cfg.cloud_type == "COMMUNITY"
+    assert cfg.cloud_type == "SECURE"  # 預設 SECURE（掛 volume 必須）
+
+
+@pytest.mark.unit
+def test_rclone_config_b64_decoded(tmp_path: Path) -> None:
+    import base64
+    conf = "[gdrive]\ntype = drive\ntoken = {\"x\":1}"
+    b64 = base64.b64encode(conf.encode()).decode()
+    content = FULL_ENV.replace("RCLONE_DRIVE_CONFIG=[gdrive]",
+                               f"RCLONE_DRIVE_CONFIG_B64={b64}")
+    cfg = load_config(_write_env(tmp_path, content))
+    assert cfg.rclone_drive_config == conf  # 多行還原無誤
+
+
+@pytest.mark.unit
+def test_missing_rclone_config_raises(tmp_path: Path) -> None:
+    content = "\n".join(ln for ln in FULL_ENV.splitlines()
+                        if not ln.startswith("RCLONE_DRIVE_CONFIG"))
+    with pytest.raises(ConfigError, match="rclone"):
+        load_config(_write_env(tmp_path, content))
 
 
 @pytest.mark.unit

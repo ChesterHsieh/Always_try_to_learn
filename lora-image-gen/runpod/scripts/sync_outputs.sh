@@ -14,16 +14,19 @@ DEST="${GDRIVE_DEST_PATH:?未設定 GDRIVE_DEST_PATH}"
 LORA_DIR="$VOL/models/loras"
 LOG_DIR="$VOL/training/logs/$CONCEPT"
 
-if [ -z "${RCLONE_DRIVE_CONFIG:-}" ]; then
-  echo "同步失敗：未注入 RCLONE_DRIVE_CONFIG" >&2
+# rclone 設定來源（擇一）：
+#   1) launcher 的 transport.kickoff 已把 rclone.conf 寫到 ~/.config/rclone/rclone.conf
+#   2) 或經環境變數 RCLONE_DRIVE_CONFIG 注入（這裡還原成 rclone.conf）
+RCLONE_CONF="$HOME/.config/rclone/rclone.conf"
+if [ -n "${RCLONE_DRIVE_CONFIG:-}" ]; then
+  mkdir -p "$(dirname "$RCLONE_CONF")"
+  printf '%s\n' "$RCLONE_DRIVE_CONFIG" > "$RCLONE_CONF"
+  chmod 600 "$RCLONE_CONF"
+fi
+if [ ! -s "$RCLONE_CONF" ]; then
+  echo "同步失敗：找不到 rclone 設定（$RCLONE_CONF 不存在，也未注入 RCLONE_DRIVE_CONFIG）" >&2
   exit 1
 fi
-
-# 還原 rclone 設定到預設位置（非互動）。
-RCLONE_CONF="$HOME/.config/rclone/rclone.conf"
-mkdir -p "$(dirname "$RCLONE_CONF")"
-printf '%s\n' "$RCLONE_DRIVE_CONFIG" > "$RCLONE_CONF"
-chmod 600 "$RCLONE_CONF"
 
 command -v rclone >/dev/null 2>&1 || { echo "==> 安裝 rclone"; curl -fsSL https://rclone.org/install.sh | bash; }
 

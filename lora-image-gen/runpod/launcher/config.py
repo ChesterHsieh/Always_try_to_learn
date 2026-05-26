@@ -13,19 +13,18 @@ class ConfigError(Exception):
     """設定缺漏或無效。訊息只含鍵名，不含機密值。"""
 
 
-# 必要鍵：缺任一即拒絕啟動。
+# 必要鍵：缺任一即拒絕啟動。rclone 設定另外驗證（見 load_config）。
 REQUIRED_KEYS: tuple[str, ...] = (
     "RUNPOD_API_KEY",
     "RUNPOD_NETWORK_VOLUME_ID",
     "RUNPOD_DATA_CENTER_ID",
     "RUNPOD_GPU_TYPE",
-    "RCLONE_DRIVE_CONFIG",
     "GDRIVE_DEST_PATH",
 )
 
 # 視為機密的鍵：不可出現在日誌 / repr。
 SECRET_KEYS: frozenset[str] = frozenset(
-    {"RUNPOD_API_KEY", "RCLONE_DRIVE_CONFIG"}
+    {"RUNPOD_API_KEY", "RCLONE_DRIVE_CONFIG", "RCLONE_DRIVE_CONFIG_B64"}
 )
 
 
@@ -86,6 +85,30 @@ def _missing_required(values: dict[str, str]) -> list[str]:
     return [k for k in REQUIRED_KEYS if not values.get(k, "").strip()]
 
 
+def _resolve_rclone_config(values: dict[str, str]) -> str:
+    """取 rclone 設定：優先 base64（單行、最穩），否則用單行原文。
+
+    .env 逐行解析無法存多行值，所以多行的 rclone.conf 必須用 RCLONE_DRIVE_CONFIG_B64
+    （整段 conf 的 base64）傳入；RCLONE_DRIVE_CONFIG 僅適用真的單行的情況。
+    """
+    import base64
+    import binascii
+
+    b64 = values.get("RCLONE_DRIVE_CONFIG_B64", "").strip()
+    if b64:
+        try:
+            return base64.b64decode(b64).decode("utf-8")
+        except (binascii.Error, ValueError) as exc:
+            raise ConfigError(f"RCLONE_DRIVE_CONFIG_B64 不是有效的 base64：{exc}") from exc
+    raw = values.get("RCLONE_DRIVE_CONFIG", "").strip()
+    if raw:
+        return raw
+    raise ConfigError(
+        "設定缺少 rclone 設定：請提供 RCLONE_DRIVE_CONFIG_B64（rclone.conf 的 base64，建議）"
+        " 或單行的 RCLONE_DRIVE_CONFIG"
+    )
+
+
 def load_config(env_path: Path) -> LauncherConfig:
     """讀 .env、驗證必要鍵、組出設定；缺漏時拋 ConfigError（只列鍵名）。"""
     if not env_path.exists():
@@ -101,8 +124,8 @@ def load_config(env_path: Path) -> LauncherConfig:
         network_volume_id=values["RUNPOD_NETWORK_VOLUME_ID"],
         data_center_id=values["RUNPOD_DATA_CENTER_ID"],
         gpu_type=values["RUNPOD_GPU_TYPE"],
-        cloud_type=values.get("RUNPOD_CLOUD_TYPE", "COMMUNITY").strip().upper(),
-        rclone_drive_config=values["RCLONE_DRIVE_CONFIG"],
+        cloud_type=values.get("RUNPOD_CLOUD_TYPE", "SECURE").strip().upper(),
+        rclone_drive_config=_resolve_rclone_config(values),
         gdrive_dest_path=values["GDRIVE_DEST_PATH"],
         image=values.get("RUNPOD_IMAGE", "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04"),
         container_disk_gb=int(values.get("RUNPOD_CONTAINER_DISK_GB", "30")),

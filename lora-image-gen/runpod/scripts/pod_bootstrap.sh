@@ -18,6 +18,17 @@ RUN_FAILED="$VOL/training/$CONCEPT.run.failed"   # launcher 輪詢：整體失�
 mkdir -p "$VOL/training"
 rm -f "$RUN_DONE" "$RUN_FAILED"
 
+# 新 volume 第一次用：若缺 base 模型，先建目錄結構 + 下載（一次性）。
+BASE_MODEL_PATH="$VOL/${TRAIN_BASE_MODEL:-models/checkpoints/dreamshaper_xl_v2_turbo.safetensors}"
+if [ ! -f "$BASE_MODEL_PATH" ]; then
+  echo "==> 偵測到新 volume 缺 base 模型，先跑 setup_volume.sh 下載（一次性）"
+  if ! bash "$SCRIPTS_DIR/setup_volume.sh"; then
+    echo "run failed at setup" > "$RUN_FAILED"
+    echo "==> 下載 base 模型失敗，停止流程。" >&2
+    exit 1
+  fi
+fi
+
 # 背景開 ComfyUI 當除錯介面；失敗不影響訓練本身。
 echo "==> 背景啟動 ComfyUI（除錯用）"
 nohup bash "$SCRIPTS_DIR/start_comfy.sh" > "$VOL/training/comfy.log" 2>&1 &
