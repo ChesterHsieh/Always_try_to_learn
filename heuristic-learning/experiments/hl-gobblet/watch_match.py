@@ -5,9 +5,12 @@ it writes no report and computes no statistics. It mirrors the lander
 play_gui.py convention (sys.path bootstrap, argparse, opponent factory) and reuses
 hl_gobblet.render so the on-screen logic matches the snapshot-tested pure helpers.
 
+Opponents: `random` (uniform legal move) and `fsm` (FsmGobbletV1, a gradient-free
+FSM controller that switches between aggressive/defensive modes).
+
 Usage:
     ./.venv/bin/python experiments/hl-gobblet/watch_match.py \\
-        --p0 random --p1 random --seed 0 --delay 0.6
+        --p0 fsm --p1 random --seed 0 --delay 0.6
     # step through one ply at a time (press Enter):
     ./.venv/bin/python experiments/hl-gobblet/watch_match.py --step
     # play the touch-move variant:
@@ -33,12 +36,17 @@ from hl_gobblet.rules import DEFAULT_MAX_MOVES, apply_move, status_of  # noqa: E
 from hl_gobblet.state import Player, initial_state  # noqa: E402
 
 
-def _opponent_factory(name: str, seed: int):
+def _opponent_factory(name: str, seed: int, *, reveal_loses: bool = False):
     if name == "random":
         from hl_gobblet.opponents import RandomOpponent
 
         return RandomOpponent(seed=seed)
-    raise SystemExit(f"unknown opponent '{name}' (available: random)")
+    if name == "fsm":
+        from hl_gobblet.controllers import FsmGobbletV1
+
+        # Pass the match variant so the controller judges wins/threats consistently.
+        return FsmGobbletV1(reveal_loses=reveal_loses)
+    raise SystemExit(f"unknown opponent '{name}' (available: random, fsm)")
 
 
 def _result_str(st) -> str:
@@ -53,8 +61,12 @@ def _result_str(st) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Watch two AIs play Gobblet Gobblers.")
-    parser.add_argument("--p0", default="random", help="opponent for P0 (default: random)")
-    parser.add_argument("--p1", default="random", help="opponent for P1 (default: random)")
+    parser.add_argument(
+        "--p0", default="random", help="opponent for P0: random|fsm (default: random)"
+    )
+    parser.add_argument(
+        "--p1", default="random", help="opponent for P1: random|fsm (default: random)"
+    )
     parser.add_argument("--seed", type=int, default=0, help="game seed (default: 0)")
     parser.add_argument(
         "--reveal-loses",
@@ -77,8 +89,8 @@ def main() -> None:
 
     console = Console()
     # Distinct seeds per side so two 'random' AIs don't mirror each other.
-    p0 = _opponent_factory(args.p0, seed=args.seed)
-    p1 = _opponent_factory(args.p1, seed=args.seed + 1)
+    p0 = _opponent_factory(args.p0, seed=args.seed, reveal_loses=args.reveal_loses)
+    p1 = _opponent_factory(args.p1, seed=args.seed + 1, reveal_loses=args.reveal_loses)
     p0.reset(args.seed)
     p1.reset(args.seed + 1)
 

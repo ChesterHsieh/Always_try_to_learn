@@ -2,7 +2,8 @@ PY := ./.venv/bin/python
 PIP := ./.venv/bin/pip
 
 .PHONY: doctor list view propose-help hl-lander-deps-check hl-lander-smoke \
-        hl-lander-eval hl-lander-watch hl-lander-train hl-gobblet-watch test
+        hl-lander-eval hl-lander-watch hl-lander-train hl-gobblet-watch \
+        hl-gobblet-play test
 
 CONTROLLER ?= baseline_v1
 SEEDS      ?= 5
@@ -12,6 +13,9 @@ STEPS      ?= 2000000
 P0         ?= random
 P1         ?= random
 DELAY      ?= 0.6
+HUMAN_AS   ?= 0
+# REVEAL: set to 1 (any non-empty value) to enable the touch-move reveal_loses variant.
+REVEAL     ?=
 
 doctor:
 	@echo "Python: $$($(PY) -c 'import sys; print(sys.executable)')"
@@ -46,10 +50,15 @@ hl-lander-watch:
 hl-lander-train:
 	$(PY) experiments/hl-lunar-lander/train_rl.py --total-steps $(STEPS) --seed $(SEED)
 
-# make hl-gobblet-watch [P0=random] [P1=random] [SEED=0] [DELAY=0.6]
+# make hl-gobblet-watch [P0=random|fsm] [P1=random|fsm] [SEED=0] [DELAY=0.6] [REVEAL=1]
 # Watch two AIs play 奇迹连连 (Gobblet Gobblers) step by step in the terminal.
 hl-gobblet-watch:
-	$(PY) experiments/hl-gobblet/watch_match.py --p0 $(P0) --p1 $(P1) --seed $(SEED) --delay $(DELAY)
+	$(PY) experiments/hl-gobblet/watch_match.py --p0 $(P0) --p1 $(P1) --seed $(SEED) --delay $(DELAY) $(if $(REVEAL),--reveal-loses)
+
+# make hl-gobblet-play [HUMAN_AS=0|1] [SEED=0] [REVEAL=1]
+# Play 奇迹连连 (Gobblet Gobblers) against the FsmGobbletV1 AI in the terminal.
+hl-gobblet-play:
+	$(PY) experiments/hl-gobblet/play_human.py --human-as $(HUMAN_AS) --seed $(SEED) $(if $(REVEAL),--reveal-loses)
 
 test:
 	$(PY) -m pytest
