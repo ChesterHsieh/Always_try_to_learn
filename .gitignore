@@ -29,3 +29,8 @@ ai-monitor-system/deploy/helm/tmpcharts-*/
 
 # External repos
 learn-jax/purejaxrl/
+
+# Node build artifacts (reading-club slide generation)
+node_modules/
+gpu-memory-reading-club/slides/build/*.pdf
+gpu-memory-reading-club/slides/build/*.jpg

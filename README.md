@@ -83,6 +83,15 @@ Spark 流處理實驗室——最小可行實驗設置，用於流式事件模�
 - **技術棧**：Python
 - **內容**：LeetCode 題解與資料結構實作（如 MonoStack、OrderedDict）
 
+### 10. gpu-memory-reading-club
+
+GPU 記憶體與資料搬遷讀書會——從計算機組織與 GPU 架構，探討為什麼 inference／training 的資料搬遷與記憶體相關速度差這麼多。
+
+- **形式**：技術讀書會（4 場系列），產出投影片（.pptx）＋ 講稿＋ 可重現 demo
+- **主線**：Roofline／算術強度 + 記憶體階層；compute-bound vs memory-bound
+- **目前進度**：S1（Roofline 與記憶體階層）、S3（Training vs Inference，以 ASR 為例）投影片 + demo + 講稿完成
+- **詳情**：[gpu-memory-reading-club/README.md](gpu-memory-reading-club/README.md)
+
 ## 技術棧概覽
 
 - **語言**：Python、Java
@@ -118,4 +127,4 @@ Chester Hsieh
 
 ## 更新日期
 
-2026-05-22
+2026-06-05
