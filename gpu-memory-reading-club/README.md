@@ -180,11 +180,17 @@ gpu-memory-reading-club/
   - 投影片 [slides/s1_roofline.pptx](slides/s1_roofline.pptx)（11 頁，深色矽晶主題）
   - Demo [demos/01_roofline_mini](demos/01_roofline_mini)（已 CPU smoke test）
   - 講稿 [notes/s1_roofline.md](notes/s1_roofline.md)
-- [ ] **M2**：S2 投影片 + pinned vs pageable demo
+- [x] **M2**：S2 投影片 + pinned vs pageable demo + 講稿
+  - 投影片 [slides/s2_gpu_hbm.pptx](slides/s2_gpu_hbm.pptx)（11 頁）
+  - Demo [demos/02_pinned_vs_pageable](demos/02_pinned_vs_pageable)（需 GPU）
+  - 講稿 [notes/s2_gpu_hbm.md](notes/s2_gpu_hbm.md)
 - [x] **M3**：S3 投影片 + decode/ASR demo + 講稿（核心場）
   - 投影片 [slides/s3_train_vs_infer_asr.pptx](slides/s3_train_vs_infer_asr.pptx)（13 頁）
   - Demo [demos/03_decode_memory_bound](demos/03_decode_memory_bound)（batch sweep + ASR proxy，已 CPU smoke test）
   - 講稿 [notes/s3_train_vs_infer_asr.md](notes/s3_train_vs_infer_asr.md)
-- [ ] **M4**：S4 投影片 + prefetch 壓軸 demo
+- [x] **M4**：S4 投影片 + prefetch 壓軸 demo + 講稿（系列終章）
+  - 投影片 [slides/s4_data_movement.pptx](slides/s4_data_movement.pptx)（12 頁）
+  - Demo [demos/04_prefetch_overlap](demos/04_prefetch_overlap)（需 GPU）
+  - 講稿 [notes/s4_data_movement.md](notes/s4_data_movement.md)
 
-> S1 ＋ S3 已可撐起一場有頭有尾的 keynote。其餘建議：S2（GPU 架構與 HBM）補齊晶片內細節、S4（資料搬遷方案）收尾。
+> 🎉 系列四場（S1–S4）投影片 + demo + 講稿全部完成。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格。

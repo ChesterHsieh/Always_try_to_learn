@@ -16,4 +16,4 @@
 - 量測前先 warmup、用 `torch.cuda.synchronize()` 圍住計時區間，多次取中位數。
 - 預設可在 RunPod GPU 上跑（沿用根目錄 `lora-image-gen` 的遠端流程）；Apple Silicon 可作統一記憶體對照。
 
-> 進度：`01_roofline_mini`、`03_decode_memory_bound` 已完成（皆已 CPU smoke test，真實效果需 GPU）；`02`、`04` 待製作。
+> 進度：四個 demo（01–04）皆已完成。01／03 已 CPU smoke test；02／04 需 CUDA（CPU 上會優雅提示並結束）。真實記憶體效應一律需在 GPU 上才明顯。

@@ -89,7 +89,7 @@ GPU 記憶體與資料搬遷讀書會——從計算機組織與 GPU 架構，�
 
 - **形式**：技術讀書會（4 場系列），產出投影片（.pptx）＋ 講稿＋ 可重現 demo
 - **主線**：Roofline／算術強度 + 記憶體階層；compute-bound vs memory-bound
-- **目前進度**：S1（Roofline 與記憶體階層）、S3（Training vs Inference，以 ASR 為例）投影片 + demo + 講稿完成
+- **目前進度**：S1–S4 四場全部完成（Roofline 與記憶體階層、GPU 架構與 HBM、Training vs Inference（以 ASR 為例）、資料搬遷的關卡與記憶體方案）；各場投影片 + demo + 講稿齊備
 - **詳情**：[gpu-memory-reading-club/README.md](gpu-memory-reading-club/README.md)
 
 ## 技術棧概覽

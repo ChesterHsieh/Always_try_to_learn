@@ -5,11 +5,11 @@
 | 檔案 | 場次 | 主題 | 狀態 |
 |---|---|---|---|
 | `s1_roofline.pptx` | S1 | 為什麼會慢？Roofline 與記憶體階層 | ✅ 已產生（11 頁） |
-| `s2_gpu_hbm.pptx` | S2 | GPU 架構與 HBM：資料在晶片內怎麼走 | 待製作 |
+| `s2_gpu_hbm.pptx` | S2 | GPU 架構與 HBM：資料在晶片內怎麼走 | ✅ 已產生（11 頁） |
 | `s3_train_vs_infer_asr.pptx` | S3 | Training vs Inference 的瓶頸差異（以 ASR 為例） | ✅ 已產生（13 頁） |
-| `s4_data_movement.pptx` | S4 | 資料搬遷的關卡與記憶體方案 | 待製作 |
+| `s4_data_movement.pptx` | S4 | 資料搬遷的關卡與記憶體方案 | ✅ 已產生（12 頁） |
 
-> 內容大綱見 [../README.md](../README.md) 第 5 節；講稿見 [../notes/s1_roofline.md](../notes/s1_roofline.md)、[../notes/s3_train_vs_infer_asr.md](../notes/s3_train_vs_infer_asr.md)。
+> 內容大綱見 [../README.md](../README.md) 第 5 節；四場講稿見 [../notes/](../notes/)。
 
 ## 如何重建 / 修改投影片
 
@@ -19,7 +19,9 @@
 cd build
 npm install               # 首次：安裝 pptxgenjs
 node generate_s1.js       # 產生 ../s1_roofline.pptx
+node generate_s2.js       # 產生 ../s2_gpu_hbm.pptx
 node generate_s3.js       # 產生 ../s3_train_vs_infer_asr.pptx
+node generate_s4.js       # 產生 ../s4_data_movement.pptx
 ```
 
 視覺檢查（需 LibreOffice 的 soffice）：
