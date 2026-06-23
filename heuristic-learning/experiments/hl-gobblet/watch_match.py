@@ -46,7 +46,11 @@ def _opponent_factory(name: str, seed: int, *, reveal_loses: bool = False):
 
         # Pass the match variant so the controller judges wins/threats consistently.
         return FsmGobbletV1(reveal_loses=reveal_loses)
-    raise SystemExit(f"unknown opponent '{name}' (available: random, fsm)")
+    if name == "fsm-v2":
+        from hl_gobblet.controllers import FsmGobbletV2
+
+        return FsmGobbletV2(reveal_loses=reveal_loses)
+    raise SystemExit(f"unknown opponent '{name}' (available: random, fsm, fsm-v2)")
 
 
 def _result_str(st) -> str:
@@ -62,10 +66,10 @@ def _result_str(st) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Watch two AIs play Gobblet Gobblers.")
     parser.add_argument(
-        "--p0", default="random", help="opponent for P0: random|fsm (default: random)"
+        "--p0", default="random", help="opponent for P0: random|fsm|fsm-v2 (default: random)"
     )
     parser.add_argument(
-        "--p1", default="random", help="opponent for P1: random|fsm (default: random)"
+        "--p1", default="random", help="opponent for P1: random|fsm|fsm-v2 (default: random)"
     )
     parser.add_argument("--seed", type=int, default=0, help="game seed (default: 0)")
     parser.add_argument(

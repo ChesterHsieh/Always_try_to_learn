@@ -7,12 +7,15 @@ picks moves with a readable, code-only policy.
 
 FsmGobbletV1 reuses hl_core's FiniteStateMachine + RuleTable building blocks to
 switch between two named modes — `aggressive` and `defensive` — driven purely by
-a one-ply threat assessment. No gradients, no neural-network weights, no tree
-search (HL red line); every "parameter" is a named constant in source.
+a one-ply threat assessment. FsmGobbletV2 iterates on it with fork (double-threat)
+awareness, gobble tactics, and a third `setup_fork` mode, and is tuned to beat v1
+head to head. No gradients, no neural-network weights, no tree search (HL red
+line); every "parameter" is a named constant in source.
 """
 
 from __future__ import annotations
 
 from .fsm_gobblet_v1 import FsmGobbletV1
+from .fsm_gobblet_v2 import FsmGobbletV2
 
-__all__ = ["FsmGobbletV1"]
+__all__ = ["FsmGobbletV1", "FsmGobbletV2"]
