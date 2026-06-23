@@ -4,10 +4,10 @@
 
 | 檔案 | 場次 | 主題 | 狀態 |
 |---|---|---|---|
-| `s1_roofline.pptx` | S1 | 為什麼會慢？Roofline 與記憶體階層 | ✅ 已產生（11 頁） |
-| `s2_gpu_hbm.pptx` | S2 | GPU 架構與 HBM：資料在晶片內怎麼走 | ✅ 已產生（11 頁） |
-| `s3_train_vs_infer_asr.pptx` | S3 | Training vs Inference 的瓶頸差異（以 ASR 為例） | ✅ 已產生（13 頁） |
-| `s4_data_movement.pptx` | S4 | 資料搬遷的關卡與記憶體方案 | ✅ 已產生（12 頁） |
+| `full_series.pptx` | 合輯 | S1–S5 重編去重、**聚焦硬體×Transformer**（已移除 ASR / NVLink-GDS / UVM / 進出站 / CPU-vs-GPU / GPU 解剖、折入心法、方案表移 Part 1） | ✅ 唯一維護版本（34 頁） |
+| ~~`s1`–`s5_*.pptx`~~ | S1–S5 | 單場版 | ♻️ 已整併入合輯後刪除；可由 `build/generate_s1.js`–`generate_s5.js` 重建 |
+
+> 合輯第 4 頁是「互動環節」指引頁：講者切出去開 [../interactive/gpu_map.html](../interactive/gpu_map.html)（Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 互動下鑽地圖）。次序對照見 [../notes/full_series.md](../notes/full_series.md)。
 
 > 內容大綱見 [../README.md](../README.md) 第 5 節；四場講稿見 [../notes/](../notes/)。
 
@@ -18,10 +18,8 @@
 ```bash
 cd build
 npm install               # 首次：安裝 pptxgenjs
-node generate_s1.js       # 產生 ../s1_roofline.pptx
-node generate_s2.js       # 產生 ../s2_gpu_hbm.pptx
-node generate_s3.js       # 產生 ../s3_train_vs_infer_asr.pptx
-node generate_s4.js       # 產生 ../s4_data_movement.pptx
+node generate_full.js     # 產生 ../full_series.pptx（主要維護版本）
+node generate_s1.js       # （選用）重建單場版 s1–s5，同理 generate_s2..s5.js
 ```
 
 視覺檢查（需 LibreOffice 的 soffice）：

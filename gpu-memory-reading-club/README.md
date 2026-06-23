@@ -61,8 +61,10 @@
 | **S2** | GPU 架構與 HBM：資料在晶片內怎麼走 | SM / warp / tensor core / HBM / shared memory | pinned vs pageable 傳輸、tiling 直覺 |
 | **S3** | Training vs Inference 的瓶頸差異（以 ASR 為例） | 為什麼 decode 是 memory-bound、KV cache 的角色 | batch sweep decode、ASR encoder/decoder 剖析 |
 | **S4** | 資料搬遷的關卡與記憶體方案 | PCIe / NVLink / GPUDirect Storage / Unified Memory | **prefetch / stream overlap 對照（壓軸 demo）** |
+| **S5** | 平行運算與軟硬體共同演化（番外進階場） | 為什麼平行度就是一切、模型設計 ⇄ 計算機結構怎麼互相塑造 | FLOPs vs 平行度（LSTM vs Transformer、dense vs depthwise） |
 
-> 彈性：若只辦一場 keynote，可走「S1 心智模型 → S3 ASR 案例 → S4 壓軸 demo」精簡線；完整讀書會則四場循序。
+> 彈性：若只辦一場 keynote，可走「S1 心智模型 → S3 ASR 案例 → S4 壓軸 demo」精簡線；完整讀書會則四場循序，S5 可作系列後的進階加場。
+> **S1–S5 合輯**（[slides/full_series.pptx](slides/full_series.pptx)，34 頁）是目前唯一維護的投影片，**聚焦「硬體架構 × Transformer」**：重編去重後的單份，五篇章「機器 → 一把尺 → 模型上機 → 資料搬遷 → 共同演化」。相對早期版**已移除 ASR 案例、NVLink/GPUDirect、Unified Memory 三種、進出站(PCIe/pinned)、靜態的「CPU vs GPU」與「GPU 解剖」（GPU 結構改由互動地圖承擔），並把「心法」折進記憶體階層頁**（以下 §4/§5 為原始 S1–S5 場次大綱，屬內容來源；合輯為其聚焦衍生版）。兩個互動環節：第 4 頁搭配 [interactive/gpu_map.html](interactive/gpu_map.html)（Cluster 下鑽到 SM、再到 CUDA/Tensor core）、第 25 頁搭配 [interactive/transformer_map.html](interactive/transformer_map.html)（玩具級 Transformer，6 層 Encoder⟷Decoder 全景→Block→Attention→Head→計算子 matmul(L2⟷HBM)→硬體 × 訓練/Prefill/Decode × GPU/TPU/Groq，含 KV cache 串流與 tensor core tiling，報告見 [notes/transformer_interactive.md](notes/transformer_interactive.md)）。第 8 頁「三層記憶體每 GB 價格」+「各家加速器比較」、TPU/Groq 硬體專頁見第 27–28 頁。次序對照見 [notes/full_series.md](notes/full_series.md)。單場版 pptx 已刪除，可由 `slides/build/generate_sX.js` 重建。
 
 ## 5. 各場詳細大綱
 
@@ -117,6 +119,19 @@
   4. **GPU / 記憶體方案比較表**（見下節）。
   5. **壓軸 demo**：`demos/04_prefetch_overlap` — 用 CUDA stream 把「搬下一批資料」與「算這一批」重疊（prefetch），對照 naïve 序列版本的吞吐提升；延伸到 DataLoader 的 `num_workers` + `pin_memory` + prefetch 對訓練 step time 的影響。
 
+### S5 — 平行運算與軟硬體共同演化：從 CNN 到 Transformer 到混合架構（番外進階場）
+
+- **學習目標**：理解「GPU 不是快，是寬」；能用三個硬體問題（平行軸 / AI / 序列鏈長）解讀模型架構的演化與取捨。
+- **大綱**：
+  1. 熱身：GPU 的單執行緒比 CPU 慢——GPU 把電晶體全換成寬度，沒有平行度就沒有 GPU。
+  2. 數字感 + Amdahl：H100 ≈ 16,896 條 lane、要 10⁵ 量級 thread 在飛；序列相依的 (1−p) 是加速天花板。
+  3. 平行度是模型「暴露」出來的：DL 的平行軸（batch / pixel / channel / token / layer）。
+  4. **硬體 → 模型**：CNN 等了 23 年等到 GPU（AlexNet）、hardware lottery；Transformer 的誕生動機就是平行化（取代 RNN 的序列鏈）。
+  5. **模型 → 硬體**：tensor core、TPU systolic array、H100 Transformer Engine、H200 141GB、精度 fp32→fp4 的共同演化。
+  6. **SOTA case studies**：MobileNet vs ConvNeXt（FLOPs ≠ 速度）；FlashAttention（演算法遷就記憶體階層）與 MQA/GQA（架構遷就頻寬）；Mamba/SSM 與混合架構（Jamba / Griffin / Conformer——呼應 S3 的 ASR）。
+  7. 收束框架：設計/選模型前先問三個硬體問題。
+- **Demo**：`demos/05_flops_vs_parallelism` — (A) 同規模 LSTM vs Transformer block：FLOPs 多 1.75× 反而快 ~2×；(B) dense vs depthwise conv：FLOPs ÷8.7 但時間只 ÷3.7（Apple M2 實測）。
+
 ### 各 GPU / 記憶體方案速覽（約略值，選型用，以官方規格為準）
 
 | 方案 | 記憶體型態 | 容量級距 | 頻寬級距 | 定位 |
@@ -138,6 +153,7 @@
 | `02_pinned_vs_pageable` | 進出站與 DMA | H2D 頻寬 (GB/s) | pinned 快 ~1.5–2× |
 | `03_decode_memory_bound` | training vs inference 瓶頸 | tokens/s vs batch | batch=1 受頻寬限、加 batch 吞吐線性升 |
 | `04_prefetch_overlap` | **預先搬資料的效益（壓軸）** | 吞吐 / step time | stream overlap / prefetch 明顯提升 |
+| `05_flops_vs_parallelism` | FLOPs ≠ 速度（S5） | GFLOPs / ms / 達成 TFLOPS | LSTM 輸給 FLOPs 更多的 transformer；depthwise 省 FLOPs 不省時間 |
 
 - **工具**：`torch.cuda.Event`（計時）、`torch.profiler`、`nvidia-smi dmon`、Nsight Systems（`nsys`）看時間軸上的 memcpy 停頓。
 - **環境**：優先用既有 `lora-image-gen` 的 RunPod GPU 流程跑（見根目錄 README）；本機 Apple Silicon 可跑 Apple 統一記憶體對照組。
@@ -149,16 +165,17 @@
 ```
 gpu-memory-reading-club/
 ├── README.md          # 本檔：系列主規劃
-├── slides/            # 各場投影片（.pptx，透過 pptx skill 產生）
-│   ├── s1_roofline.pptx
-│   ├── s2_gpu_hbm.pptx
-│   ├── s3_train_vs_infer_asr.pptx
-│   └── s4_data_movement.pptx
+├── slides/            # 投影片（pptxgenjs 腳本產生，見 slides/build/）
+│   └── full_series.pptx        # S1–S5 合輯（唯一維護版本；單場版可由 build 腳本重建）
+├── interactive/       # 互動教具
+│   ├── gpu_map.html            # Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 互動下鑽地圖（合輯第 4 頁指引開啟）
+│   └── transformer_map.html    # 玩具級 Transformer（T=5、d=6、2 heads）6 層 Encoder⟷Decoder→…→計算子 matmul(L2⟷HBM)→硬體 × 三模式 × GPU/TPU/Groq（KV 串流、tensor core tiling；第 25 頁指引）
 ├── demos/             # 可重現的 demo 程式與量測腳本
 │   ├── 01_roofline_mini/
 │   ├── 02_pinned_vs_pageable/
 │   ├── 03_decode_memory_bound/
-│   └── 04_prefetch_overlap/
+│   ├── 04_prefetch_overlap/
+│   └── 05_flops_vs_parallelism/
 └── notes/             # 各場深入筆記 / 講稿 / 推導
 ```
 
@@ -167,30 +184,34 @@ gpu-memory-reading-club/
 
 ## 8. 參考主題（待補來源連結）
 
+> 📖 系列用到的所有縮寫（GEMM / HBM / KV cache / MMA / GQA…）的英文全稱 + 中文 + 一句話說明，見 [notes/glossary.md](notes/glossary.md)。
+
 - Roofline model（Williams et al.）/ Arithmetic intensity
 - GPU memory hierarchy 與 CUDA best practices（pinned memory、stream、tiling）
 - LLM inference 的 memory-bound 本質、KV cache、prefill vs decode
 - ASR 架構對照：Whisper（attention decoder）vs wav2vec2/Conformer + CTC
 - GPUDirect Storage、CUDA Unified Memory、Apple 統一記憶體、Grace Hopper 架構
+- The Hardware Lottery（Sara Hooker）／Attention is All You Need 的平行化動機
+- FlashAttention（IO-aware exact attention）、MQA/GQA、Mamba/SSM 與混合架構（Jamba、Griffin、Conformer）
 
 ## 9. 里程碑與下一步
 
 - [x] **M0**：系列主規劃（本檔）
-- [x] **M1**：S1 投影片 + roofline demo + 講稿
-  - 投影片 [slides/s1_roofline.pptx](slides/s1_roofline.pptx)（11 頁，深色矽晶主題）
-  - Demo [demos/01_roofline_mini](demos/01_roofline_mini)（已 CPU smoke test）
-  - 講稿 [notes/s1_roofline.md](notes/s1_roofline.md)
-- [x] **M2**：S2 投影片 + pinned vs pageable demo + 講稿
-  - 投影片 [slides/s2_gpu_hbm.pptx](slides/s2_gpu_hbm.pptx)（11 頁）
-  - Demo [demos/02_pinned_vs_pageable](demos/02_pinned_vs_pageable)（需 GPU）
-  - 講稿 [notes/s2_gpu_hbm.md](notes/s2_gpu_hbm.md)
-- [x] **M3**：S3 投影片 + decode/ASR demo + 講稿（核心場）
-  - 投影片 [slides/s3_train_vs_infer_asr.pptx](slides/s3_train_vs_infer_asr.pptx)（13 頁）
-  - Demo [demos/03_decode_memory_bound](demos/03_decode_memory_bound)（batch sweep + ASR proxy，已 CPU smoke test）
-  - 講稿 [notes/s3_train_vs_infer_asr.md](notes/s3_train_vs_infer_asr.md)
-- [x] **M4**：S4 投影片 + prefetch 壓軸 demo + 講稿（系列終章）
-  - 投影片 [slides/s4_data_movement.pptx](slides/s4_data_movement.pptx)（12 頁）
-  - Demo [demos/04_prefetch_overlap](demos/04_prefetch_overlap)（需 GPU）
-  - 講稿 [notes/s4_data_movement.md](notes/s4_data_movement.md)
+- [x] **M1**：S1 roofline demo + 講稿（投影片已整併入合輯，可由 `slides/build/generate_s1.js` 重建）
+  - Demo [demos/01_roofline_mini](demos/01_roofline_mini)（已 CPU smoke test）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 1–2；單場講稿已併入後刪除）
+- [x] **M2**：S2 pinned vs pageable demo + 講稿（投影片已整併，`generate_s2.js` 可重建）
+  - Demo [demos/02_pinned_vs_pageable](demos/02_pinned_vs_pageable)（需 GPU）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 1–2）
+- [x] **M3**：S3 decode/ASR demo + 講稿（核心場；投影片已整併，`generate_s3.js` 可重建）
+  - Demo [demos/03_decode_memory_bound](demos/03_decode_memory_bound)（batch sweep + ASR proxy，已 CPU smoke test）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 3）
+- [x] **M4**：S4 prefetch 壓軸 demo + 講稿（投影片已整併，`generate_s4.js` 可重建）
+  - Demo [demos/04_prefetch_overlap](demos/04_prefetch_overlap)（需 GPU）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 4）
+- [x] **M5**：S5 FLOPs vs 平行度 demo + 講稿（番外進階場；投影片已整併，`generate_s5.js` 可重建）
+  - Demo [demos/05_flops_vs_parallelism](demos/05_flops_vs_parallelism)（已在 Apple M2 / MPS 實測）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 5）
+- [x] **M6**：S1–S5 合輯 + 互動地圖
+  - 合輯 [slides/full_series.pptx](slides/full_series.pptx)（34 頁，聚焦硬體×Transformer；次序對照 [notes/full_series.md](notes/full_series.md)）
+  - 互動地圖 [interactive/gpu_map.html](interactive/gpu_map.html)（Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 下鑽，合輯第 4 頁指引開啟）
+- [x] **M7**：玩具級 Transformer 互動地圖 + TPU 專頁
+  - 互動地圖 [interactive/transformer_map.html](interactive/transformer_map.html)（T=5、d=6、2 heads；六層 Encoder⟷Decoder 全景 → Block → Attention → Head → 計算子 matmul(L2⟷HBM 搬運) → 硬體；訓練/Prefill/Decode 三模式；GPU/TPU/Groq 切換含脈動陣列動畫）
+  - 報告 [notes/transformer_interactive.md](notes/transformer_interactive.md)；合輯第 25 頁（互動環節②）、第 27 頁（TPU）、第 28 頁（Groq）、第 8 頁（每 GB 價格）
 
-> 🎉 系列四場（S1–S4）投影片 + demo + 講稿全部完成。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格。
+> 🎉 全系列內容已整併為單份合輯 + 互動地圖。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格（demo 05 已有 M2/MPS 實測數據）。
