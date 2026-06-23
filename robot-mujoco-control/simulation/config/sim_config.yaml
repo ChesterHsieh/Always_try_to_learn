@@ -1,0 +1,4 @@
+model: models/simple_arm.xml
+timestep: 0.005       # MuJoCo physics dt (seconds)
+render: true
+zmq_port: 5555

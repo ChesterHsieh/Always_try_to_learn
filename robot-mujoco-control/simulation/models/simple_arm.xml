@@ -1,0 +1,32 @@
+<!-- 2-DOF planar robot arm for Phase 1 testing -->
+<mujoco model="simple_arm">
+  <option timestep="0.005" gravity="0 0 -9.81"/>
+
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1"/>
+    <geom name="floor" type="plane" size="2 2 0.1" rgba="0.8 0.8 0.8 1"/>
+
+    <!-- Link 1 -->
+    <body name="link1" pos="0 0 0.1">
+      <joint name="joint1" type="hinge" axis="0 0 1" range="-3.14 3.14" damping="0.1"/>
+      <geom type="capsule" fromto="0 0 0 0.3 0 0" size="0.04" rgba="0.3 0.6 0.9 1"/>
+
+      <!-- Link 2 -->
+      <body name="link2" pos="0.3 0 0">
+        <joint name="joint2" type="hinge" axis="0 0 1" range="-2.5 2.5" damping="0.1"/>
+        <geom type="capsule" fromto="0 0 0 0.25 0 0" size="0.035" rgba="0.9 0.4 0.3 1"/>
+
+        <!-- End effector -->
+        <body name="end_effector" pos="0.25 0 0">
+          <geom type="sphere" size="0.03" rgba="0.2 0.9 0.2 1"/>
+          <site name="ee_site" size="0.01"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="act_joint1" joint="joint1" kp="50" kv="5"/>
+    <position name="act_joint2" joint="joint2" kp="50" kv="5"/>
+  </actuator>
+</mujoco>
