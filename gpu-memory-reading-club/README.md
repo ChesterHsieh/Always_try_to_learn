@@ -169,7 +169,8 @@ gpu-memory-reading-club/
 │   └── full_series.pptx        # S1–S5 合輯（唯一維護版本；單場版可由 build 腳本重建）
 ├── interactive/       # 互動教具
 │   ├── gpu_map.html            # Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 互動下鑽地圖（合輯第 4 頁指引開啟）
-│   └── transformer_map.html    # 玩具級 Transformer（T=5、d=6、2 heads）6 層 Encoder⟷Decoder→…→計算子 matmul(L2⟷HBM)→硬體 × 三模式 × GPU/TPU/Groq（KV 串流、tensor core tiling；第 25 頁指引）
+│   ├── transformer_map.html    # 玩具級 Transformer（T=5、d=6、2 heads）6 層 Encoder⟷Decoder→…→計算子 matmul(L2⟷HBM)→硬體 × 三模式 × GPU/TPU/Groq（KV 串流、tensor core tiling；第 25 頁指引）
+│   └── interconnect_map.html   # NVIDIA 互連與通訊協定 6 層下鑽（全景階梯→NVLink/NVSwitch/C2C→PCIe→InfiniBand/Spectrum-X→GPUDirect→CMX）；scale-up/out 視角切換、IB↔乙太分頁、資料流動畫（獨立教具）
 ├── demos/             # 可重現的 demo 程式與量測腳本
 │   ├── 01_roofline_mini/
 │   ├── 02_pinned_vs_pageable/
@@ -191,6 +192,8 @@ gpu-memory-reading-club/
 - LLM inference 的 memory-bound 本質、KV cache、prefill vs decode
 - ASR 架構對照：Whisper（attention decoder）vs wav2vec2/Conformer + CTC
 - GPUDirect Storage、CUDA Unified Memory、Apple 統一記憶體、Grace Hopper 架構
+- NVIDIA 互連與通訊協定：NVLink / NVSwitch / NVLink-C2C（scale-up）、PCIe、InfiniBand（Quantum）vs Spectrum-X 乙太網（RoCE）、GPUDirect RDMA、NCCL
+- NVIDIA CMX（Context Memory，2026）：KV cache 卸載到 G3.5 層（BlueField-4 DPU + Spectrum-X flash）、DOCA Memos / Dynamo / NIXL、長上下文與 agentic 推論
 - The Hardware Lottery（Sara Hooker）／Attention is All You Need 的平行化動機
 - FlashAttention（IO-aware exact attention）、MQA/GQA、Mamba/SSM 與混合架構（Jamba、Griffin、Conformer）
 
@@ -213,5 +216,8 @@ gpu-memory-reading-club/
 - [x] **M7**：玩具級 Transformer 互動地圖 + TPU 專頁
   - 互動地圖 [interactive/transformer_map.html](interactive/transformer_map.html)（T=5、d=6、2 heads；六層 Encoder⟷Decoder 全景 → Block → Attention → Head → 計算子 matmul(L2⟷HBM 搬運) → 硬體；訓練/Prefill/Decode 三模式；GPU/TPU/Groq 切換含脈動陣列動畫）
   - 報告 [notes/transformer_interactive.md](notes/transformer_interactive.md)；合輯第 25 頁（互動環節②）、第 27 頁（TPU）、第 28 頁（Groq）、第 8 頁（每 GB 價格）
+- [x] **M8**：NVIDIA 互連與通訊協定互動地圖（含 2026 CMX）
+  - 互動地圖 [interactive/interconnect_map.html](interactive/interconnect_map.html)（六層下鑽：全景階梯 → NVLink/NVSwitch/C2C（scale-up）→ PCIe → InfiniBand/Spectrum-X（scale-out）→ GPUDirect → CMX；scale-up/scale-out 視角切換、IB↔乙太分頁、資料流動畫）
+  - 把合輯為聚焦而移除的 NVLink/GPUDirect/網路等互連主題以獨立教具補回，並新增 NVIDIA 2026 的 **CMX（Context Memory）**：KV cache 卸載到 G3.5 層（BlueField-4 + Spectrum-X flash），呼應 Part 3 decode memory-bound 與 Part 4 prefetch。詞條見 [notes/glossary.md](notes/glossary.md) §12
 
-> 🎉 全系列內容已整併為單份合輯 + 互動地圖。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格（demo 05 已有 M2/MPS 實測數據）。
+> 🎉 全系列內容已整併為單份合輯 + 三張互動地圖。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格（demo 05 已有 M2/MPS 實測數據）；把 interconnect_map / CMX 接進合輯投影片（目前為獨立教具）。
