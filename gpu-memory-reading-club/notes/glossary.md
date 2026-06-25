@@ -1,6 +1,6 @@
 # 術語與縮寫對照表（Glossary）
 
-整個讀書會系列（投影片、demo、兩個互動地圖、合輯講稿）用到的縮寫、英文全稱、中文與一句話說明。
+整個讀書會系列（投影片、demo、三個互動地圖、合輯講稿）用到的縮寫、英文全稱、中文與一句話說明。
 > 用法:第一次出現某縮寫時可回查這張表;括號內的 Part 對應 [合輯](full_series.md) 的篇章。
 > 校準說明:系列已更迭到聚焦版合輯(硬體架構 × Transformer)。下表仍保留**全部**術語以利回查,但標 ⊘ 者其正文已從合輯移除(ASR 案例、NVLink/GPUDirect/UVM),只在 demo 或概念背景出現——詳見合輯「## 聚焦版移除的內容」。
 
@@ -195,6 +195,33 @@
 | stream | (CUDA) stream | 串流 | GPU 上的指令佇列;多條 stream 可重疊搬運與運算 |
 | bank conflict | bank conflict | 記憶體庫衝突 | 多 thread 同時存取同一 shared memory bank 被序列化 |
 
+## 12. NVIDIA 互連與 AI 儲存織物(互連地圖 / CMX)
+
+> 對應互動地圖 [interactive/interconnect_map.html](../interactive/interconnect_map.html):從晶片到資料中心,資料走哪條協定。
+
+| 縮寫 / 術語 | 英文全稱 | 中文 | 一句話說明 |
+|---|---|---|---|
+| scale-up | scale-up | 向上擴展 | 用記憶體語意(load/store、一致性)把多顆 GPU 綁成一顆大 GPU(NVLink 域內) |
+| scale-out | scale-out | 向外擴展 | 用網路訊息語意(RDMA)把多台節點串成一台 AI factory |
+| NVLink 5 | NVLink (5th gen) | (Blackwell 互連) | 每 GPU ~1.8 TB/s(18×100);NVLink 4(Hopper)~900 GB/s |
+| NVL72 | GB200 NVL72 | (機架級 scale-up 域) | 72 顆 Blackwell 當一個記憶體域,130 TB/s aggregate(NVSwitch fabric 上限 576 GPU/1 PB/s) |
+| Blackwell | Blackwell (B200/GB200) | (NVIDIA GPU 世代) | Hopper 之後世代;NVLink 5、HBM3e |
+| RDMA | Remote Direct Memory Access | 遠端直接記憶體存取 | 一台機器的 NIC 直接讀寫另一台的記憶體,CPU 不插手 |
+| RoCE | RDMA over Converged Ethernet | (乙太網上的 RDMA) | 把 RDMA 跑在乙太網上(Spectrum-X 用 RoCEv2) |
+| Spectrum-X | NVIDIA Spectrum-X | (AI 乙太網平台) | 為 AI 調過的乙太網;adaptive routing + 壅塞控制,~800 Gb/s |
+| Quantum | NVIDIA Quantum InfiniBand | (IB 交換器) | InfiniBand 交換器;NDR 400 Gb/s / XDR 800 Gb/s |
+| GPUDirect RDMA | GPUDirect RDMA | (網路直達 HBM) | 讓遠端 NIC 直接讀寫 GPU HBM、繞過 CPU |
+| NVMe-oF | NVMe over Fabrics | (網路化 NVMe) | 把 NVMe 協定跑在網路上,遠端 flash 像本機般存取 |
+| DPU | Data Processing Unit | 資料處理器 | 卸載網路/儲存/安全的處理器(NVIDIA = BlueField) |
+| BlueField | NVIDIA BlueField | (DPU 產品) | NVIDIA 的 DPU;CMX 用 BlueField-4 當儲存處理器 |
+| NCCL | NVIDIA Collective Communications Library | (集合通訊庫) | GPU 間 all-reduce/all-gather 等集合通訊,資料平行梯度同步靠它 |
+| CMX | Context Memory (storage) | 情境記憶儲存 | 2026 NVIDIA 提出;把 KV cache 卸載到乙太掛載 flash 的 G3.5 層,~5× tok/s、~5× 能效 |
+| G3.5 / context tier | context memory tier | 情境記憶層 | 記憶體階層新增的一層,夾在本機 SSD(G3)與共享儲存(G4)之間,專放 KV cache |
+| DOCA Memos | NVIDIA DOCA Memos | (CMX 軟體 SDK) | 把 KV cache 當一等公民管理/分享/放置的 SDK,跑在 BlueField 上 |
+| Dynamo | NVIDIA Dynamo | (分散式推論框架) | 協調 prefill/decode/KV cache,KV-aware 請求調度,整合 CMX |
+| NIXL | NVIDIA Inference Transfer Library | (推論搬運庫) | 協調 KV 在各記憶體/儲存層間搬運,decode 前把 KV prestage 回 HBM |
+| prestage | prestaging | 預先搬入 | 在 decode 之前把需要的 KV 從 CMX 搬回 HBM,不卡生成(prefetch 的一種) |
+
 ---
 
 ## 速記:最常混淆的幾組
@@ -203,7 +230,9 @@
 - **SRAM vs DRAM**:晶片內快取材料(快小)vs 主記憶體材料(慢大);HBM 是一種 DRAM。**KV cache 因為太大塞不進 SRAM,只能住 HBM、每步串流**。
 - **FMA vs MMA**:CUDA core 的純量乘加 vs tensor core 的一整塊 tile 乘加。
 - **MHA / MQA / GQA**:KV head 數從「每個 Q 一組」→「全部共用一組」→「分組共用」,換 KV cache 頻寬。
-- **HBM / NVLink / PCIe**:TB/s / ~900 GB/s / ~64 GB/s,差一個量級往下掉,瓶頸常在 PCIe。
+- **HBM / NVLink / PCIe**:TB/s / ~900 GB/s–1.8 TB/s / ~64 GB/s,差一個量級往下掉,瓶頸常在 PCIe。
 - **遷移 / 零複製 / 一致性互連**:三種「unified memory」機制(NVIDIA UVM / Apple / Grace Hopper)。
+- **scale-up vs scale-out**:NVLink 把多顆 GPU 當一顆(記憶體語意)vs 網路把多台串起來(訊息語意);頻寬差一個量級——張量平行留 scale-up、資料平行才跨 scale-out。
+- **CMX / G3.5**:KV cache 是「短命、可重算」的 AI-native 資料,CMX 給它專屬一層(BlueField-4 + Spectrum-X flash),省去硬塞 HBM 或重算 prefill(呼應 Part 3 decode memory-bound、Part 4 prefetch)。
 
 > 數字一律約略值(以 H100 世代為主),詳見 [合輯](full_series.md) 與各場講稿。
