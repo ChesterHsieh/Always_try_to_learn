@@ -53,7 +53,40 @@
 
 **一句話心法**：資料搬運的瓶頸＝它必須經過的「最慢那一段路」。HBM 內部很快，但只要被迫跨 PCIe 反覆進出，整體就被 PCIe 拖住——這就是「memory 站一進一出」的代價。
 
-## 4. 課程地圖（4 場系列）
+## 4. 課程地圖
+
+### 4.0 實際開講場次（交付單位）
+
+「S1–S5」是**內容來源大綱**（§4.1／§5），實際開講與維護的是下面這幾堂課，每堂一份獨立投影片 + 講稿 + 互動教具：
+
+| 堂 | 投影片 | 講稿 | 互動教具 | 這一堂在看哪一層 |
+|---|---|---|---|---|
+| **第一堂** | [full_series.pptx](slides/full_series.pptx)（34 頁） | [notes/full_series.md](notes/full_series.md) | [gpu_map](interactive/gpu_map.html)、[transformer_map](interactive/transformer_map.html) | **硬體本身**：roofline、記憶體階層、GPU 單元、Transformer 上機 |
+| **第二堂** | [class2_transformer_gpu.pptx](slides/class2_transformer_gpu.pptx)（24 頁） | [notes/class2_transformer_gpu.md](notes/class2_transformer_gpu.md) | [parallelism_map](interactive/parallelism_map.html) | **一張卡 → 多張卡**：逐 block 對應 GPU 單元；DP/TP/PP/EP 與互連 |
+| **第三堂** | [class3_sglang_single_node.pptx](slides/class3_sglang_single_node.pptx)（24 頁） | [notes/class3_sglang_single_node.md](notes/class3_sglang_single_node.md) | [serving_map](interactive/serving_map.html)（模式 1–4） | **SGLang 單機篇**：問題 ①–④（DSL／RadixAttention／FSM／排程） |
+| **第四堂**（規劃中） | — | [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) | （構想：router_map） | **SGLang 多機篇**：問題 ⑤–⑧（大規模 EP／PD 分離／cache-aware router／容錯） |
+| **第五堂** | [class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁） | [notes/class5_china_models.md](notes/class5_china_models.md) | — | **模型架構**：中國開源模型的五個旋鈕（壓 KV／少算／少看／一次多產／降精度） |
+
+### 三、四堂共用一條主幹：SGLang 遇到的八個問題
+
+不照功能表講，照**問題**講——每個機制都是被一個具體痛點逼出來的。八個問題由淺入深剛好走完「編程模型 → 單機記憶體 → 單機排程 → 多卡 → 多機」：
+
+| # | 遇到的問題 | 解法 | 場次 |
+|---|---|---|---|
+| ① | LLM 程式（多次呼叫、分支、工具）難寫又跑不快 | 前端 DSL：把程式描述成執行圖 | 第三堂 |
+| ② | 這些程式天然共享大量前綴，卻被反覆重算 | 分頁 KV + RadixAttention + continuous batching | 第三堂 |
+| ③ | 結構化輸出逐 token 檢查語法太慢、格式仍不保證 | Compressed FSM：預編譯 + 位元遮罩 | 第三堂 |
+| ④ | GPU 一步只要 5–10 ms，CPU 排程反而成了瓶頸 | zero-overhead scheduler / CUDA Graph / chunked prefill | 第三堂 |
+| ⑤ | 大 MoE（DeepSeek）單機放不下、專家負載不均 | 大規模 EP + DeepEP / EPLB | 第四堂 |
+| ⑥ | prefill 與 decode 互相干擾（TTFT vs ITL） | PD 分離 | 第四堂 |
+| ⑦ | 多副本之間：快取局部性 vs 負載均衡此消彼長 | cache-aware router + KV 複製 | 第四堂 |
+| ⑧ | 副本掛掉，進行中的請求與它的 KV 怎麼辦 | 容錯 | 第四堂 |
+
+> **第四堂的開場框架**：先用「**經典分散式系統的八類共同問題**」（時間與順序、一致性、容錯、共識、通訊、並發、可擴展性、可觀測性）當影子，逐格對照到 GPU 叢集——看清楚哪些是被**規避**掉的（拜占庭、共識、CAP，因為放棄了「互不信任」與「執行期協商」）、哪些**變形**了（因果順序 → barrier 與 pipeline bubble；通訊可靠性 → 通訊效率）、哪些反而被**放大**成核心（可擴展性、部分失效、可觀測性）。關鍵轉折：**推論服務比訓練更像傳統分散式系統**——它是長期在線、有 SLO、有狀態（KV）散在各機的服務，所以「可用性」與「快取視圖不一致」這兩件在訓練場景可以忽略的事，在這裡回來了。詳見 [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) §1。
+
+> **第五堂是另一個軸**：三、四堂是「框架從**外面**調」（一個模型權重都沒改），第五堂是「模型從**裡面**改」。兩邊打的是同一個敵人——decode 的 memory-bound 與 KV cache。
+
+### 4.1 內容來源大綱（S1–S5）
 
 | 場次 | 主題 | 核心問題 | 對應 demo |
 |---|---|---|---|
@@ -64,7 +97,7 @@
 | **S5** | 平行運算與軟硬體共同演化（番外進階場） | 為什麼平行度就是一切、模型設計 ⇄ 計算機結構怎麼互相塑造 | FLOPs vs 平行度（LSTM vs Transformer、dense vs depthwise） |
 
 > 彈性：若只辦一場 keynote，可走「S1 心智模型 → S3 ASR 案例 → S4 壓軸 demo」精簡線；完整讀書會則四場循序，S5 可作系列後的進階加場。
-> **S1–S5 合輯**（[slides/full_series.pptx](slides/full_series.pptx)，34 頁）是目前唯一維護的投影片，**聚焦「硬體架構 × Transformer」**：重編去重後的單份，五篇章「機器 → 一把尺 → 模型上機 → 資料搬遷 → 共同演化」。相對早期版**已移除 ASR 案例、NVLink/GPUDirect、Unified Memory 三種、進出站(PCIe/pinned)、靜態的「CPU vs GPU」與「GPU 解剖」（GPU 結構改由互動地圖承擔），並把「心法」折進記憶體階層頁**（以下 §4/§5 為原始 S1–S5 場次大綱，屬內容來源；合輯為其聚焦衍生版）。兩個互動環節：第 4 頁搭配 [interactive/gpu_map.html](interactive/gpu_map.html)（Cluster 下鑽到 SM、再到 CUDA/Tensor core）、第 25 頁搭配 [interactive/transformer_map.html](interactive/transformer_map.html)（玩具級 Transformer，6 層 Encoder⟷Decoder 全景→Block→Attention→Head→計算子 matmul(L2⟷HBM)→硬體 × 訓練/Prefill/Decode × GPU/TPU/Groq，含 KV cache 串流與 tensor core tiling，報告見 [notes/transformer_interactive.md](notes/transformer_interactive.md)）。第 8 頁「三層記憶體每 GB 價格」+「各家加速器比較」、TPU/Groq 硬體專頁見第 27–28 頁。次序對照見 [notes/full_series.md](notes/full_series.md)。單場版 pptx 已刪除，可由 `slides/build/generate_sX.js` 重建。
+> **S1–S5 合輯**（[slides/full_series.pptx](slides/full_series.pptx)，34 頁）是目前唯一維護的投影片，**聚焦「硬體架構 × Transformer」**：重編去重後的單份，五篇章「機器 → 一把尺 → 模型上機 → 資料搬遷 → 共同演化」。相對早期版**已移除 ASR 案例、NVLink/GPUDirect、Unified Memory 三種、進出站(PCIe/pinned)、靜態的「CPU vs GPU」與「GPU 解剖」（GPU 結構改由互動地圖承擔），並把「心法」折進記憶體階層頁**（以下 §4/§5 為原始 S1–S5 場次大綱，屬內容來源；合輯為其聚焦衍生版）。兩個互動環節：第 4 頁搭配 [interactive/gpu_map.html](interactive/gpu_map.html)（Cluster 下鑽到 SM、再到 CUDA/Tensor core）、第 25 頁搭配 [interactive/transformer_map.html](interactive/transformer_map.html)（玩具級 **decoder-only** Transformer，7 層 decoder 全景（自回歸）→Block（masked self-attn + FFN）→Attention→Head→計算子 matmul(L2⟷HBM)→FlashAttention(線上 softmax)→硬體 × 訓練/Prefill/Decode × GPU/TPU/Groq，含 KV cache 串流與 tensor core tiling，報告見 [notes/transformer_interactive.md](notes/transformer_interactive.md)）。第 8 頁「三層記憶體每 GB 價格」+「各家加速器比較」、TPU/Groq 硬體專頁見第 27–28 頁。次序對照見 [notes/full_series.md](notes/full_series.md)。單場版 pptx 已刪除，可由 `slides/build/generate_sX.js` 重建。
 
 ## 5. 各場詳細大綱
 
@@ -166,11 +199,16 @@
 gpu-memory-reading-club/
 ├── README.md          # 本檔：系列主規劃
 ├── slides/            # 投影片（pptxgenjs 腳本產生，見 slides/build/）
-│   └── full_series.pptx        # S1–S5 合輯（唯一維護版本；單場版可由 build 腳本重建）
+│   ├── full_series.pptx        # 第一堂課：S1–S5 合輯（34 頁，硬體架構 × Transformer）
+│   ├── class2_transformer_gpu.pptx     # 第二堂課：Transformer × GPU 框架（24 頁，單卡逐 block → 多卡平行與互連）
+│   ├── class3_sglang_single_node.pptx  # 第三堂課：SGLang 單機篇（24 頁，問題 ①–④）
+│   └── class5_china_models.pptx        # 第五堂課：中國開源模型的五個旋鈕（16 頁）
 ├── interactive/       # 互動教具
 │   ├── gpu_map.html            # Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 互動下鑽地圖（合輯第 4 頁指引開啟）
-│   ├── transformer_map.html    # 玩具級 Transformer（T=5、d=6、2 heads）6 層 Encoder⟷Decoder→…→計算子 matmul(L2⟷HBM)→硬體 × 三模式 × GPU/TPU/Groq（KV 串流、tensor core tiling；第 25 頁指引）
-│   └── interconnect_map.html   # NVIDIA 互連與通訊協定 6 層下鑽（全景階梯→NVLink/NVSwitch/C2C→PCIe→InfiniBand/Spectrum-X→GPUDirect→CMX）；scale-up/out 視角切換、IB↔乙太分頁、資料流動畫（獨立教具）
+│   ├── transformer_map.html    # 玩具級 decoder-only Transformer（T=5、d=6、2 heads）7 層 decoder 全景→…→計算子 matmul(L2⟷HBM)→FlashAttention(線上 softmax)→硬體 × 三模式 × GPU/TPU/Groq（KV 串流、tensor core tiling；第 25 頁指引）
+│   ├── interconnect_map.html   # NVIDIA 互連與通訊協定 6 層下鑽（全景階梯→NVLink/NVSwitch/C2C→PCIe→InfiniBand/Spectrum-X→GPUDirect→CMX）；scale-up/out 視角切換、IB↔乙太分頁、資料流動畫（獨立教具）
+│   ├── parallelism_map.html    # 玩具 Transformer 攤到多卡：單卡 → 裝不下 → DP → TP → PP → 互連硬體（第二堂第 23 頁指引）
+│   └── serving_map.html        # 推論服務地圖：Naive / Continuous batching / Paged KV / Radix 前綴共用 / PD 分離 五種模式的 GPU 時間軸、HBM 佔用與 roofline 位置（第三堂第 12 頁指引）
 ├── demos/             # 可重現的 demo 程式與量測腳本
 │   ├── 01_roofline_mini/
 │   ├── 02_pinned_vs_pageable/
@@ -214,10 +252,27 @@ gpu-memory-reading-club/
   - 合輯 [slides/full_series.pptx](slides/full_series.pptx)（34 頁，聚焦硬體×Transformer；次序對照 [notes/full_series.md](notes/full_series.md)）
   - 互動地圖 [interactive/gpu_map.html](interactive/gpu_map.html)（Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 下鑽，合輯第 4 頁指引開啟）
 - [x] **M7**：玩具級 Transformer 互動地圖 + TPU 專頁
-  - 互動地圖 [interactive/transformer_map.html](interactive/transformer_map.html)（T=5、d=6、2 heads；六層 Encoder⟷Decoder 全景 → Block → Attention → Head → 計算子 matmul(L2⟷HBM 搬運) → 硬體；訓練/Prefill/Decode 三模式；GPU/TPU/Groq 切換含脈動陣列動畫）
+  - 互動地圖 [interactive/transformer_map.html](interactive/transformer_map.html)（T=5、d=6、2 heads，**decoder-only**；七層 decoder 全景（自回歸）→ Block（masked self-attn + FFN）→ Attention → Head → 計算子 matmul(L2⟷HBM 搬運) → **FlashAttention（線上 softmax 6 步驟：HBM/SRAM 大小 → safe softmax → 分塊找 max → 分塊找 Σ → 分塊算 o → 取代整個 S）** → 硬體；訓練/Prefill/Decode 三模式；GPU/TPU/Groq 切換含脈動陣列動畫）
   - 報告 [notes/transformer_interactive.md](notes/transformer_interactive.md)；合輯第 25 頁（互動環節②）、第 27 頁（TPU）、第 28 頁（Groq）、第 8 頁（每 GB 價格）
 - [x] **M8**：NVIDIA 互連與通訊協定互動地圖（含 2026 CMX）
   - 互動地圖 [interactive/interconnect_map.html](interactive/interconnect_map.html)（六層下鑽：全景階梯 → NVLink/NVSwitch/C2C（scale-up）→ PCIe → InfiniBand/Spectrum-X（scale-out）→ GPUDirect → CMX；scale-up/scale-out 視角切換、IB↔乙太分頁、資料流動畫）
   - 把合輯為聚焦而移除的 NVLink/GPUDirect/網路等互連主題以獨立教具補回，並新增 NVIDIA 2026 的 **CMX（Context Memory）**：KV cache 卸載到 G3.5 層（BlueField-4 + Spectrum-X flash），呼應 Part 3 decode memory-bound 與 Part 4 prefetch。詞條見 [notes/glossary.md](notes/glossary.md) §12
 
-> 🎉 全系列內容已整併為單份合輯 + 三張互動地圖。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格（demo 05 已有 M2/MPS 實測數據）；把 interconnect_map / CMX 接進合輯投影片（目前為獨立教具）。
+- [x] **M9**：第二堂課 — Transformer × GPU 框架（獨立投影片 + 新互動地圖）
+  - 投影片 [slides/class2_transformer_gpu.pptx](slides/class2_transformer_gpu.pptx)（24 頁）：**Part A** 玩具 Transformer（T=6、d=6、2 heads）逐 block 對應 GPU 單元（Embedding→QKV→多頭→Attention→Add&Norm→FFN，各自 tensor/CUDA core、compute/memory-bound；單卡跑得完）｜**Part B** 一張卡裝不下 → **資料平行的四個問題** → TP/PP/EP → NVIDIA 互連新技術（NVLink5/NVSwitch/NVL72、SHARP/NCCL、IB/Spectrum-X/GPUDirect、**Rubin/NVLink6**、**CMX 2026**）
+  - 講稿 [notes/class2_transformer_gpu.md](notes/class2_transformer_gpu.md)（頁面地圖、逐 block 速查、四種平行對照、互連數字與來源、關鍵推導、Q&A）
+  - 新互動地圖 [interactive/parallelism_map.html](interactive/parallelism_map.html)（第 23 頁指引）：同一個玩具 Transformer 攤到多卡，六層 單卡 → 裝不下 → DP → TP → PP → 互連硬體；TP/PP 兩層畫出「一層」的權重矩陣（Wq/Wk/Wv/Wo + W1/W2）怎麼被切
+- [x] **M10**：第三堂課 — SGLang 單機篇（獨立投影片 + 新互動地圖）
+  - 投影片 [slides/class3_sglang_single_node.pptx](slides/class3_sglang_single_node.pptx)（24 頁）：主幹是**沿著 SGLang 遇到的問題走**。地基（batch=1 decode 只用 0.34% 算力 → AI ≈ B）｜**問題①** 程式難平行 → 前端 DSL｜**問題②** 前綴重算 → 分頁 KV + RadixAttention + continuous batching（含「RadixAttention vs PagedAttention 是假對立」的澄清）｜**問題③** 輸出不可控 → Compressed FSM（含與②的正交性紅線）｜**問題④** CPU 成瓶頸 → zero-overhead scheduler / CUDA Graph / chunked prefill｜天花板：投機解碼·MTP、量化
+  - 講稿 [notes/class3_sglang_single_node.md](notes/class3_sglang_single_node.md)（八問題全景、頁面地圖、關鍵推導、Q&A、資料來源）
+  - 新互動地圖 [interactive/serving_map.html](interactive/serving_map.html)（第 14 頁指引）：同一批請求在 Naive → Continuous batching → Paged KV → Radix 前綴共用 → PD 分離 五種模式下，GPU 時間軸、HBM 佔用、有效 batch、算術強度與 roofline 位置怎麼變（**第三堂用模式 1–4，模式 5 留給第四堂**）
+- [ ] **M11**：第四堂課 — SGLang 多機篇（規劃中，見 [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md)）
+  - 主幹延續：問題 ⑤ 大規模 EP、⑥ PD 分離、⑦ cache-aware router、⑧ 容錯
+  - 開場框架：**用經典分散式系統的八類共同問題當影子**，逐格對照 GPU 叢集（規避／變形／放大），並指出推論服務比訓練更靠近經典分散式系統那一端
+  - 壓軸推導構想：**KV 該搬還是該重算**（KV 大小 ÷ 互連頻寬 vs 重新 prefill 的時間）——把第二堂的頻寬階梯、第三堂的 KV 每 token 位元組數、第四堂的路由決策串成一條線
+  - 待補：容錯的實作細節、SGLang / vLLM / Mooncake / DeepSeek 橫向比較矩陣；互動教具構想 `router_map.html`
+- [x] **M12**：第五堂課 — 中國開源模型的五個旋鈕
+  - 投影片 [slides/class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁）：五個旋鈕（壓 KV／少算／少看／一次多產／降精度）× 五個實驗室（DeepSeek／Kimi／MiniMax／Qwen／GLM）。含 **MiniMax M1→M2→M3 反例兩頁**（No Free Lunch：評測會騙人、理論 FLOPs ≠ wall-clock、卡在 KV cache／prefix caching／投機解碼三個生產系統）與**「為什麼他們連 kernel 都開源」**（FlashMLA / DeepEP / DeepGEMM / EPLB 各自讓哪個旋鈕跑得動）
+  - 講稿 [notes/class5_china_models.md](notes/class5_china_models.md)
+
+> 🎉 全系列內容已整併為單份合輯 + 第二/三堂課獨立場 + 五張互動地圖。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格（demo 05 已有 M2/MPS 實測數據）；把 interconnect_map / CMX 接進合輯投影片（目前為獨立教具）；新增 demo 06「vLLM batch sweep + prefix caching 開關」實測，回填第三堂的示意值。

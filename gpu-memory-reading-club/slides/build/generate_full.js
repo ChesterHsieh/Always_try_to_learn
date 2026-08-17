@@ -737,17 +737,17 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
   const s = pres.addSlide(); base(s); runningHeader(s);
 
   s.addText("🔬  互動環節 ②", { x: MX, y: 1.45, w: 11.9, h: 0.9, align: "center", fontFace: HEAD, fontSize: 38, bold: true, color: GOOD, margin: 0 });
-  s.addText("講者：切出去打開玩具級 Transformer 地圖（T=5、d=6、2 heads——同構縮小版，含 encoder⟷decoder 全景與單一 matmul 的 L2/HBM 搬運）", { x: MX, y: 2.5, w: 11.9, h: 0.5, align: "center", fontFace: BODY, fontSize: 16, color: INK, margin: 0 });
+  s.addText("講者：切出去打開玩具級 Transformer 地圖（T=5、d=6、2 heads——同構縮小版，decoder-only 全景與單一 matmul 的 L2/HBM 搬運）", { x: MX, y: 2.5, w: 11.9, h: 0.5, align: "center", fontFace: BODY, fontSize: 16, color: INK, margin: 0 });
   s.addText("interactive/transformer_map.html", { x: 3.5, y: 3.2, w: 6.3, h: 0.6, align: "center", valign: "middle", fontFace: MONO, fontSize: 17, bold: true, color: GOOD, fill: { color: "0A1322" }, margin: 8 });
 
-  // 層級路徑（6 層）
-  const steps = ["全景 Enc/Dec", "Block", "Attention", "Head", "計算子", "硬體 3 機"];
-  const n3 = steps.length, bw3 = 1.74, gap3 = 0.34, sx = (W - (n3 * bw3 + (n3 - 1) * gap3)) / 2, sy = 4.15;
+  // 層級路徑（7 層）
+  const steps = ["全景 decoder", "Block", "Attention", "Head", "計算子", "FlashAttn", "硬體 3 機"];
+  const n3 = steps.length, bw3 = 1.5, gap3 = 0.26, sx = (W - (n3 * bw3 + (n3 - 1) * gap3)) / 2, sy = 4.15;
   steps.forEach((t, i) => {
     const last = i === n3 - 1;
     const x = sx + i * (bw3 + gap3);
     s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y: sy, w: bw3, h: 0.55, rectRadius: 0.08, fill: { color: last ? COMPTINT : MEMTINT }, line: { color: last ? COMP : MEM, width: 1.2 } });
-    s.addText(t, { x, y: sy, w: bw3, h: 0.55, align: "center", valign: "middle", fontFace: MONO, fontSize: 12, bold: true, color: last ? COMP : MEM, margin: 0 });
+    s.addText(t, { x, y: sy, w: bw3, h: 0.55, align: "center", valign: "middle", fontFace: MONO, fontSize: 10.5, bold: true, color: last ? COMP : MEM, margin: 0 });
     if (!last) s.addShape(pres.shapes.LINE, { x: x + bw3 + 0.04, y: sy + 0.275, w: gap3 - 0.08, h: 0, line: { color: FOOTC, width: 2, endArrowType: "triangle" } });
   });
 
@@ -759,7 +759,7 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
     { text: "Decode", options: { color: MEM, bold: true } },
     { text: "　——資料流、KV cache、GEMM→GEMV、利用率全部跟著變", options: { color: MUTE } },
   ], { x: MX, y: 5.05, w: 11.9, h: 0.4, align: "center", fontFace: BODY, fontSize: 14, margin: 0 });
-  s.addText("建議動線：全景（encoder→memory M→decoder cross）→ Block → Attention（分叉＝平行軸）→ Head 看矩陣 → 計算子：一個 matmul 的 L2⟷HBM 搬運 → 硬體層 GPU/TPU/Groq；全程配 T/P/D 看 compute-bound→memory-bound、KV cache 串流 → 回來接下一頁", { x: MX, y: 5.55, w: 11.9, h: 0.75, align: "center", fontFace: BODY, fontSize: 11, color: FOOTC, margin: 0 });
+  s.addText("建議動線：全景（decoder-only）→ Block → Attention（分叉＝平行軸）→ Head 看矩陣 → 計算子：matmul 的 L2⟷HBM 搬運 → FlashAttention（線上 softmax，←/→ 逐步看 S 怎麼不落 HBM）→ 硬體層 GPU/TPU/Groq；配 T/P/D 看 compute-bound→memory-bound", { x: MX, y: 5.55, w: 11.9, h: 0.75, align: "center", fontFace: BODY, fontSize: 11, color: FOOTC, margin: 0 });
   footer(s, P5);
 })();
 

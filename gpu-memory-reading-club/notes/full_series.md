@@ -1,7 +1,7 @@
 # 合輯索引 — S1–S5 重編成一份投影片的次序與對照
 
 投影片：[../slides/full_series.pptx](../slides/full_series.pptx)（34 頁）｜重建：`cd ../slides/build && node generate_full.js`
-互動地圖 ×2：[gpu_map.html](../interactive/gpu_map.html)（Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 下鑽；第 4 頁指引）、[transformer_map.html](../interactive/transformer_map.html)（玩具級 Transformer：6 層由 Encoder⟷Decoder 全景 → Block → Attention → Head → 計算子 matmul(L2⟷HBM 搬運) → 硬體，× 三模式 × GPU/TPU/Groq，含 KV cache 串流與 tensor core tiling；第 25 頁指引，報告見 [transformer_interactive.md](transformer_interactive.md)）
+互動地圖 ×2：[gpu_map.html](../interactive/gpu_map.html)（Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 下鑽；第 4 頁指引）、[transformer_map.html](../interactive/transformer_map.html)（玩具級 **decoder-only** Transformer：7 層由 decoder 全景（自回歸迴圈）→ Block（masked self-attn + FFN）→ Attention → Head → 計算子 matmul(L2⟷HBM 搬運) → **FlashAttention（線上 softmax 6 步驟）** → 硬體，× 三模式 × GPU/TPU/Groq，含 KV cache 串流與 tensor core tiling；第 25 頁指引，報告見 [transformer_interactive.md](transformer_interactive.md)）
 
 合輯不是五場串接，而是**重編去重 + 聚焦**。最新版**聚焦「硬體架構 × Transformer」**：已移除 ASR 案例、NVLink/GPUDirect、Unified Memory 三種，並把「心法」折進記憶體階層頁；另把靜態的「CPU vs GPU」「GPU 解剖」兩頁拿掉，GPU 結構改由互動地圖（已含 SM → CUDA/Tensor core 下鑽）承擔。講解細節仍看各場講稿（s1–s5 的 notes），本檔是次序地圖。
 單場版 pptx 已刪除（內容皆已整併）；如需重建單場版，`slides/build/generate_s1.js`–`generate_s5.js` 仍在。
@@ -28,7 +28,7 @@
 | 21 | prefetch / overlap 壓軸 | S4-10 | Part 4 只剩此頁（進出站/PCIe-pinned 頁已移除，與整體脫節）；overlap：把搬運藏在運算後面 |
 | **Part 5 共同演化** | | | |
 | 22–24 | 平行軸、hardware lottery、Transformer 為平行而生 | S5-4,5,6 | 原樣保留（Amdahl 已前移至第 6 頁） |
-| 25 | 🔬 互動環節②（指引頁） | 新增 | 切出去開 transformer_map.html：玩具級 Transformer（T=5、d=6、2 heads），6 層 全景 Enc⟷Dec → Block → Attention → Head → 計算子 matmul(L2⟷HBM) → 硬體，× 訓練/Prefill/Decode × GPU/TPU/Groq |
+| 25 | 🔬 互動環節②（指引頁） | 新增 | 切出去開 transformer_map.html：玩具級 **decoder-only** Transformer（T=5、d=6、2 heads），7 層 decoder 全景 → Block（masked self-attn + FFN）→ Attention → Head → 計算子 matmul(L2⟷HBM) → FlashAttention(線上 softmax) → 硬體，× 訓練/Prefill/Decode × GPU/TPU/Groq |
 | 26 | 模型 → 硬體 | S5-7 | |
 | 27 | TPU：systolic array | 新增 | weight-stationary、XLA 靜態排程；transformer on TPU；decode 跨硬體一樣 memory-bound |
 | 28 | Groq LPU：全 SRAM 砍掉 HBM | 新增 | 回答「KV 塞不下 L2 → 一直從 HBM 串流」：GPU/TPU 痛點（HBM→SRAM 串流）vs Groq 全 SRAM（80 TB/s、多晶片切片） |
