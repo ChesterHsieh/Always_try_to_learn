@@ -64,7 +64,7 @@
 | **第一堂** | [full_series.pptx](slides/full_series.pptx)（34 頁） | [notes/full_series.md](notes/full_series.md) | [gpu_map](interactive/gpu_map.html)、[transformer_map](interactive/transformer_map.html) | **硬體本身**：roofline、記憶體階層、GPU 單元、Transformer 上機 |
 | **第二堂** | [class2_transformer_gpu.pptx](slides/class2_transformer_gpu.pptx)（24 頁） | [notes/class2_transformer_gpu.md](notes/class2_transformer_gpu.md) | [parallelism_map](interactive/parallelism_map.html) | **一張卡 → 多張卡**：逐 block 對應 GPU 單元；DP/TP/PP/EP 與互連 |
 | **第三堂** | [class3_sglang_single_node.pptx](slides/class3_sglang_single_node.pptx)（24 頁） | [notes/class3_sglang_single_node.md](notes/class3_sglang_single_node.md) | [serving_map](interactive/serving_map.html)（模式 1–4） | **SGLang 單機篇**：問題 ①–④（DSL／RadixAttention／FSM／排程） |
-| **第四堂**（規劃中） | — | [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) | （構想：router_map） | **SGLang 多機篇**：問題 ⑤–⑧（大規模 EP／PD 分離／cache-aware router／容錯） |
+| **第四堂** | [class4_sglang_multi_node.pptx](slides/class4_sglang_multi_node.pptx)（20 頁） | [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) | [serving_map](interactive/serving_map.html)（模式 5） | **SGLang 多機篇**：問題 ⑤–⑧（大規模 EP／PD 分離／cache-aware router／容錯） |
 | **第五堂** | [class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁） | [notes/class5_china_models.md](notes/class5_china_models.md) | — | **模型架構**：中國開源模型的五個旋鈕（壓 KV／少算／少看／一次多產／降精度） |
 
 ### 三、四堂共用一條主幹：SGLang 遇到的八個問題
@@ -202,6 +202,7 @@ gpu-memory-reading-club/
 │   ├── full_series.pptx        # 第一堂課：S1–S5 合輯（34 頁，硬體架構 × Transformer）
 │   ├── class2_transformer_gpu.pptx     # 第二堂課：Transformer × GPU 框架（24 頁，單卡逐 block → 多卡平行與互連）
 │   ├── class3_sglang_single_node.pptx  # 第三堂課：SGLang 單機篇（24 頁，問題 ①–④）
+│   ├── class4_sglang_multi_node.pptx   # 第四堂課：SGLang 多機篇（20 頁，問題 ⑤–⑧）
 │   └── class5_china_models.pptx        # 第五堂課：中國開源模型的五個旋鈕（16 頁）
 ├── interactive/       # 互動教具
 │   ├── gpu_map.html            # Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 互動下鑽地圖（合輯第 4 頁指引開啟）
@@ -266,11 +267,10 @@ gpu-memory-reading-club/
   - 投影片 [slides/class3_sglang_single_node.pptx](slides/class3_sglang_single_node.pptx)（24 頁）：主幹是**沿著 SGLang 遇到的問題走**。地基（batch=1 decode 只用 0.34% 算力 → AI ≈ B）｜**問題①** 程式難平行 → 前端 DSL｜**問題②** 前綴重算 → 分頁 KV + RadixAttention + continuous batching（含「RadixAttention vs PagedAttention 是假對立」的澄清）｜**問題③** 輸出不可控 → Compressed FSM（含與②的正交性紅線）｜**問題④** CPU 成瓶頸 → zero-overhead scheduler / CUDA Graph / chunked prefill｜天花板：投機解碼·MTP、量化
   - 講稿 [notes/class3_sglang_single_node.md](notes/class3_sglang_single_node.md)（八問題全景、頁面地圖、關鍵推導、Q&A、資料來源）
   - 新互動地圖 [interactive/serving_map.html](interactive/serving_map.html)（第 14 頁指引）：同一批請求在 Naive → Continuous batching → Paged KV → Radix 前綴共用 → PD 分離 五種模式下，GPU 時間軸、HBM 佔用、有效 batch、算術強度與 roofline 位置怎麼變（**第三堂用模式 1–4，模式 5 留給第四堂**）
-- [ ] **M11**：第四堂課 — SGLang 多機篇（規劃中，見 [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md)）
-  - 主幹延續：問題 ⑤ 大規模 EP、⑥ PD 分離、⑦ cache-aware router、⑧ 容錯
-  - 開場框架：**用經典分散式系統的八類共同問題當影子**，逐格對照 GPU 叢集（規避／變形／放大），並指出推論服務比訓練更靠近經典分散式系統那一端
-  - 壓軸推導構想：**KV 該搬還是該重算**（KV 大小 ÷ 互連頻寬 vs 重新 prefill 的時間）——把第二堂的頻寬階梯、第三堂的 KV 每 token 位元組數、第四堂的路由決策串成一條線
-  - 待補：容錯的實作細節、SGLang / vLLM / Mooncake / DeepSeek 橫向比較矩陣；互動教具構想 `router_map.html`
+- [x] **M11**：第四堂課 — SGLang 多機篇
+  - 投影片 [slides/class4_sglang_multi_node.pptx](slides/class4_sglang_multi_node.pptx)（20 頁）：**Part A** 用經典分散式系統的八類共同問題當影子，逐格對照 GPU 推論叢集（規避／變形／放大）、共同的底層結構（三個物理事實）、關鍵轉折（推論服務比訓練更像分散式系統）｜**⑤** 大 MoE → 大規模 EP（all-to-all 代價、專家負載不均＝資料傾斜、EPLB、落地數字）｜**⑥** P/D 互擾 → PD 分離（含 KV 所有權轉移的影子）｜**⑦** 多機調度 → cache-aware router（**壓軸推導：該搬還是該重算**，串起第二/三/四堂）｜**⑧** 容錯（KV 是可重算的快取 + 四個開放問題）｜收尾：三個換了名字的老問題、四家架構取向橫向比較
+  - 講稿 [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md)
+  - 待做：互動教具 `interactive/router_map.html`（Round Robin / 內容感知 / cache-aware+複製 三種路由下各機的命中率與負載）
 - [x] **M12**：第五堂課 — 中國開源模型的五個旋鈕
   - 投影片 [slides/class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁）：五個旋鈕（壓 KV／少算／少看／一次多產／降精度）× 五個實驗室（DeepSeek／Kimi／MiniMax／Qwen／GLM）。含 **MiniMax M1→M2→M3 反例兩頁**（No Free Lunch：評測會騙人、理論 FLOPs ≠ wall-clock、卡在 KV cache／prefix caching／投機解碼三個生產系統）與**「為什麼他們連 kernel 都開源」**（FlashMLA / DeepEP / DeepGEMM / EPLB 各自讓哪個旋鈕跑得動）
   - 講稿 [notes/class5_china_models.md](notes/class5_china_models.md)
