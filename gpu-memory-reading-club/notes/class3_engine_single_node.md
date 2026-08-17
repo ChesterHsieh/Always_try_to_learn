@@ -1,7 +1,7 @@
 # 第三堂課 講稿／索引 — 推論引擎單機篇：八個問題，兩種解法（SGLang × vLLM）
 
-投影片：[../slides/class3_engine_single_node.pptx](../slides/class3_engine_single_node.pptx)（28 頁）｜重建：`cd ../slides/build && node generate_class3.js`
-互動地圖：[serving_map.html](../interactive/serving_map.html)（第 17 頁指引，**本堂只用模式 1–4**，模式 5 PD 分離留給第四堂）
+投影片：[../slides/class3_engine_single_node.pptx](../slides/class3_engine_single_node.pptx)（27 頁）｜重建：`cd ../slides/build && node generate_class3.js`
+互動地圖：[serving_map.html](../interactive/serving_map.html)（第 16 頁指引，**本堂只用模式 1–4**，模式 5 PD 分離留給第四堂）
 
 > **主幹＝問題導向，而且一個問題兩種寫法。**
 > 那八個問題**不是 SGLang 專有的，是任何推論引擎都會撞到的**——SGLang 的發展史剛好把它們依序列了出來。所以最好的學法是：**一個問題、兩種解法，對比之後就看得到兩家哲學的差異。**
@@ -26,7 +26,7 @@
 
 ---
 
-## 頁面地圖（28 頁）
+## 頁面地圖（27 頁）
 
 | 頁 | 內容 |
 |---|---|
@@ -47,23 +47,22 @@
 | 12 | **對比②a 索引層**：radix tree vs 鏈式雜湊表 |
 | 13 | **對比②b 排程**：cache-aware 主動 vs 被動命中 |
 | 14 | **共同地基**：continuous batching |
-| 15 | 澄清：「RadixAttention vs PagedAttention」是假對立 |
-| 16 | 所以問題②該選哪一家？（含三個容易被忽略的選型因素） |
-| 17 | 🧭 互動環節：serving_map 模式 1–4（6.8% → 81%） |
+| 15 | 所以問題②該選哪一家？（含三個容易被忽略的選型因素） |
+| 16 | 🧭 互動環節：serving_map 模式 1–4（6.8% → 81%） |
 | **問題③ 輸出不可控** | |
-| 18 | 問題③：只靠 prompt 說「請輸出 JSON」不可靠（四種翻車） |
-| 19 | **共同地基**：FSM + 位元遮罩（兩家預設都用 XGrammar） |
-| 20 | **對比③**：jump-forward decoding（語法允許時一次吐多個 token） |
-| 21 | 問題② 與 ③ 的關係：正交，但有一條紅線 |
+| 17 | 問題③：只靠 prompt 說「請輸出 JSON」不可靠（四種翻車） |
+| 18 | **共同地基**：FSM + 位元遮罩（兩家預設都用 XGrammar） |
+| 19 | **對比③**：jump-forward decoding（語法允許時一次吐多個 token） |
+| 20 | 問題② 與 ③ 的關係：正交，但有一條紅線 |
 | **問題④ CPU 成瓶頸** | |
-| 22 | 問題④：GPU 快到讓 CPU 變成瓶頸 + 共同地基 CUDA Graph |
-| 23 | **對比④**：zero-overhead scheduler vs 多進程 + async |
-| 24 | 雙胞胎：TTFT vs ITL → chunked prefill（兩家都有） |
+| 21 | 問題④：GPU 快到讓 CPU 變成瓶頸 + 共同地基 CUDA Graph |
+| 22 | **對比④**：zero-overhead scheduler vs 多進程 + async |
+| 23 | 雙胞胎：TTFT vs ITL → chunked prefill（兩家都有） |
 | **天花板** | |
-| 25 | 天花板①：投機解碼 / MTP（兩家都有，draft 來源不同） |
-| 26 | 天花板②：量化 |
-| 27 | **彙整：四個問題 × 兩種寫法**（本堂核心產出） |
-| 28 | 帶走三句話 |
+| 24 | 天花板①：投機解碼 / MTP（兩家都有，draft 來源不同） |
+| 25 | 天花板②：量化 |
+| 26 | **彙整：四個問題 × 兩種寫法**（本堂核心產出） |
+| 27 | 帶走三句話 |
 
 ---
 
@@ -78,7 +77,7 @@
 > **一句話**：SGLang 在「前綴與語法重複」這條路上**挖得深**；vLLM 在「什麼都能跑」這個面上**鋪得廣**。
 > 不是誰比較好，是**最佳化的目標函數不同**。這頁先講，後面每一題都會驗證一次。
 
-**更精準的說法（第 28 頁會回收）**：兩家的差異幾乎都在**「要不要替使用者猜工作負載」**。SGLang 猜你會重複用前綴與語法，猜對了就贏很多；vLLM 不猜。
+**更精準的說法（第 27 頁會回收）**：兩家的差異幾乎都在**「要不要替使用者猜工作負載」**。SGLang 猜你會重複用前綴與語法，猜對了就贏很多；vLLM 不猜。
 
 ---
 
@@ -144,7 +143,7 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 
 ---
 
-## 問題② 前綴重算（第 10–17 頁，本堂最厚的一段）
+## 問題② 前綴重算（第 10–16 頁，本堂最厚的一段）
 
 ### KV cache 有多大（第 10 頁）
 
@@ -161,6 +160,9 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 固定大小 block（16 token）、不連續、用完才要、block table 做映射；浪費 60–80% → **<4%**。
 **vLLM 的 PagedAttention 讓它出名，但 SGLang 底下同樣是分頁式記憶體池——這一層兩家沒有分歧。**
 關鍵副產品：**block 可跨請求共享** → 打開複用的門。
+
+> ⚠️ **順帶破除一個迷思**：網路文章常把「RadixAttention vs PagedAttention」寫成競品，那是**把兩層混為一談**——分頁是「KV 怎麼放」（記憶體配置層，兩家一致），radix tree 是「放好的 block 怎麼被找到」（索引層，兩家不同）。
+> **舊版投影片曾為此獨立一頁澄清；改成兩家對照之後，版面本身就已經把這件事講完了（共同地基 → 對比索引層），所以那頁刪掉，只留這一句。**
 
 ### 對比②a 索引層：radix tree vs 鏈式雜湊表（第 12 頁）
 
@@ -200,16 +202,7 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 
 > **三隻腳**：分頁撐大「B 的上限」、continuous batching 撐滿「實際值」、前綴複用省掉「不必算的」。
 
-### 澄清：假對立（第 15 頁）
-
-| 層 | 回答什麼 | 各家 |
-|---|---|---|
-| **索引 / 複用層** | 放好的 block 怎麼被找到並複用？ | SGLang：radix tree + cache-aware 排程｜vLLM：鏈式雜湊表 APC |
-| **記憶體配置層** | KV cache 在 HBM 裡怎麼放？ | **兩邊都是分頁式** |
-
-真正的差異是「索引結構 + 排程策略」，不是「要不要分頁」。**兩邊功能持續趨同——別把某一次 benchmark 當永久結論。**
-
-### 怎麼選（第 16 頁）
+### 怎麼選（第 15 頁）
 
 | 前綴共用 > 60% → SGLang | 前綴各自獨立 → 看生態成熟度 |
 |---|---|
@@ -220,15 +213,17 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 2. **模型** —— 剛出的新架構誰先支援？通常 vLLM 廣、SGLang 對 DeepSeek 系特別快
 3. **多租戶安全** —— 前綴快取跨使用者共享會讓 TTFT 洩漏「這段 prompt 是否被用過」（時間側信道）→ 要按租戶分隔快取命名空間
 
+> **收尾提醒**：兩邊功能持續趨同（continuous batching、chunked prefill、投機解碼都已經是共識）——**別把某一次 benchmark 當永久結論**。
+
 ---
 
-## 問題③ 輸出不可控（第 18–21 頁）
+## 問題③ 輸出不可控（第 17–20 頁）
 
 ### 四種翻車
 多餘文字（「當然！以下是您要的 JSON：」）、型別錯誤（`{"age": "twenty"}`）、語法小錯、幻覺欄位。Agent／function calling 一旦解析失敗整條鏈就斷。
 ⚠️ **這不需要另一個小模型來審核**——純粹是符號計算／規則引擎問題。
 
-### 共同地基：FSM + 位元遮罩（第 19 頁）
+### 共同地基：FSM + 位元遮罩（第 18 頁）
 
 1. **預編譯成 FSM**：JSON schema / 正則 / EBNF → 有限狀態機。**XGrammar 是 SGLang、vLLM、TensorRT-LLM 三家的預設後端**（另可換 Outlines、llguidance）
 2. **非同步編譯**：vLLM 讓請求先進 `WAITING_FOR_FSM`，編好才轉 `WAITING`，不阻塞其他請求
@@ -236,7 +231,7 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 
 > ⚠️ **常見誤解**：以為 SGLang 是自研語法引擎、vLLM 是外掛。**實際上兩家的預設後端都是 XGrammar**——差異在下一頁。
 
-### 對比③：jump-forward decoding（第 20 頁）
+### 對比③：jump-forward decoding（第 19 頁）
 
 這是 SGLang「compressed FSM」真正的價值：**不是換一個語法引擎，是在同一個 FSM 上多走幾步。**
 
@@ -248,7 +243,7 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 
 > **反直覺但重要**：約束不是成本，是**資訊**——它告訴引擎「這幾個 token 不用問模型」。所以加了語法約束之後，生成反而可能比自由生成更快。
 
-### 問題② 與 ③ 的關係：正交，但有一條紅線（第 21 頁）
+### 問題② 與 ③ 的關係：正交，但有一條紅線（第 20 頁）
 
 | | 前綴複用 | 約束生成 |
 |---|---|---|
@@ -262,14 +257,14 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 
 ---
 
-## 問題④ CPU 成瓶頸（第 22–24 頁）
+## 問題④ CPU 成瓶頸（第 21–23 頁）
 
 前面三個解完，每個 forward step 只剩 5–10 ms，而 tokenize、排程決策、取樣、序列化、**數百次 kernel launch** 全在 CPU 上。
 
 ### 共同地基：CUDA Graph
 初始化時對各種 batch size 做 dummy forward，把整串 kernel launch 錄成 DAG，之後直接 replay。兩家都有（vLLM V1 用 piecewise CUDA graph 兼顧動態形狀）。
 
-### 對比④：兩條路，同一目標（第 23 頁）
+### 對比④：兩條路，同一目標（第 22 頁）
 
 | | SGLang：zero-overhead scheduler | vLLM：多進程 + async 排程 |
 |---|---|---|
@@ -281,7 +276,7 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 
 > **這一頁值得講**：聽眾很容易以為「推論優化＝寫 CUDA」。實際上一大塊收益來自「別讓 GPU 等 CPU」，跟第一堂 prefetch/overlap 的 demo 是同一個道理。
 
-### 雙胞胎：TTFT vs ITL（第 24 頁）
+### 雙胞胎：TTFT vs ITL（第 23 頁）
 
 | 指標 | 被誰決定 | 想要它小，你會想… |
 |---|---|---|
@@ -296,7 +291,7 @@ sgl.fork()  → runtime 看到：1 個共享前綴 + 3 條可平行分支
 
 ---
 
-## 單機的天花板（第 25–26 頁，兩家都有）
+## 單機的天花板（第 24–25 頁，兩家都有）
 
 ### 天花板① 投機解碼 / MTP
 Draft（n-gram / 小模型 / Medusa / EAGLE / MTP head）→ Verify（一次 forward 跑完 k 個草稿）→ Accept（rejection sampling）。
@@ -319,7 +314,7 @@ Draft（n-gram / 小模型 / Medusa / EAGLE / MTP head）→ Verify（一次 for
 
 ---
 
-## 彙整：四個問題 × 兩種寫法（第 27 頁，本堂核心產出）
+## 彙整：四個問題 × 兩種寫法（第 26 頁，本堂核心產出）
 
 | 問題 | 共同地基 | SGLang 的寫法 | vLLM 的寫法 |
 |---|---|---|---|
@@ -336,7 +331,7 @@ Draft（n-gram / 小模型 / Medusa / EAGLE / MTP head）→ Verify（一次 for
 
 ---
 
-## 帶走三句話（第 28 頁）
+## 帶走三句話（第 27 頁）
 
 1. **每個機制都是被一個具體痛點逼出來的。** DSL 因為程式難平行、前綴複用因為程式製造了大量共享前綴、FSM 因為 agent 需要能解析的輸出、CPU 優化因為前三個解完 GPU 快到 CPU 跟不上。**順著問題走，就不用背功能表。**
 2. **兩家的差異幾乎都在「要不要替你猜工作負載」。** SGLang 猜你會重複用前綴與語法（radix tree、cache-aware 排程、jump-forward），猜對了就贏很多；vLLM 不猜，把廣度與抽象做好。**共同地基（分頁 KV、continuous batching、XGrammar、CUDA Graph）兩家一致。**

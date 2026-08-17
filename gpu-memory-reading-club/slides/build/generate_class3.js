@@ -20,7 +20,7 @@ const HEAD = "PingFang TC", BODY = "PingFang TC", MONO = "Menlo";
 // 兩家的固定色：SGLang = purple、vLLM = cyan
 const SG = PURP, SGT = PURPTINT, VL = MEM, VLT = MEMTINT;
 
-const W = 13.33, H = 7.5, MX = 0.7, TITLE_Y = 0.62, FOOT_Y = 7.05, TOTAL = 28;
+const W = 13.33, H = 7.5, MX = 0.7, TITLE_Y = 0.62, FOOT_Y = 7.05, TOTAL = 27;
 const shadow = () => ({ type: "outer", color: "000000", blur: 8, offset: 3, angle: 135, opacity: 0.3 });
 
 const pres = new pptxgen();
@@ -398,7 +398,7 @@ const P5 = "單機的天花板";
     { x: 7.2, y: 4.6, w: 5.4, h: 0.3, fontFace: BODY, fontSize: 10.5, margin: 0 });
   [["浪費 60–80% → < 4%", GOOD], ["用完才要、不用連續", MEM], ["請求結束立刻歸還", MEM], ["block 可跨請求共享 ←關鍵", PURP]]
     .forEach(([t, c], i) => pill(s, MX + i * 3.0, 5.1, 2.85, 0.52, t, c, BG2, c, 11.5));
-  takeaway(s, "這一層兩家沒有分歧。分歧在下一頁：block 放好之後，「怎麼被找到」。", GOOD);
+  takeaway(s, "這一層兩家沒有分歧——所以「RadixAttention vs PagedAttention」是把兩層混為一談。分歧在下一頁：block 放好之後，怎麼被找到。", GOOD);
   footer(s, P2);
 })();
 
@@ -476,30 +476,10 @@ const P5 = "單機的天花板";
   footer(s, P2);
 })();
 
-// ============================================================ 15 假對立澄清
+// ============================================================ 15 怎麼選
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "14", "澄清：「RadixAttention vs PagedAttention」是假對立", GOOD);
-  s.addText("網路文章常把兩者寫成競品。它們其實在不同層——而且兩家兩層都有。",
-    { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
-  [["索引 / 複用層", "已經放好的 KV block 怎麼被找到並複用？", "SGLang：radix tree（+ cache-aware 排程）　｜　vLLM：鏈式雜湊表 APC", PURP],
-  ["記憶體配置層", "KV cache 在 HBM 裡怎麼放？", "兩邊都是分頁式：固定大小 block、不連續、用完才要", MEM]]
-    .forEach(([t, q, impl, c], i) => {
-      const y = 1.85 + i * 1.45;
-      card(s, MX, y, 11.9, 1.25, BG2, c);
-      s.addText(t, { x: MX + 0.3, y: y + 0.12, w: 3.0, h: 0.45, valign: "middle", fontFace: HEAD, fontSize: 16, bold: true, color: c, margin: 0 });
-      s.addText(q, { x: MX + 3.4, y: y + 0.12, w: 8.2, h: 0.45, valign: "middle", fontFace: BODY, fontSize: 12.5, color: INK, margin: 0 });
-      s.addText(impl, { x: MX + 0.3, y: y + 0.62, w: 11.3, h: 0.5, valign: "middle", fontFace: MONO, fontSize: 11, color: MUTE, margin: 0 });
-    });
-  s.addText("▲ 蓋在上面", { x: MX + 0.3, y: 3.1, w: 3, h: 0.28, fontFace: BODY, fontSize: 10.5, color: FOOTC, margin: 0 });
-  verdict(s, 4.75, "所以真正的差異是「索引結構 + 排程策略」，不是「要不要分頁」。兩邊功能持續趨同——別把某一次 benchmark 當永久結論。", GOOD);
-  footer(s, P2);
-})();
-
-// ============================================================ 16 怎麼選
-(() => {
-  const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "15", "所以問題②該選哪一家？看你的流量長相", WARN);
+  header(s, "14", "所以問題②該選哪一家？看你的流量長相", WARN);
   card(s, MX, 1.4, 5.8, 2.5, BG2, SG);
   s.addText("前綴共用 > 60% → SGLang", { x: MX + 0.28, y: 1.52, w: 5.2, h: 0.38, fontFace: HEAD, fontSize: 16, bold: true, color: SG, margin: 0 });
   ["RAG（同幾份文件反覆進 prompt）", "多輪對話（每輪帶整段歷史）", "Few-shot（同一批範例）", "Agent（工具描述 + 前面所有步驟）", "sgl.fork() 的分支"]
@@ -520,13 +500,14 @@ const P5 = "單機的天花板";
       s.addText(k, { x: MX + 0.3, y, w: 1.5, h: 0.36, valign: "middle", fontFace: HEAD, fontSize: 11.5, bold: true, color: WARN, margin: 0 });
       s.addText(v, { x: MX + 1.9, y, w: 9.7, h: 0.36, valign: "middle", fontFace: BODY, fontSize: 11.2, color: MUTE, margin: 0 });
     });
+  takeaway(s, "而且兩邊功能持續趨同（continuous batching、chunked prefill、投機解碼都已經是共識）——別把某一次 benchmark 當永久結論。", WARN);
   footer(s, P2);
 })();
 
-// ============================================================ 17 互動環節
+// ============================================================ 16 互動環節
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "16", "互動環節：把「有效 batch」變成看得到的東西", GOOD);
+  header(s, "15", "互動環節：把「有效 batch」變成看得到的東西", GOOD);
   s.addText("開啟 interactive/serving_map.html —— 本堂只用模式 1–4（模式 5 PD 分離留給第四堂）。",
     { x: MX, y: 1.4, w: 11.9, h: 0.35, fontFace: BODY, fontSize: 13.5, color: MUTE, margin: 0 });
   [["1 Naive", "靜態批次 + 連續預留 KV：時間軸有多空、HBM 有多浪費", WARN, "有效 batch ≈ 20 → 6.8%"],
@@ -546,10 +527,10 @@ const P5 = "單機的天花板";
   footer(s, P2);
 })();
 
-// ============================================================ 18 問題③
+// ============================================================ 17 問題③
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "17", "問題③：輸出格式不可控（而且檢查很慢）", PURP);
+  header(s, "16", "問題③：輸出格式不可控（而且檢查很慢）", PURP);
   probStepper(s, 2);
   problemBanner(s, "③", "只靠 prompt 說「請輸出 JSON」，模型不保證遵守",
     "常見翻車：前後多加解釋文字、欄位型別錯、語法小錯（多逗號／單引號）、幻覺出 schema 沒有的欄位。而 agent／function calling 一旦解析失敗，整條鏈就斷了。天真的補救是每步生成後用正則檢查再重試——CPU 成本高得離譜，還是不保證對。", PURP);
@@ -564,10 +545,10 @@ const P5 = "單機的天花板";
   footer(s, P3);
 })();
 
-// ============================================================ 19 共同地基：FSM
+// ============================================================ 18 共同地基：FSM
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "18", "共同地基：FSM + 位元遮罩（兩家預設都用 XGrammar）", GOOD);
+  header(s, "17", "共同地基：FSM + 位元遮罩（兩家預設都用 XGrammar）", GOOD);
   s.addText("生成每個 token 前，先算出「此刻合法的 token 集合」，把不合法的 logit 壓成 −∞ → 物理上不可能生成非法內容。",
     { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 12.5, color: MUTE, margin: 0 });
   [["① 預編譯成 FSM", "把 JSON schema / 正則 / EBNF 編成有限狀態機。XGrammar 是 SGLang、vLLM、TensorRT-LLM 三家的預設後端（另可換 Outlines、llguidance）", COMP],
@@ -583,10 +564,10 @@ const P5 = "單機的天花板";
   footer(s, P3);
 })();
 
-// ============================================================ 20 對比③ jump-forward
+// ============================================================ 19 對比③ jump-forward
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "19", "對比③：語法允許時，可以一次吐好幾個 token", SG);
+  header(s, "18", "對比③：語法允許時，可以一次吐好幾個 token", SG);
   s.addText("這是 SGLang「compressed FSM」真正的價值：不是換一個語法引擎，是在同一個 FSM 上多走幾步。",
     { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 12.5, color: MUTE, margin: 0 });
   card(s, MX, 1.8, 11.9, 1.75, BG2, GOOD);
@@ -604,10 +585,10 @@ const P5 = "單機的天花板";
   footer(s, P3);
 })();
 
-// ============================================================ 21 正交性
+// ============================================================ 20 正交性
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "20", "問題② 與 ③ 的關係：正交，但有一條紅線", GOOD);
+  header(s, "19", "問題② 與 ③ 的關係：正交，但有一條紅線", GOOD);
   card(s, MX, 1.5, 5.8, 2.2, BG2, MEM);
   s.addText("前綴複用複用的是「算力」", { x: MX + 0.28, y: 1.62, w: 5.2, h: 0.35, fontFace: HEAD, fontSize: 14.5, bold: true, color: MEM, margin: 0 });
   s.addText("避免重複的矩陣運算。作用在「這段 token 的中間結果」上。", { x: MX + 0.28, y: 2.02, w: 5.2, h: 0.6, valign: "top", fontFace: BODY, fontSize: 12, color: MUTE, lineSpacingMultiple: 1.3, margin: 0 });
@@ -625,10 +606,10 @@ const P5 = "單機的天花板";
   footer(s, P3);
 })();
 
-// ============================================================ 22 問題④
+// ============================================================ 21 問題④
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "21", "問題④：GPU 快到讓 CPU 變成瓶頸", GOOD);
+  header(s, "20", "問題④：GPU 快到讓 CPU 變成瓶頸", GOOD);
   probStepper(s, 3);
   problemBanner(s, "④", "一步只花 5–10 ms，Python 那邊來得及嗎？",
     "前面三個問題解完，batch 撐起來了、重複計算省掉了。這時每個 forward step 只剩幾毫秒，而 tokenize、排程決策、取樣、序列化、數百次 kernel launch 全在 CPU 上——GPU 開始出現「算完在等 CPU 決定下一步」的空窗。", GOOD);
@@ -640,10 +621,10 @@ const P5 = "單機的天花板";
   footer(s, P4);
 })();
 
-// ============================================================ 23 對比④
+// ============================================================ 22 對比④
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "22", "對比④：兩條不同的路，同一個目標", VL);
+  header(s, "21", "對比④：兩條不同的路，同一個目標", VL);
   s.addText("目標都是「GPU 不要等 CPU」。差別在把 CPU 工作搬到哪裡。",
     { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
   versus(s, 1.8, 2.5,
@@ -656,10 +637,10 @@ const P5 = "單機的天花板";
   footer(s, P4);
 })();
 
-// ============================================================ 24 TTFT vs ITL
+// ============================================================ 23 TTFT vs ITL
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "23", "問題④的雙胞胎：TTFT 與 ITL 互相打架", WARN);
+  header(s, "22", "問題④的雙胞胎：TTFT 與 ITL 互相打架", WARN);
   tableGrid(s, MX, 1.4, 11.9, [
     { t: "指標", w: 2.0 }, { t: "全名", w: 2.6 }, { t: "被誰決定", w: 3.3 }, { t: "想要它小，你會想…", w: 4.0 },
   ], [
@@ -677,10 +658,10 @@ const P5 = "單機的天花板";
   footer(s, P4);
 })();
 
-// ============================================================ 25 天花板① 投機解碼
+// ============================================================ 24 天花板① 投機解碼
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "24", "單機的天花板①：投機解碼 / MTP（兩家都有）", COMP);
+  header(s, "23", "單機的天花板①：投機解碼 / MTP（兩家都有）", COMP);
   s.addText("前面四個問題解完，B 撐大了。但「單一請求的延遲」仍被『讀一遍權重』鎖死——要打破它只有這條路。",
     { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 12.5, color: MUTE, margin: 0 });
   [["Draft", "便宜地提出 k 個候選：n-gram / 小模型 / Medusa / EAGLE / 模型自帶的 MTP head", MEM],
@@ -704,10 +685,10 @@ const P5 = "單機的天花板";
   footer(s, P5);
 })();
 
-// ============================================================ 26 天花板② 量化
+// ============================================================ 25 天花板② 量化
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "25", "單機的天花板②：量化——直接砍分母", MEM);
+  header(s, "24", "單機的天花板②：量化——直接砍分母", MEM);
   s.addText("AI = FLOPs ÷ Bytes。前面全在動分子，量化直接動分母——decode 被權重讀取綁死，權重減半 ≈ 延遲減半。兩家都支援。",
     { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 12.5, color: MUTE, margin: 0 });
   [["權重", "fp16 → FP8（÷2）→ FP4 / MXFP4（÷4）", "decode 步時直接等比下降", COMP],
@@ -726,10 +707,10 @@ const P5 = "單機的天花板";
   footer(s, P5);
 })();
 
-// ============================================================ 27 彙整總表
+// ============================================================ 26 彙整總表
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "26", "彙整：四個問題 × 兩種寫法", GOOD);
+  header(s, "25", "彙整：四個問題 × 兩種寫法", GOOD);
   tableGrid(s, MX, 1.4, 11.9, [
     { t: "問題", w: 2.0 }, { t: "共同地基", w: 3.0 }, { t: "SGLang 的寫法", w: 3.5, c: SG }, { t: "vLLM 的寫法", w: 3.4, c: VL },
   ], [
@@ -746,10 +727,10 @@ const P5 = "單機的天花板";
   footer(s, P5);
 })();
 
-// ============================================================ 28 帶走三句話
+// ============================================================ 27 帶走三句話
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "27", "帶走三句話", COMP);
+  header(s, "26", "帶走三句話", COMP);
   [["1", "每個機制都是被一個具體痛點逼出來的", "DSL 因為程式難平行、前綴複用因為程式製造了大量共享前綴、FSM 因為 agent 需要能解析的輸出、CPU 優化因為前三個解完 GPU 快到 CPU 跟不上。順著問題走，就不用背功能表。", COMP],
   ["2", "兩家的差異幾乎都在「要不要替你猜工作負載」", "SGLang 猜你會重複用前綴與語法（radix tree、cache-aware 排程、jump-forward），猜對了就贏很多；vLLM 不猜，把廣度與抽象做好（最多模型/硬體、可插拔後端）。共同地基（分頁 KV、continuous batching、XGrammar、CUDA Graph）兩家一致。", GOOD],
   ["3", "所以選型看流量長相，不看 benchmark 排名", "前綴共用 >60%（agent／多輪／RAG）→ SGLang 的 TTFT 低 20–40%、結構化輸出快約 3×；請求彼此獨立 → 兩者差 <5%，就選硬體與模型支援更廣的那家。", MEM]]
