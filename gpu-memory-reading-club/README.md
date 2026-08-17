@@ -63,20 +63,20 @@
 |---|---|---|---|---|
 | **第一堂** | [full_series.pptx](slides/full_series.pptx)（34 頁） | [notes/full_series.md](notes/full_series.md) | [gpu_map](interactive/gpu_map.html)、[transformer_map](interactive/transformer_map.html) | **硬體本身**：roofline、記憶體階層、GPU 單元、Transformer 上機 |
 | **第二堂** | [class2_transformer_gpu.pptx](slides/class2_transformer_gpu.pptx)（24 頁） | [notes/class2_transformer_gpu.md](notes/class2_transformer_gpu.md) | [parallelism_map](interactive/parallelism_map.html) | **一張卡 → 多張卡**：逐 block 對應 GPU 單元；DP/TP/PP/EP 與互連 |
-| **第三堂** | [class3_sglang_single_node.pptx](slides/class3_sglang_single_node.pptx)（24 頁） | [notes/class3_sglang_single_node.md](notes/class3_sglang_single_node.md) | [serving_map](interactive/serving_map.html)（模式 1–4） | **SGLang 單機篇**：問題 ①–④（DSL／RadixAttention／FSM／排程） |
+| **第三堂** | [class3_engine_single_node.pptx](slides/class3_engine_single_node.pptx)（28 頁） | [notes/class3_engine_single_node.md](notes/class3_engine_single_node.md) | [serving_map](interactive/serving_map.html)（模式 1–4） | **推論引擎單機篇**：問題 ①–④，每題對比 **SGLang × vLLM** 兩種寫法 |
 | **第四堂** | [class4_sglang_multi_node.pptx](slides/class4_sglang_multi_node.pptx)（20 頁） | [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) | [serving_map](interactive/serving_map.html)（模式 5） | **SGLang 多機篇**：問題 ⑤–⑧（大規模 EP／PD 分離／cache-aware router／容錯） |
 | **第五堂** | [class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁） | [notes/class5_china_models.md](notes/class5_china_models.md) | — | **模型架構**：中國開源模型的五個旋鈕（壓 KV／少算／少看／一次多產／降精度） |
 
-### 三、四堂共用一條主幹：SGLang 遇到的八個問題
+### 三、四堂共用一條主幹：推論引擎會撞到的八個問題
 
-不照功能表講，照**問題**講——每個機制都是被一個具體痛點逼出來的。八個問題由淺入深剛好走完「編程模型 → 單機記憶體 → 單機排程 → 多卡 → 多機」：
+不照功能表講，照**問題**講——每個機制都是被一個具體痛點逼出來的。而且**這八個問題不是某一家專有的**（SGLang 的發展史剛好把它們依序列了出來），**兩家都給了答案**，所以第三堂每一題都對比 SGLang 與 vLLM 的寫法。八個問題由淺入深剛好走完「編程模型 → 單機記憶體 → 單機排程 → 多卡 → 多機」：
 
 | # | 遇到的問題 | 解法 | 場次 |
 |---|---|---|---|
-| ① | LLM 程式（多次呼叫、分支、工具）難寫又跑不快 | 前端 DSL：把程式描述成執行圖 | 第三堂 |
-| ② | 這些程式天然共享大量前綴，卻被反覆重算 | 分頁 KV + RadixAttention + continuous batching | 第三堂 |
-| ③ | 結構化輸出逐 token 檢查語法太慢、格式仍不保證 | Compressed FSM：預編譯 + 位元遮罩 | 第三堂 |
-| ④ | GPU 一步只要 5–10 ms，CPU 排程反而成了瓶頸 | zero-overhead scheduler / CUDA Graph / chunked prefill | 第三堂 |
+| ① | LLM 程式（多次呼叫、分支、工具）難寫又跑不快 | SGLang：前端 DSL｜**vLLM：沒有對應物**（職責邊界的選擇） | 第三堂 |
+| ② | 這些程式天然共享大量前綴，卻被反覆重算 | 共同：分頁 KV + continuous batching｜索引：radix tree vs 鏈式雜湊表｜排程：主動 vs 被動 | 第三堂 |
+| ③ | 結構化輸出逐 token 檢查語法太慢、格式仍不保證 | 共同：XGrammar FSM + 位元遮罩｜差異：SGLang 的 jump-forward（約 3× 吞吐） | 第三堂 |
+| ④ | GPU 一步只要 5–10 ms，CPU 排程反而成了瓶頸 | 共同：CUDA Graph + chunked prefill｜SGLang：zero-overhead scheduler｜vLLM：多進程 + async | 第三堂 |
 | ⑤ | 大 MoE（DeepSeek）單機放不下、專家負載不均 | 大規模 EP + DeepEP / EPLB | 第四堂 |
 | ⑥ | prefill 與 decode 互相干擾（TTFT vs ITL） | PD 分離 | 第四堂 |
 | ⑦ | 多副本之間：快取局部性 vs 負載均衡此消彼長 | cache-aware router + KV 複製 | 第四堂 |
@@ -201,7 +201,7 @@ gpu-memory-reading-club/
 ├── slides/            # 投影片（pptxgenjs 腳本產生，見 slides/build/）
 │   ├── full_series.pptx        # 第一堂課：S1–S5 合輯（34 頁，硬體架構 × Transformer）
 │   ├── class2_transformer_gpu.pptx     # 第二堂課：Transformer × GPU 框架（24 頁，單卡逐 block → 多卡平行與互連）
-│   ├── class3_sglang_single_node.pptx  # 第三堂課：SGLang 單機篇（24 頁，問題 ①–④）
+│   ├── class3_engine_single_node.pptx  # 第三堂課：推論引擎單機篇 SGLang × vLLM（28 頁，問題 ①–④）
 │   ├── class4_sglang_multi_node.pptx   # 第四堂課：SGLang 多機篇（20 頁，問題 ⑤–⑧）
 │   └── class5_china_models.pptx        # 第五堂課：中國開源模型的五個旋鈕（16 頁）
 ├── interactive/       # 互動教具
@@ -264,9 +264,9 @@ gpu-memory-reading-club/
   - 講稿 [notes/class2_transformer_gpu.md](notes/class2_transformer_gpu.md)（頁面地圖、逐 block 速查、四種平行對照、互連數字與來源、關鍵推導、Q&A）
   - 新互動地圖 [interactive/parallelism_map.html](interactive/parallelism_map.html)（第 23 頁指引）：同一個玩具 Transformer 攤到多卡，六層 單卡 → 裝不下 → DP → TP → PP → 互連硬體；TP/PP 兩層畫出「一層」的權重矩陣（Wq/Wk/Wv/Wo + W1/W2）怎麼被切
 - [x] **M10**：第三堂課 — SGLang 單機篇（獨立投影片 + 新互動地圖）
-  - 投影片 [slides/class3_sglang_single_node.pptx](slides/class3_sglang_single_node.pptx)（24 頁）：主幹是**沿著 SGLang 遇到的問題走**。地基（batch=1 decode 只用 0.34% 算力 → AI ≈ B）｜**問題①** 程式難平行 → 前端 DSL｜**問題②** 前綴重算 → 分頁 KV + RadixAttention + continuous batching（含「RadixAttention vs PagedAttention 是假對立」的澄清）｜**問題③** 輸出不可控 → Compressed FSM（含與②的正交性紅線）｜**問題④** CPU 成瓶頸 → zero-overhead scheduler / CUDA Graph / chunked prefill｜天花板：投機解碼·MTP、量化
-  - 講稿 [notes/class3_sglang_single_node.md](notes/class3_sglang_single_node.md)（八問題全景、頁面地圖、關鍵推導、Q&A、資料來源）
-  - 新互動地圖 [interactive/serving_map.html](interactive/serving_map.html)（第 14 頁指引）：同一批請求在 Naive → Continuous batching → Paged KV → Radix 前綴共用 → PD 分離 五種模式下，GPU 時間軸、HBM 佔用、有效 batch、算術強度與 roofline 位置怎麼變（**第三堂用模式 1–4，模式 5 留給第四堂**）
+  - 投影片 [slides/class3_engine_single_node.pptx](slides/class3_engine_single_node.pptx)（28 頁）：主幹是**問題導向，而且一個問題兩種寫法**。地基（batch=1 decode 只用 0.34% 算力 → AI ≈ B）｜**問題①** 程式難平行（SGLang 前端 DSL vs **vLLM 沒有對應物**——職責邊界的選擇）｜**問題②** 前綴重算（共同地基：分頁 KV、continuous batching；對比 a 索引層：radix tree vs 鏈式雜湊表；對比 b 排程：cache-aware 主動 vs 被動，含「RadixAttention vs PagedAttention 是假對立」澄清與選型判準）｜**問題③** 輸出不可控（共同地基：**兩家預設都是 XGrammar**；差異：jump-forward decoding 約 3× 吞吐；含與②的正交性紅線）｜**問題④** CPU 成瓶頸（zero-overhead scheduler vs 多進程+async）｜天花板：投機解碼·MTP、量化｜收尾：**四問題 × 兩種寫法總表**
+  - 講稿 [notes/class3_engine_single_node.md](notes/class3_engine_single_node.md)（八問題全景、兩家哲學差異、頁面地圖、關鍵推導、Q&A、資料來源）
+  - 新互動地圖 [interactive/serving_map.html](interactive/serving_map.html)（第 17 頁指引）：同一批請求在 Naive → Continuous batching → Paged KV → Radix 前綴共用 → PD 分離 五種模式下，GPU 時間軸、HBM 佔用、有效 batch、算術強度與 roofline 位置怎麼變（**第三堂用模式 1–4，模式 5 留給第四堂**）
 - [x] **M11**：第四堂課 — SGLang 多機篇
   - 投影片 [slides/class4_sglang_multi_node.pptx](slides/class4_sglang_multi_node.pptx)（20 頁）：**Part A** 用經典分散式系統的八類共同問題當影子，逐格對照 GPU 推論叢集（規避／變形／放大）、共同的底層結構（三個物理事實）、關鍵轉折（推論服務比訓練更像分散式系統）｜**⑤** 大 MoE → 大規模 EP（all-to-all 代價、專家負載不均＝資料傾斜、EPLB、落地數字）｜**⑥** P/D 互擾 → PD 分離（含 KV 所有權轉移的影子）｜**⑦** 多機調度 → cache-aware router（**壓軸推導：該搬還是該重算**，串起第二/三/四堂）｜**⑧** 容錯（KV 是可重算的快取 + 四個開放問題）｜收尾：三個換了名字的老問題、四家架構取向橫向比較
   - 講稿 [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md)

@@ -3,7 +3,7 @@
 投影片：[../slides/class4_sglang_multi_node.pptx](../slides/class4_sglang_multi_node.pptx)（20 頁）｜重建：`cd ../slides/build && node generate_class4.js`
 互動教具：可搭配 [serving_map.html](../interactive/serving_map.html) 的**模式 5（PD 分離）**——第三堂只用到模式 1–4。
 
-> 承接[第三堂](class3_sglang_single_node.md)的同一條主幹：沿著 SGLang 遇到的問題走。①–④ 是單機，本堂做 ⑤–⑧。
+> 承接[第三堂](class3_engine_single_node.md)的同一條主幹：沿著 SGLang 遇到的問題走。①–④ 是單機，本堂做 ⑤–⑧。
 > **本堂的骨架是「先列問題」**：開場不講 SGLang，先用經典分散式系統的八類共同問題當影子（§1），建立地圖之後，四個技術問題才不是零散的技術點。
 
 ---
@@ -249,4 +249,4 @@ Cache-Aware Load Balancing / KV Cache Replication —— SGLang Router、**Moonc
 - [DeepSeek-V3/R1 Inference System Overview](https://github.com/deepseek-ai/open-infra-index/blob/main/202502OpenSourceWeek/day_6_one_more_thing_deepseekV3R1_inference_system_overview.md)（EP32/EP144、73.7k/14.8k、545%）
 - SGLang Router / cache-aware load balancing、Mooncake（Kimi）、vLLM KV connector / LMCache / NIXL、NVIDIA Dynamo —— **待補官方文件連結**
 - 分散式系統對照的教科書基礎：CAP、FLP、Lamport timestamp、Paxos/Raft、2PC —— 建議指向 *Designing Data-Intensive Applications*（本 repo 另有 `DDIA-in-real/` 專案可交叉引用）
-- 前置：[第三堂講稿](class3_sglang_single_node.md)（分頁 KV、RadixAttention、continuous batching、FSM、chunked prefill）
+- 前置：[第三堂講稿](class3_engine_single_node.md)（分頁 KV、RadixAttention、continuous batching、FSM、chunked prefill）

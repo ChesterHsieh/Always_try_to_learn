@@ -245,4 +245,4 @@ A：總參數是容量門檻、活躍參數是速度門檻——兩者都要看�
 - [LMSYS：No Free Lunch — Deconstruct Efficient Attention with MiniMax M2](https://www.lmsys.org/blog/2025-11-04-miminmax-m2/)｜[MiniMax 官方說明](https://www.minimax.io/news/why-did-m2-end-up-as-a-full-attention-model)｜[MiniMax-M1 論文](https://arxiv.org/abs/2506.13585)
 - Qwen3 / Qwen3-Next / Qwen 3.5、GLM-5 —— 各家官方部落格；綜覽見 [Interconnects 開源模型整理](https://www.interconnects.ai/p/latest-open-artifacts-19-qwen-35)
 - DeepSeek 開源週零件：FlashMLA / DeepEP / DeepGEMM / EPLB / 3FS（[open-infra-index](https://github.com/deepseek-ai/open-infra-index)）
-- 前置：[第三堂](class3_sglang_single_node.md)（KV cache、prefix caching、投機解碼、量化）、[第四堂](class4_sglang_multi_node.md)（大規模 EP）
+- 前置：[第三堂](class3_engine_single_node.md)（KV cache、prefix caching、投機解碼、量化）、[第四堂](class4_sglang_multi_node.md)（大規模 EP）
