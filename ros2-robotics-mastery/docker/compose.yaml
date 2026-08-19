@@ -1,0 +1,41 @@
+name: ros2-mastery
+
+services:
+  ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        WITH_VNC: "1"
+    platform: linux/arm64          # Apple Silicon 原生；Intel Mac 請改 linux/amd64
+    image: ros2-mastery:jazzy
+    container_name: ros2-mastery
+    hostname: ros2-dev
+    stdin_open: true
+    tty: true
+    network_mode: bridge
+    ports:
+      - "8765:8765"                # foxglove_bridge
+      - "6080:6080"                # noVNC (瀏覽器開 http://localhost:6080)
+      - "5900:5900"                # VNC
+    environment:
+      ROS_DOMAIN_ID: "42"
+      RMW_IMPLEMENTATION: rmw_fastrtps_cpp
+      DISPLAY: ":99"               # 走容器內 Xvfb；要用 XQuartz 改成 host.docker.internal:0
+      LIBGL_ALWAYS_SOFTWARE: "1"   # 容器內無 GPU，走軟體渲染
+      QT_X11_NO_MITSHM: "1"
+    volumes:
+      - ../ros2_ws/src:/ros2_ws/src            # 你的原始碼（Mac 上編輯）
+      - ros2_build:/ros2_ws/build              # build 產物放 volume，避免拖慢
+      - ros2_install:/ros2_ws/install
+      - ros2_log:/ros2_ws/log
+      - ../projects:/projects                  # 實作專案筆記
+      - ros2_home:/home/dev                    # 保留 shell 歷史與設定
+    shm_size: "2gb"                            # DDS 與 Gazebo 需要
+    working_dir: /ros2_ws
+
+volumes:
+  ros2_build:
+  ros2_install:
+  ros2_log:
+  ros2_home:
