@@ -2,8 +2,9 @@
 
 Staff 級系統設計面試導向，40 節點 / 120 題 / 84 小時（主線 78 小時）。
 
+- 線上開啟：<https://chesterhsieh.github.io/Always_try_to_learn/system-design/url-shortener/>
 - 資料單一來源：`tree_data.py`
-- 產物：`url-shortener.html`（單檔自足，無外部依賴）
+- 產物：`index.html`（獨立版，Pages 與瀏覽器用）、`url-shortener.html`（片段版，Artifact 用）
 - 重建：在上層目錄執行 `python3 build.py url-shortener`
 
 ## 十章

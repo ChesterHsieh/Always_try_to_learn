@@ -6,7 +6,7 @@
 
 | 題目 | 資料夾 | 節點 / 題目 | 狀態 |
 |---|---|---|---|
-| URL Shortener（縮網址） | [url-shortener](url-shortener/) | 40 節點 / 120 題 | ✅ |
+| URL Shortener（縮網址） | [url-shortener](url-shortener/) | 40 節點 / 120 題 | ✅ [線上開啟](https://chesterhsieh.github.io/Always_try_to_learn/system-design/url-shortener/) |
 
 ## 建置
 
