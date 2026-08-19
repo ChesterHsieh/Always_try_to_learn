@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROS 2 Robotics Mastery — 技能樹</title>
+<style>
+:root{
+  --bg:#080b12; --bg2:#0d1220; --panel:#111827ee; --line:#1e2a3f;
+  --gold:#e8c15a; --gold2:#ffd97a; --dim:#5a6478; --txt:#dfe6f2; --txt2:#9aa7bd;
+  --lock:#2a3346; --avail:#4b74c9; --done:#e8c15a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;}
+body{display:flex;flex-direction:column}
+
+/* ── HUD ── */
+#hud{flex:0 0 auto;background:linear-gradient(180deg,#0e1524,#0a0f1a);border-bottom:1px solid var(--line);
+  padding:10px 16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;z-index:30;position:relative}
+#hud h1{font-size:15px;font-weight:700;letter-spacing:.5px;color:var(--gold);white-space:nowrap}
+#hud h1 small{display:block;font-size:10px;color:var(--txt2);font-weight:400;letter-spacing:0}
+.lvlbox{display:flex;align-items:center;gap:10px;min-width:280px;flex:1}
+.lvlnum{width:44px;height:44px;flex:0 0 auto;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2b3550,#141b2b);
+  border:2px solid var(--gold);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 0 14px #e8c15a44}
+.lvlnum b{font-size:17px;color:var(--gold2);line-height:1}
+.lvlnum span{font-size:7px;color:var(--txt2);letter-spacing:1px}
+.bars{flex:1;min-width:160px}
+.barlabel{display:flex;justify-content:space-between;font-size:10px;color:var(--txt2);margin-bottom:3px}
+.bar{height:8px;background:#161d2e;border-radius:5px;overflow:hidden;border:1px solid #1d263a}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#8a6d1f,var(--gold2));transition:width .45s cubic-bezier(.2,.8,.2,1)}
+.bar.blue i{background:linear-gradient(90deg,#2b4b86,#5b96ff)}
+.stat{text-align:center;padding:0 8px;border-left:1px solid var(--line)}
+.stat b{display:block;font-size:16px;color:var(--gold2)}
+.stat span{font-size:9px;color:var(--txt2);letter-spacing:.5px}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+button{background:#18213a;color:var(--txt);border:1px solid #2a3552;border-radius:6px;
+  padding:6px 10px;font-size:11px;cursor:pointer;transition:.15s;font-family:inherit}
+button:hover{background:#22304f;border-color:var(--gold);color:var(--gold2)}
+button.pri{background:#2d4a86;border-color:#3d63ad}
+button.pri:hover{background:#3a5da5}
+
+/* ── Viewport ── */
+#viewport{flex:1;position:relative;overflow:hidden;cursor:grab;
+  background:radial-gradient(ellipse 90% 60% at 50% 0%,#121a2c 0%,#080b12 70%)}
+#viewport.drag{cursor:grabbing}
+#world{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+#edges{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+.edge{fill:none;stroke:#25324a;stroke-width:2.5}
+.edge.on{stroke:#e8c15a;stroke-width:3;filter:drop-shadow(0 0 5px #e8c15a99)}
+.edge.rdy{stroke:#4b74c9;stroke-width:2.5}
+.edge.side{stroke-dasharray:5 5}
+
+/* ── Nodes ── */
+.node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;user-select:none}
+.orb{position:relative;display:flex;align-items:center;justify-content:center;
+  border:2.5px solid var(--lock);background:#0f1626;color:#46536b;transition:.22s;font-size:11px;font-weight:700}
+.node[data-t="normal"] .orb{width:42px;height:42px;border-radius:50%}
+.node[data-t="notable"] .orb{width:56px;height:56px;border-radius:50%;border-width:3px}
+.node[data-t="start"]   .orb{width:58px;height:58px;border-radius:50%;border-width:3px}
+.node[data-t="keystone"] .orb{width:74px;height:74px;border-radius:14px;transform:rotate(45deg);border-width:3px}
+.node[data-t="keystone"] .orb > *{transform:rotate(-45deg)}
+.node[data-track="side"] .orb{border-style:dashed}
+
+.node.avail .orb{border-color:var(--avail);color:#a9c6ff;background:#111c33;
+  box-shadow:0 0 0 4px #4b74c922,0 0 18px #4b74c955}
+.node.prog .orb{border-color:#c98a2e;color:var(--gold2);background:#1d1a12;
+  box-shadow:0 0 0 4px #e8c15a22,0 0 18px #e8c15a55}
+.node.done .orb{border-color:var(--gold);color:#1a1408;
+  background:radial-gradient(circle at 35% 30%,var(--gold2),#a8811f);
+  box-shadow:0 0 0 5px #e8c15a22,0 0 26px #e8c15a88}
+.node.avail:hover .orb,.node.prog:hover .orb,.node.done:hover .orb,.node:hover .orb{filter:brightness(1.25)}
+.node.sel .orb{outline:3px solid #fff;outline-offset:4px}
+
+.lbl{margin-top:6px;font-size:11px;line-height:1.25;text-align:center;max-width:120px;color:var(--dim);
+  text-shadow:0 2px 6px #000,0 0 12px #000;font-weight:600;pointer-events:none}
+.node.avail .lbl{color:#c3d5f5}
+.node.prog .lbl,.node.done .lbl{color:var(--gold2)}
+.lbl em{display:block;font-style:normal;font-size:9px;color:#6b7789;font-weight:400}
+.node .hrs{font-size:8.5px;color:#6b7789;margin-top:1px;pointer-events:none}
+
+.actlabel{position:absolute;transform:translate(-50%,-50%);font-size:26px;font-weight:800;letter-spacing:6px;
+  color:#ffffff08;pointer-events:none;white-space:nowrap;text-transform:uppercase}
+.actchip{position:absolute;transform:translate(-50%,-50%);padding:5px 14px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:1px;pointer-events:none;white-space:nowrap;
+  background:#0d1424dd;border:1px solid #22304a}
+
+/* ── Side panel ── */
+#panel{position:absolute;top:0;right:0;width:430px;max-width:92vw;height:100%;background:var(--panel);
+  backdrop-filter:blur(14px);border-left:1px solid var(--line);z-index:40;overflow-y:auto;
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);padding:0 0 40px}
+#panel.open{transform:translateX(0)}
+.phead{padding:18px 20px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0f1626f5;
+  backdrop-filter:blur(10px);z-index:2}
+.pact{font-size:10px;letter-spacing:2px;font-weight:700;margin-bottom:6px}
+.phead h2{font-size:19px;line-height:1.3;color:#fff}
+.phead .en{font-size:11px;color:var(--txt2);margin-top:2px}
+.pmeta{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tag{font-size:10px;padding:3px 8px;border-radius:4px;background:#1a2338;border:1px solid #26324c;color:var(--txt2)}
+.tag.ks{background:#3a2c0d;border-color:#7a5f19;color:var(--gold2)}
+.tag.side{background:#2a1f3a;border-color:#4a3a63;color:#c5a8e8}
+.pclose{position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:var(--txt2);padding:2px 8px}
+.sec{padding:16px 20px;border-bottom:1px solid #18202f}
+.sec h3{font-size:11px;letter-spacing:1.5px;color:var(--gold);margin-bottom:9px;font-weight:700}
+.sec p{font-size:13px;line-height:1.75;color:#c3ccdb}
+.why{background:#141d30;border-left:3px solid var(--gold);padding:12px 14px;border-radius:0 6px 6px 0;
+  font-size:12.5px;line-height:1.75;color:#cfd8e8}
+.dod{background:#12251c;border-left:3px solid #4caf50;padding:12px 14px;border-radius:0 6px 6px 0;
+  font-size:12.5px;line-height:1.7;color:#c8e6c9}
+ul.tasks{list-style:none;display:flex;flex-direction:column;gap:2px}
+ul.tasks li{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.65;
+  padding:8px 10px;border-radius:6px;cursor:pointer;transition:.13s;color:#c3ccdb}
+ul.tasks li:hover{background:#18213a}
+ul.tasks li .ck{flex:0 0 auto;width:17px;height:17px;border:2px solid #3a4762;border-radius:4px;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#0a0a0a;transition:.13s}
+ul.tasks li.on .ck{background:var(--gold);border-color:var(--gold)}
+ul.tasks li.on{color:#7d8798;text-decoration:line-through}
+.res{display:flex;flex-direction:column;gap:7px}
+.res a{display:flex;gap:9px;align-items:flex-start;padding:9px 11px;background:#151d2e;border:1px solid #212c42;
+  border-radius:7px;text-decoration:none;color:#cfd8e8;font-size:12px;line-height:1.5;transition:.14s}
+.res a:hover{background:#1c2740;border-color:var(--gold);color:#fff}
+.kind{flex:0 0 auto;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.5px;margin-top:1px}
+.k-video{background:#4a1f2a;color:#ff9fb0}.k-read{background:#1f3a4a;color:#8fd4ff}
+.k-hands-on{background:#1f4a2c;color:#8fe8a8}.k-interactive{background:#402a4a;color:#d9a8ff}
+.reshrs{margin-left:auto;flex:0 0 auto;font-size:10px;color:#68758c}
+.deps{display:flex;flex-wrap:wrap;gap:6px}
+.deps button{font-size:11px;padding:4px 9px}
+.pfoot{padding:16px 20px;display:flex;gap:8px}
+.pfoot button{flex:1;padding:11px;font-size:12.5px;font-weight:700}
+.big{background:linear-gradient(180deg,#8a6d1f,#6d551a);border-color:var(--gold);color:#ffe9b0}
+.big:hover{background:linear-gradient(180deg,#a8811f,#8a6d1f)}
+.locked-note{padding:10px 14px;background:#2a1a1a;border:1px solid #5a3030;border-radius:6px;
+  font-size:12px;color:#ffb0b0;line-height:1.6}
+
+/* ── legend ── */
+#legend{position:absolute;left:12px;bottom:12px;z-index:20;background:#0d1424dd;border:1px solid var(--line);
+  border-radius:9px;padding:10px 12px;font-size:10.5px;max-height:46vh;overflow-y:auto;backdrop-filter:blur(8px)}
+#legend h4{font-size:10px;letter-spacing:1px;color:var(--txt2);margin-bottom:7px}
+.lgrow{display:flex;align-items:center;gap:7px;padding:3px 0;cursor:pointer;border-radius:4px}
+.lgrow:hover{background:#ffffff0d}
+.lgdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.lgbar{width:52px;height:4px;background:#1b2437;border-radius:3px;overflow:hidden;margin-left:auto}
+.lgbar i{display:block;height:100%;background:var(--gold)}
+.lgn{color:#aab6c9}
+#zoomctl{position:absolute;right:12px;bottom:12px;z-index:20;display:flex;flex-direction:column;gap:5px}
+#zoomctl button{width:34px;height:34px;font-size:15px;padding:0}
+#toast{position:absolute;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:60;
+  background:#16203a;border:1px solid var(--gold);color:var(--gold2);padding:11px 20px;border-radius:9px;
+  font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.3s;box-shadow:0 8px 30px #000a}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#search{background:#141c2e;border:1px solid #253048;border-radius:6px;padding:6px 10px;color:var(--txt);
+  font-size:11.5px;width:150px;font-family:inherit}
+#search:focus{outline:none;border-color:var(--gold)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:#0c111c}
+::-webkit-scrollbar-thumb{background:#26324a;border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:#36465f}
+@media(max-width:760px){#hud{gap:10px;padding:8px 10px}#hud h1{font-size:13px}.stat{display:none}#legend{display:none}}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <h1>ROS 2 ROBOTICS MASTERY<small id="sub"></small></h1>
+  <div class="lvlbox">
+    <div class="lvlnum"><b id="lvl">1</b><span>LV</span></div>
+    <div class="bars">
+      <div class="barlabel"><span id="title">見習生</span><span id="xptxt">0 / 120 XP</span></div>
+      <div class="bar"><i id="xpbar" style="width:0"></i></div>
+      <div class="barlabel" style="margin-top:5px"><span>總進度</span><span id="pctxt">0 / 0 節點</span></div>
+      <div class="bar blue"><i id="pcbar" style="width:0"></i></div>
+    </div>
+  </div>
+  <div class="stat"><b id="hdone">0</b><span>已投入小時</span></div>
+  <div class="stat"><b id="hleft">0</b><span>剩餘小時</span></div>
+  <div class="stat"><b id="weeks">—</b><span>預估週數 @12h</span></div>
+  <div class="btns">
+    <input id="search" placeholder="搜尋節點…">
+    <button class="pri" id="btnNext">▶ 下一步</button>
+    <button id="btnHome">定位</button>
+    <button id="btnFit">全覽</button>
+    <button id="btnExp">匯出進度</button>
+    <button id="btnImp">匯入</button>
+    <button id="btnReset">重置</button>
+  </div>
+</div>
+
+<div id="viewport">
+  <div id="world"><svg id="edges"></svg></div>
+  <div id="legend"><h4>章節進度 · 點擊跳轉</h4><div id="lgbody"></div></div>
+  <div id="zoomctl">
+    <button id="zi">+</button><button id="zo">−</button>
+  </div>
+  <div id="toast"></div>
+</div>
+
+<aside id="panel">
+  <div class="phead">
+    <button class="pclose" id="pclose">×</button>
+    <div class="pact" id="pact"></div>
+    <h2 id="ptitle"></h2>
+    <div class="en" id="pen"></div>
+    <div class="pmeta" id="pmeta"></div>
+  </div>
+  <div id="pbody"></div>
+</aside>
+
+<input type="file" id="fileinput" accept="application/json" style="display:none">
+
+<script>
+const DATA = /*__TREE_JSON__*/;
+const NODES = DATA.nodes, META = DATA.meta;
+const BY = {}; NODES.forEach(n => BY[n.id] = n);
+const ACT = {}; META.acts.forEach(a => ACT[a.id] = a);
+const KEY = 'ros2-skilltree-v1';
+
+const TITLES = [
+  [0,'見習生 · Apprentice'],[5,'節點工匠 · Node Artisan'],[10,'系統整合者 · Integrator'],
+  [15,'模擬架構師 · Sim Architect'],[20,'具身智慧工程師 · Embodied AI'],[25,'機器人大師 · Robotics Master']
+];
+const XP_PER_LEVEL = 120;
+
+// ── state ────────────────────────────────────────────────
+let S = { done: {} };   // { nodeId: [taskIdx,...] }
+function load(){
+  try{ const r = localStorage.getItem(KEY); if(r) S = JSON.parse(r); }catch(e){}
+  if(!S.done) S.done = {};
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function ticks(id){ return S.done[id] || []; }
+function nodeDone(n){ return ticks(n.id).length >= n.tasks.length && n.tasks.length > 0; }
+function nodeFrac(n){ return n.tasks.length ? ticks(n.id).length / n.tasks.length : 0; }
+function unlocked(n){ return n.deps.every(d => BY[d] && nodeDone(BY[d])); }
+function state(n){
+  if(nodeDone(n)) return 'done';
+  if(ticks(n.id).length > 0) return 'prog';
+  return unlocked(n) ? 'avail' : 'lock';
+}
+
+// ── build DOM ────────────────────────────────────────────
+const world = document.getElementById('world');
+const svg = document.getElementById('edges');
+const XS = 1.7;      // 水平展開係數（讓樹不要太瘦長）
+const CX = 1200;     // 資料座標的中心軸
+const PAD = 340;
+
+function px(n){ return (n.x - CX) * XS + CX + PAD - 480; }
+function py(n){ return n.y + 70; }
+
+let MAXX = 0, MINX = 1e9, MAXY = 0;
+NODES.forEach(n => { const x = px(n); MAXX = Math.max(MAXX,x); MINX = Math.min(MINX,x); MAXY = Math.max(MAXY, py(n)); });
+const W = MAXX + PAD, H = MAXY + PAD;
+world.style.width = W+'px'; world.style.height = H+'px';
+svg.setAttribute('width', W); svg.setAttribute('height', H);
+
+// edges
+const edgeEls = [];
+NODES.forEach(n => n.deps.forEach(d => {
+  const p = BY[d]; if(!p) return;
+  const x1 = px(p), y1 = py(p), x2 = px(n), y2 = py(n);
+  const my = (y1+y2)/2;
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`);
+  path.setAttribute('class','edge' + (n.track==='side'?' side':''));
+  svg.appendChild(path);
+  edgeEls.push({el:path, from:p, to:n});
+}));
+
+// act background labels
+const actY = {};
+META.acts.forEach(a => {
+  const ns = NODES.filter(n => n.act === a.id);
+  if(!ns.length) return;
+  const minY = Math.min(...ns.map(py)), maxY = Math.max(...ns.map(py));
+  const minX = Math.min(...ns.map(px));
+  actY[a.id] = [minY, maxY];
+  const chip = document.createElement('div');
+  chip.className = 'actchip';
+  chip.style.left = (minX - 230) + 'px';
+  chip.style.top = (minY - 40) + 'px';
+  chip.style.color = a.color;
+  chip.style.borderColor = a.color + '55';
+  chip.textContent = a.name;
+  world.appendChild(chip);
+});
+
+// nodes
+const nodeEls = {};
+NODES.forEach(n => {
+  const el = document.createElement('div');
+  el.className = 'node';
+  el.dataset.t = n.type; el.dataset.track = n.track; el.dataset.id = n.id;
+  el.style.left = px(n)+'px'; el.style.top = py(n)+'px';
+  const c = ACT[n.act].color;
+  el.innerHTML =
+    `<div class="orb"><span class="ic"></span></div>` +
+    `<div class="lbl">${n.title}<em>${n.en}</em></div>` +
+    `<div class="hrs">${n.hours}h</div>`;
+  el.addEventListener('click', e => { e.stopPropagation(); open(n.id); });
+  world.appendChild(el);
+  nodeEls[n.id] = el;
+});
+
+// ── render ───────────────────────────────────────────────
+function render(){
+  let xp = 0, totalXp = 0, doneN = 0, hDone = 0, hLeft = 0;
+  NODES.forEach(n => {
+    const f = nodeFrac(n), st = state(n);
+    totalXp += n.hours * 10;
+    xp += n.hours * 10 * f;
+    hDone += n.hours * f; hLeft += n.hours * (1-f);
+    if(st === 'done') doneN++;
+    const el = nodeEls[n.id];
+    el.className = 'node ' + st + (el.classList.contains('sel')?' sel':'');
+    const orb = el.querySelector('.orb');
+    const ic = el.querySelector('.ic');
+    if(st === 'done') ic.textContent = '✓';
+    else if(st === 'lock') ic.textContent = '🔒';
+    else if(st === 'prog') ic.textContent = Math.round(f*100)+'%';
+    else ic.textContent = '';
+    const c = ACT[n.act].color;
+    if(st === 'avail'){ orb.style.borderColor = c; orb.style.boxShadow = `0 0 0 4px ${c}22, 0 0 20px ${c}66`; orb.style.color = c; }
+    else { orb.style.borderColor=''; orb.style.boxShadow=''; orb.style.color=''; }
+  });
+  edgeEls.forEach(({el,from,to}) => {
+    el.classList.remove('on','rdy');
+    if(nodeDone(from) && nodeDone(to)) el.classList.add('on');
+    else if(nodeDone(from)) el.classList.add('rdy');
+  });
+
+  const lvl = Math.floor(xp / XP_PER_LEVEL) + 1;
+  const inLvl = xp % XP_PER_LEVEL;
+  document.getElementById('lvl').textContent = lvl;
+  document.getElementById('xptxt').textContent = `${Math.round(inLvl)} / ${XP_PER_LEVEL} XP　(總 ${Math.round(xp)})`;
+  document.getElementById('xpbar').style.width = (inLvl/XP_PER_LEVEL*100)+'%';
+  let t = TITLES[0][1]; TITLES.forEach(([l,name]) => { if(lvl-1 >= l) t = name; });
+  document.getElementById('title').textContent = t;
+  document.getElementById('pctxt').textContent = `${doneN} / ${NODES.length} 節點`;
+  document.getElementById('pcbar').style.width = (doneN/NODES.length*100)+'%';
+  document.getElementById('hdone').textContent = Math.round(hDone);
+  document.getElementById('hleft').textContent = Math.round(hLeft);
+  document.getElementById('weeks').textContent = Math.ceil(hLeft/META.weekly_hours);
+
+  // legend
+  const lg = document.getElementById('lgbody');
+  lg.innerHTML = META.acts.map(a => {
+    const ns = NODES.filter(n => n.act === a.id);
+    const d = ns.filter(nodeDone).length;
+    return `<div class="lgrow" data-act="${a.id}">
+      <span class="lgdot" style="background:${a.color}"></span>
+      <span class="lgn">${a.name}</span>
+      <span class="lgbar"><i style="width:${ns.length?d/ns.length*100:0}%;background:${a.color}"></i></span>
+      <span style="color:#68758c;font-size:9px">${d}/${ns.length}</span></div>`;
+  }).join('');
+  lg.querySelectorAll('.lgrow').forEach(r => r.onclick = () => {
+    const ns = NODES.filter(n => n.act === r.dataset.act);
+    if(ns.length) focusNode(ns[0].id);
+  });
+  save();
+}
+
+// ── panel ────────────────────────────────────────────────
+let cur = null;
+function open(id){
+  const n = BY[id]; cur = id;
+  document.querySelectorAll('.node.sel').forEach(e => e.classList.remove('sel'));
+  nodeEls[id].classList.add('sel');
+  const a = ACT[n.act];
+  document.getElementById('pact').textContent = a.name;
+  document.getElementById('pact').style.color = a.color;
+  document.getElementById('ptitle').textContent = n.title;
+  document.getElementById('pen').textContent = n.en;
+  const typeName = {start:'起點',normal:'一般',notable:'關鍵',keystone:'★ 樞紐'}[n.type];
+  document.getElementById('pmeta').innerHTML =
+    `<span class="tag ${n.type==='keystone'?'ks':''}">${typeName}</span>` +
+    `<span class="tag ${n.track==='side'?'side':''}">${n.track==='side'?'選修支線':'主線'}</span>` +
+    `<span class="tag">${n.hours} 小時</span>` +
+    `<span class="tag">${n.id}</span>`;
+
+  const st = state(n);
+  const tk = ticks(n.id);
+  const lockNote = st === 'lock'
+    ? `<div class="sec"><div class="locked-note">🔒 尚未解鎖。需先完成：${n.deps.filter(d=>!nodeDone(BY[d])).map(d=>BY[d].title).join('、')}</div></div>` : '';
+
+  document.getElementById('pbody').innerHTML =
+    lockNote +
+    `<div class="sec"><h3>這是什麼</h3><p>${n.desc}</p></div>` +
+    `<div class="sec"><h3>為什麼重要</h3><div class="why">${n.why}</div></div>` +
+    `<div class="sec"><h3>任務清單 · ${tk.length}/${n.tasks.length}</h3>
+      <ul class="tasks">${n.tasks.map((t,i) =>
+        `<li data-i="${i}" class="${tk.includes(i)?'on':''}"><span class="ck">${tk.includes(i)?'✓':''}</span><span>${t}</span></li>`
+      ).join('')}</ul></div>` +
+    `<div class="sec"><h3>驗收條件 · Definition of Done</h3><div class="dod">✅ ${n.dod}</div></div>` +
+    `<div class="sec"><h3>資源</h3><div class="res">${n.res.map(r =>
+        `<a href="${r.u}" target="_blank" rel="noopener"><span class="kind k-${r.k}">${r.k.toUpperCase()}</span><span>${r.t}</span><span class="reshrs">${r.h}h</span></a>`
+      ).join('')}</div></div>` +
+    (n.deps.length ? `<div class="sec"><h3>前置節點</h3><div class="deps">${n.deps.map(d =>
+        `<button data-go="${d}">${nodeDone(BY[d])?'✓':'○'} ${BY[d].title}</button>`).join('')}</div></div>` : '') +
+    (childrenOf(id).length ? `<div class="sec"><h3>解鎖後可前往</h3><div class="deps">${childrenOf(id).map(c =>
+        `<button data-go="${c.id}">→ ${c.title}</button>`).join('')}</div></div>` : '') +
+    `<div class="pfoot">
+       <button class="big" id="markAll">${st==='done'?'取消完成':'全部標記完成'}</button>
+     </div>`;
+
+  document.querySelectorAll('#pbody ul.tasks li').forEach(li => li.onclick = () => {
+    const i = +li.dataset.i;
+    const arr = ticks(n.id).slice();
+    const p = arr.indexOf(i);
+    if(p >= 0) arr.splice(p,1); else arr.push(i);
+    S.done[n.id] = arr;
+    const wasDone = li.parentElement.parentElement.parentElement; // noop
+    open(id); render();
+    if(nodeDone(n) && p < 0) celebrate(n);
+  });
+  document.querySelectorAll('#pbody [data-go]').forEach(b => b.onclick = () => focusNode(b.dataset.go));
+  const ma = document.getElementById('markAll');
+  if(ma) ma.onclick = () => {
+    if(nodeDone(n)) S.done[n.id] = [];
+    else { S.done[n.id] = n.tasks.map((_,i)=>i); celebrate(n); }
+    open(id); render();
+  };
+  document.getElementById('panel').classList.add('open');
+}
+function childrenOf(id){ return NODES.filter(n => n.deps.includes(id)); }
+document.getElementById('pclose').onclick = () => {
+  document.getElementById('panel').classList.remove('open');
+  document.querySelectorAll('.node.sel').forEach(e => e.classList.remove('sel'));
+};
+
+function celebrate(n){
+  const newly = childrenOf(n.id).filter(c => unlocked(c));
+  toast(`✦ ${n.title} 完成！` + (newly.length ? `　解鎖：${newly.map(c=>c.title).join('、')}` : ''));
+}
+let tTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(tTimer); tTimer = setTimeout(()=>t.classList.remove('show'), 3600);
+}
+
+// ── pan / zoom ───────────────────────────────────────────
+let sc = 0.7, tx = 0, ty = 0;
+const vp = document.getElementById('viewport');
+function apply(){ world.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; }
+function fit(){
+  const r = vp.getBoundingClientRect();
+  sc = Math.min(r.width / W, r.height / H) * 0.94;
+  tx = (r.width - W*sc)/2; ty = 16;
+  apply();
+}
+// 開場視角：以「目前該做的節點」為中心，縮放到看得清標籤的程度
+function home(){
+  const r = vp.getBoundingClientRect();
+  sc = Math.min(1.0, Math.max(0.62, r.width / 1900));
+  const focus = NODES.filter(n => state(n) === 'prog')[0]
+             || NODES.filter(n => state(n) === 'avail' && n.track === 'main')[0]
+             || NODES[0];
+  const panelOpen = document.getElementById('panel').classList.contains('open');
+  const cx = panelOpen ? (r.width - 430)/2 : r.width/2;
+  tx = cx - px(focus)*sc;
+  ty = Math.min(24, r.height*0.42 - py(focus)*sc);
+  apply();
+}
+function focusNode(id){
+  const n = BY[id]; const r = vp.getBoundingClientRect();
+  sc = Math.max(sc, 0.85);
+  const cx = (r.width > 900 ? r.width - 430 : r.width) / 2;
+  tx = cx - px(n)*sc; ty = r.height/2 - py(n)*sc;
+  apply(); open(id);
+}
+let dragging = false, lx = 0, ly = 0, moved = 0;
+vp.addEventListener('mousedown', e => { dragging = true; moved = 0; lx = e.clientX; ly = e.clientY; vp.classList.add('drag'); });
+window.addEventListener('mousemove', e => {
+  if(!dragging) return;
+  tx += e.clientX - lx; ty += e.clientY - ly; moved += Math.abs(e.clientX-lx)+Math.abs(e.clientY-ly);
+  lx = e.clientX; ly = e.clientY; apply();
+});
+window.addEventListener('mouseup', () => { dragging = false; vp.classList.remove('drag'); });
+vp.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = vp.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  const k = e.deltaY < 0 ? 1.12 : 1/1.12;
+  const ns = Math.min(2.2, Math.max(0.18, sc*k));
+  tx = mx - (mx - tx) * (ns/sc); ty = my - (my - ty) * (ns/sc);
+  sc = ns; apply();
+}, {passive:false});
+// touch
+let pt = null, pd = 0;
+vp.addEventListener('touchstart', e => {
+  if(e.touches.length === 1){ pt = {x:e.touches[0].clientX, y:e.touches[0].clientY}; }
+  else if(e.touches.length === 2){ pd = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
+}, {passive:true});
+vp.addEventListener('touchmove', e => {
+  if(e.touches.length === 1 && pt){
+    tx += e.touches[0].clientX - pt.x; ty += e.touches[0].clientY - pt.y;
+    pt = {x:e.touches[0].clientX, y:e.touches[0].clientY}; apply();
+  } else if(e.touches.length === 2){
+    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    if(pd){ const ns = Math.min(2.2, Math.max(0.18, sc*(d/pd))); sc = ns; apply(); }
+    pd = d;
+  }
+}, {passive:true});
+document.getElementById('zi').onclick = () => { sc = Math.min(2.2, sc*1.25); apply(); };
+document.getElementById('zo').onclick = () => { sc = Math.max(0.18, sc/1.25); apply(); };
+document.getElementById('btnFit').onclick = fit;
+document.getElementById('btnHome').onclick = home;
+
+// ── next step ────────────────────────────────────────────
+document.getElementById('btnNext').onclick = () => {
+  const prog = NODES.filter(n => state(n) === 'prog');
+  const pick = prog[0] || NODES.filter(n => state(n)==='avail' && n.track==='main')[0]
+             || NODES.filter(n => state(n)==='avail')[0];
+  if(pick){ focusNode(pick.id); toast(`建議下一步：${pick.title}（${pick.hours}h）`); }
+  else toast('🏆 全部完成了。去做點真的機器人吧。');
+};
+
+// ── search ───────────────────────────────────────────────
+document.getElementById('search').addEventListener('keydown', e => {
+  if(e.key !== 'Enter') return;
+  const q = e.target.value.trim().toLowerCase();
+  if(!q) return;
+  const hit = NODES.find(n => (n.title+n.en+n.desc+n.id).toLowerCase().includes(q));
+  if(hit) focusNode(hit.id); else toast('找不到符合的節點');
+});
+
+// ── import / export ──────────────────────────────────────
+document.getElementById('btnExp').onclick = () => {
+  const blob = new Blob([JSON.stringify({v:1, saved:new Date().toISOString(), done:S.done}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'ros2-skilltree-progress.json'; a.click();
+  toast('進度已匯出 → ros2-skilltree-progress.json');
+};
+document.getElementById('btnImp').onclick = () => document.getElementById('fileinput').click();
+document.getElementById('fileinput').onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try{ const j = JSON.parse(r.result); S.done = j.done || {}; render(); toast('進度已匯入'); }
+                     catch(err){ toast('檔案格式錯誤'); } };
+  r.readAsText(f);
+};
+document.getElementById('btnReset').onclick = () => {
+  if(confirm('確定要清除所有進度？建議先按「匯出進度」備份。')){ S.done = {}; render(); toast('已重置'); }
+};
+
+// ── init ─────────────────────────────────────────────────
+document.getElementById('sub').textContent = `${META.distro}　·　${NODES.length} 節點　·　v${META.version}`;
+load(); render(); home();
+window.addEventListener('resize', () => {});
+vp.addEventListener('click', e => { if(e.target === vp && moved < 4){
+  document.getElementById('panel').classList.remove('open');
+  document.querySelectorAll('.node.sel').forEach(el => el.classList.remove('sel'));
+}});
+</script>
+</body>
+</html>
