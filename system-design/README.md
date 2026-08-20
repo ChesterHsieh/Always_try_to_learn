@@ -32,6 +32,15 @@ python3 build.py url-shortener
 
 節點規格與出題規格見 `~/.claude/skills/skill-tree/references/`。
 
+## 本地樣板的改動
+
+`_tooling/index.template.html` 是從 `~/.claude/skills/skill-tree/assets/` 複製過來的，
+之後在本地加了一項功能，**從 skill 重新複製樣板會蓋掉它**：
+
+- **試煉區的「重置作答」** —— 清除範圍是「目前篩選看得到的題目」：選了某章就只清該章、
+  選了某個節點就只清該節點，`只看錯題` 則清掉全部錯題。只動 `S.ans`，不碰 `S.done`
+  （任務勾選是另一回事）。需要連按兩次確認，4 秒內沒有第二次就自動取消。
+
 ## 慣例
 
 - **全篇繁體中文**（節點標題、任務、題幹、選項、解釋、深挖 prompt）

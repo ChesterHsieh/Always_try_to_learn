@@ -168,6 +168,7 @@ ul.tasks li.on{color:#7d8798;text-decoration:line-through}
   background:#121a2b;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--gold);color:#151007;border-color:var(--gold);font-weight:700}
 .chip:hover{color:var(--gold2)}
+#tclear.arm{border-color:#c2564f;color:#ff9d94;background:#2a1512}
 .tbody{flex:1;overflow-y:auto;padding:22px 20px 60px}
 .qwrap{max-width:760px;margin:0 auto}
 .qcard{background:#0f1626;border:1px solid var(--line);border-radius:12px;padding:22px 24px}
@@ -272,6 +273,7 @@ ul.tasks li.on{color:#7d8798;text-decoration:line-through}
     <div class="thead">
       <h2>⚔ 試煉 TRIALS</h2>
       <div class="filters" id="filters"></div>
+      <button id="tclear">重置作答</button>
       <button id="tclose">關閉 ×</button>
     </div>
     <div class="tbody"><div class="qwrap" id="qhost"></div></div>
@@ -293,6 +295,7 @@ ul.tasks li.on{color:#7d8798;text-decoration:line-through}
       <tr><td>勾任務</td><td>累積節點進度；任務全勾（+ 題目過關）→ 點亮、解鎖後續</td></tr>
       <tr><td>▶ 下一步</td><td>跳到建議的下一個節點</td></tr>
       <tr><td>⚔ 試煉</td><td>題庫。可只看錯題；每題附可複製的深挖 prompt</td></tr>
+      <tr><td>重置作答</td><td>只清掉<b>目前篩選範圍</b>內的作答（選了某章就只清該章），任務勾選不受影響。按兩次確認</td></tr>
       <tr><td>定位 / 全覽</td><td>回到當前節點 / 縮到看得見整棵樹</td></tr>
       <tr><td>搜尋 + Enter</td><td>跳到第一個命中的節點</td></tr>
       <tr><td>左下章節列</td><td>點擊跳到該章</td></tr>
@@ -575,7 +578,39 @@ function buildFilters(){
   if(filter.node){ const b=document.createElement('button'); b.className='chip';
     b.setAttribute('aria-pressed','true'); b.textContent='節點：'+BY[filter.node].title+' ×';
     b.onclick=()=>setFilter({kind:'all',node:null}); box.appendChild(b); }
+  clearLabel();
 }
+
+/* 「重置作答」清掉的範圍 = 目前篩選看得到的那些題。
+   選了章節就只清該章、選了節點就只清該節點，一顆按鈕覆蓋所有粒度。
+   只清 S.ans，不動 S.done —— 任務勾選是另一回事，不該被題目重置牽連。 */
+let armUntil = 0;
+function clearScope(){
+  if(filter.node) return '本節點';
+  if(filter.kind==='all') return '全部';
+  if(filter.kind==='wrong') return '錯題';
+  if(filter.kind==='unans') return '未答';
+  return (ACT[filter.kind]||{}).name || '本章';
+}
+function clearLabel(){
+  const b=document.getElementById('tclear'); if(!b) return;
+  armUntil=0; b.classList.remove('arm');
+  b.textContent='重置作答';
+  b.title=`清除「${clearScope()}」範圍內已作答的題目，任務勾選不受影響`;
+}
+document.getElementById('tclear').onclick=function(){
+  const b=this, ids=pool().map(q=>q.id).filter(id=>S.ans[id]);
+  if(!ids.length){ toast('這個範圍內還沒有作答紀錄'); return; }
+  if(Date.now()>armUntil){
+    armUntil=Date.now()+4000; b.classList.add('arm');
+    b.textContent=`再按一次，清除 ${ids.length} 題`;
+    setTimeout(()=>{ if(Date.now()>armUntil) clearLabel(); },4100);
+    return;
+  }
+  ids.forEach(id=>delete S.ans[id]);
+  save(); cursor=0; clearLabel(); render(); renderQ();
+  toast(`已清除 ${ids.length} 題作答`);
+};
 function pool(){ return QUIZ.filter(q=>{
   if(filter.node) return q.n===filter.node;
   const a=S.ans[q.id];
