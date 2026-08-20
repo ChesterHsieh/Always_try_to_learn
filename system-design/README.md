@@ -32,14 +32,14 @@ python3 build.py url-shortener
 
 節點規格與出題規格見 `~/.claude/skills/skill-tree/references/`。
 
-## 本地樣板的改動
+## 樣板來源
 
-`_tooling/index.template.html` 是從 `~/.claude/skills/skill-tree/assets/` 複製過來的，
-之後在本地加了一項功能，**從 skill 重新複製樣板會蓋掉它**：
+`_tooling/` 是從 `skill-tree` skill 的 `assets/` 複製過來的，兩邊目前一致。
+skill 本身版控在 [ChesterHsieh/chester-skills](https://github.com/ChesterHsieh/chester-skills)
+的 `plugins/skill-tree/`，日後 skill 更新時重新複製 `build.py` 與 `index.template.html` 即可。
 
-- **試煉區的「重置作答」** —— 清除範圍是「目前篩選看得到的題目」：選了某章就只清該章、
-  選了某個節點就只清該節點，`只看錯題` 則清掉全部錯題。只動 `S.ans`，不碰 `S.done`
-  （任務勾選是另一回事）。需要連按兩次確認，4 秒內沒有第二次就自動取消。
+試煉區的「重置作答」已經是 skill 的標準功能：清除範圍跟著目前的篩選走
+（選了某章就只清該章、選了某節點就只清該節點），只動作答不碰任務勾選，需按兩次確認。
 
 ## 慣例
 
