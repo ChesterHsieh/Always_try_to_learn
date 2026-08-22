@@ -1,6 +1,0 @@
-# Install on Jetson Orin Nano (Ubuntu 22.04 / Python 3.10+)
-pyzmq>=25.0
-numpy>=1.24
-
-# Optional: if using ROS2 bridge later
-# rclpy  # installed via ROS2 apt packages, not pip

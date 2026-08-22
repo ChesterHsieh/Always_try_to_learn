@@ -1,3 +1,0 @@
-sim_host: "localhost"   # change to Sim PC's IP when running on real Jetson
-control_hz: 50
-n_joints: 2
