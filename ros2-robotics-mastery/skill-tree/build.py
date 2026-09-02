@@ -167,6 +167,8 @@ def main():
     html = (tpl.replace("/*__TREE_JSON__*/", json.dumps(payload, ensure_ascii=False))
                .replace("{{TITLE}}", meta.get("title", "技能樹")))
     out.write_text(html, encoding="utf-8")
+    # GitHub Pages 入口固定在 index.html，同步輸出一份
+    (HERE / "index.html").write_text(html, encoding="utf-8")
     (HERE / "skill-tree.json").write_text(   # 副产物，除错用；不必交付
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
