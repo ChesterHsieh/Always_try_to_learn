@@ -101,11 +101,11 @@
         "color": "#ff7043"
       }
     ],
-    "total_hours": 225,
+    "total_hours": 275,
     "main_hours": 198,
-    "side_hours": 27,
-    "node_count": 46,
-    "quiz_count": 138
+    "side_hours": 77,
+    "node_count": 49,
+    "quiz_count": 147
   },
   "nodes": [
     {
@@ -1165,6 +1165,145 @@
         {
           "t": "NVIDIA TensorRT 文件",
           "u": "https://docs.nvidia.com/deeplearning/tensorrt/",
+          "k": "read",
+          "h": 2
+        }
+      ]
+    },
+    {
+      "id": "P7-1",
+      "act": "A5",
+      "type": "notable",
+      "track": "side",
+      "title": "P7 · Pickleball 離線追蹤",
+      "en": "Ball Tracking Pipeline",
+      "x": 1550,
+      "y": 2300,
+      "hours": 20,
+      "deps": [
+        "A4-2",
+        "A1-7",
+        "A7-2"
+      ],
+      "desc": "P7 專案 Phase 0+1：固定機位轉播影片 → MCAP bag → 全 C++ 的 camera_node / ball_detector(cv) / ball_tracker / court_calibrator / shot_engine。球場四角 homography 建立 court frame，輸出 3D 落點、In/Out、球速。規格見 projects/P7-pickleball-tracker/README.md。",
+      "why": "★ 全樹第一個有真實輸入、有面試展示價值的專案。pickleball_msgs 介面一次定義完（對標 SwingVision 功能面），之後三個階段只填欄位。也是 tf2、rosbag、rclcpp 的實戰題。",
+      "tasks": [
+        "定義 pickleball_msgs 全部 msg/srv/action，Jazzy 與 Humble 都能編",
+        "把 ~/Downloads 的 PPA 轉播片段錄成 MCAP bag，記錄來源與 md5；偵測 ROI 遮掉比分板與看板",
+        "camera_node（C++）：影片檔 → Image + CameraInfo，use_sim_time 下用影片時間戳",
+        "ball_detector(cv)：背景相減 + 顏色/形狀，輸出 BallDetection；附 gtest",
+        "ball_tracker：Kalman + 遺失補插，輸出 BallTrack；RViz Marker 畫出 2D 軌跡",
+        "court_calibrator：四角 → homography，發布 court→camera static tf 與 CourtModel",
+        "shot_engine：bounce/hit 偵測、In/Out、深度、方向、球速；RViz 3D 軌跡與落點",
+        "手標 200 幀 ground truth（跨 10 個以上回合抽樣），量偵測召回率與落點誤差"
+      ],
+      "dod": "同一份 bag 重播，RViz 中看到 3D 軌跡與落點；召回率 ≥ 90%、落點誤差 ≤ 15 cm 有數據；每個節點的 gtest 我都能說出在驗什麼。",
+      "res": [
+        {
+          "t": "P7 專案規格",
+          "u": "https://github.com/ChesterHsieh/Always_try_to_learn/blob/main/ros2-robotics-mastery/projects/P7-pickleball-tracker/README.md",
+          "k": "read",
+          "h": 1
+        },
+        {
+          "t": "TrackNet（球體熱圖追蹤）",
+          "u": "https://github.com/yastrebksv/TrackNet",
+          "k": "read",
+          "h": 2
+        },
+        {
+          "t": "OpenCV homography 教學",
+          "u": "https://docs.opencv.org/4.x/d9/dab/tutorial_homography.html",
+          "k": "hands-on",
+          "h": 2
+        },
+        {
+          "t": "rosbag2 MCAP 儲存格式",
+          "u": "https://github.com/ros2/rosbag2/tree/jazzy/rosbag2_storage_mcap",
+          "k": "read",
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "P7-2",
+      "act": "A5",
+      "type": "normal",
+      "track": "side",
+      "title": "P7 · 回合與 AI 計分",
+      "en": "Rally & Match Engine",
+      "x": 1550,
+      "y": 2430,
+      "hours": 15,
+      "deps": [
+        "P7-1",
+        "A1-2",
+        "A1-3"
+      ],
+      "desc": "P7 專案 Phase 2：player_tracker（人物偵測，不做骨架）、rally_engine（回合切段、擊球分類 serve/return/dink/drop/drive/volley、side-out 計分狀態機）、stats_node（熱圖、進球率、球速分布）。ProcessSession action 匯入整段影片。",
+      "why": "從『看得到球』走到『看得懂比賽』。AI 計分只做全自動，錯誤要顯性化成 score_confidence，這是把 ML 不確定性放進 ROS 系統的練習。轉播比分板 OCR 就是 ground truth。",
+      "tasks": [
+        "player_tracker：DNN 人物偵測 + 追蹤，擊球時最近球員 = hitter，輸出 PlayerState",
+        "rally_engine：回合結束條件（出界/雙彈跳/觸網/靜止）與贏家判定",
+        "擊球分類規則：以球速、落點深度、擊球高度、回合內序號分類，輸出 ShotEvent.stroke_type",
+        "side-out scoring 狀態機（0-0-2、發球權轉移、換邊），輸出 MatchState 與 score_confidence",
+        "stats_node：Stats 與 6x11 落點/擊球位置熱圖，RViz 顯示",
+        "ProcessSession action：匯入影片，feedback 回報進度",
+        "OCR 轉播比分板當 ground truth，量分類準確率與計分誤差"
+      ],
+      "dod": "一局比賽終局分數正確、point-by-point 錯誤 ≤ 2 分；擊球分類 ≥ 80%；熱圖能在 RViz 看到。",
+      "res": [
+        {
+          "t": "USA Pickleball 官方規則（計分章節）",
+          "u": "https://usapickleball.org/what-is-pickleball/official-rules/",
+          "k": "read",
+          "h": 1
+        },
+        {
+          "t": "ROS 2 Actions（C++）",
+          "u": "https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Writing-an-Action-Server-Client/Cpp.html",
+          "k": "hands-on",
+          "h": 2
+        }
+      ]
+    },
+    {
+      "id": "P7-3",
+      "act": "A5",
+      "type": "notable",
+      "track": "side",
+      "title": "P7 · Jetson 即時追蹤",
+      "en": "Real-time on Edge",
+      "x": 1550,
+      "y": 2570,
+      "hours": 15,
+      "deps": [
+        "P7-2",
+        "A5-4",
+        "A5-3"
+      ],
+      "desc": "P7 專案 Phase 3：ball_detector(trt) 用 TensorRT 取代傳統 CV、Pixel 5 經 USB tethering 串流進 Jetson、Challenge service（最近 N 拍線審）、語音 Out!、Mac(Jazzy)↔Jetson(Humble) 分散式：Jetson 跑相機+偵測，Mac 跑分析+RViz。",
+      "why": "★ 面試的關鍵數據都在這：720p ≥ 30 fps、end-to-end ≤ 100 ms、cv vs trt 三欄對照。也是 A5-3 分散式系統與 A5-4 邊緣推論的具體題目。",
+      "tasks": [
+        "把 TrackNet 類或微調 YOLO 轉 TensorRT，包成 ball_detector(trt) plugin，輸出格式與 cv 版完全相同",
+        "同一份 bag 跑 cv 與 trt，做召回率 / fps / 記憶體三欄對照表",
+        "Pixel 5 USB tethering + GStreamer 串流，camera_node 支援 rtsp/udp 來源",
+        "Challenge service：回傳最近 N 拍 BounceEvent；viz_node 語音播 Out!",
+        "量 end-to-end latency（camera stamp → Marker），畫 latency budget 圖",
+        "Jetson 跑 camera+detector+tracker，Mac 跑 shot/rally/stats/viz，量跨機延遲",
+        "錄 demo 影片：overlay + RViz 並排；寫技術文件"
+      ],
+      "dod": "Jetson 上 720p ≥ 30 fps、latency ≤ 100 ms 有實測數據；demo 影片與技術文件完成。",
+      "res": [
+        {
+          "t": "TensorRT C++ API",
+          "u": "https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/c-api-docs.html",
+          "k": "read",
+          "h": 3
+        },
+        {
+          "t": "Jetson Accelerated GStreamer",
+          "u": "https://docs.nvidia.com/jetson/archives/r36.4/DeveloperGuide/SD/Multimedia/AcceleratedGstreamer.html",
           "k": "read",
           "h": 2
         }
@@ -4295,6 +4434,177 @@
         "m": "反問環節就是禮貌性的，隨便問問就好",
         "t": "反問是你最後一次展示思考方式的機會：問題的層次直接反映你對職位的理解深度",
         "p": "幫我準備 5 個針對 robot platform 職缺的反問，每個附「這題想探什麼」的註解"
+      }
+    },
+    {
+      "n": "P7-1",
+      "ty": "concept",
+      "q": "單鏡頭沒有深度資訊，卻能算出球的落點在球場上的位置，靠的是？",
+      "o": [
+        "球場四角求 homography 映射地面像素",
+        "相機內參標定後直接反投影出 3D 點",
+        "球的像素半徑反推距離再乘方向向量",
+        "連續兩幀的移動視差做單目立體視覺"
+      ],
+      "a": 0,
+      "ex": "落點在地面這個平面上，平面到平面的映射只需要一個 3x3 homography。B 內參只給方向，少一個深度自由度。C 球太小，半徑量測誤差會放大到公尺級。D 單目移動視差需要相機動，固定機位沒有視差。",
+      "dig": {
+        "s": "平面約束下的單鏡頭定位",
+        "m": "沒有深度相機就不可能得到 3D 位置",
+        "t": "只要目標落在已知平面上，2D 到該平面是可逆的射影變換，這是 SwingVision 的核心",
+        "p": "用 OpenCV 示範：給球場四角像素座標與實際尺寸，求 homography 並把任一落點像素轉成球場公尺座標"
+      }
+    },
+    {
+      "n": "P7-1",
+      "ty": "debug",
+      "q": "bag 重播時 ball_tracker 抱怨 tf lookup 是 extrapolation into the future，最可能的設定錯誤是？",
+      "o": [
+        "court→camera 的 static tf 沒有用 StaticTransformBroadcaster",
+        "節點沒開 use_sim_time，拿牆鐘去查影片時間戳的 tf",
+        "homography 的 3x3 矩陣沒有正規化",
+        "Kalman 的過程雜訊設太小造成預測跑到未來"
+      ],
+      "a": 1,
+      "ex": "重播的訊息帶影片時間戳，節點若用牆鐘就會用「未來」的時間去查 tf。A static tf 沒有時間限制，不會 extrapolation。C 矩陣尺度不影響 tf 時間。D Kalman 不碰 tf 的時間軸。",
+      "dig": {
+        "s": "sim time 與 tf 時間軸一致性",
+        "m": "tf 查不到是 tf tree 斷了",
+        "t": "extrapolation 錯誤九成是時鐘不一致：發布端用一個時鐘、查詢端用另一個",
+        "p": "解釋 use_sim_time 在 bag 重播下的完整機制：/clock 誰發、節點怎麼訂、launch 怎麼統一設定"
+      }
+    },
+    {
+      "n": "P7-1",
+      "ty": "scenario",
+      "q": "轉播畫面右上角有比分板、四周是贊助看板。背景相減式的球偵測要先做什麼？",
+      "o": [
+        "提高背景模型的學習率讓看板快速融入背景",
+        "改用 HSV 顏色門檻只留球的黃綠色",
+        "限制偵測 ROI 在球場區域，遮掉比分板與看板",
+        "把影像縮到 320p 讓看板細節消失"
+      ],
+      "a": 2,
+      "ex": "比分板會變動、看板有高對比字樣，都會被當成前景。遮罩是最便宜也最穩的解。A 學習率太高會把慢速球也吸進背景。B 觀眾衣服與看板可能同色。D 縮圖也縮小了球，召回率先掉。",
+      "dig": {
+        "s": "偵測 ROI 與畫面雜訊來源",
+        "m": "偵測器夠好就不需要人工遮罩",
+        "t": "先用領域知識把不可能有球的區域排除，模型只需處理剩下的問題，這是感知管線的第一條原則",
+        "p": "幫我設計 ball_detector 的 ROI 參數格式（多邊形），並說明如何從 court_calibrator 的四角自動推導"
+      }
+    },
+    {
+      "n": "P7-2",
+      "ty": "concept",
+      "q": "pickleball side-out 計分中，比分播報「4-2-1」的第三個數字代表？",
+      "o": [
+        "本局到目前為止的換邊次數",
+        "目前這個回合累計的擊球數",
+        "發球方對接發方領先的分數差",
+        "發球方目前輪到第幾位發球者"
+      ],
+      "a": 3,
+      "ex": "雙打每隊有兩次發球機會，第三個數字是發球者序號。只有發球方能得分，兩個發球者都失誤才 side-out。A 換邊不計入比分。B 擊球數不在比分裡。C 分差可從前兩個數字算，不需另報。",
+      "dig": {
+        "s": "side-out scoring 狀態機",
+        "m": "計分就是誰贏回合誰加一分",
+        "t": "只有發球方得分、發球者序號與換發球規則讓狀態機有五個以上的轉移條件，必須畫出來再寫",
+        "p": "幫我畫出雙打 side-out scoring 的完整狀態機，包含開局 0-0-2 的特例與每個轉移的觸發條件"
+      }
+    },
+    {
+      "n": "P7-2",
+      "ty": "debug",
+      "q": "AI 計分連續幾局都在球網附近的 dink 交換後算錯分，score_confidence 卻很高。該先查？",
+      "o": [
+        "回合結束條件把慢速 dink 誤判成球靜止",
+        "OCR 比分板的字型辨識錯誤",
+        "ProcessSession action 的 feedback 頻率太低",
+        "熱圖的 6x11 格子解析度不夠"
+      ],
+      "a": 0,
+      "ex": "dink 球速低、彈跳低，靜止判定的門檻若以速度為準會提早切回合，而信心值只看 In/Out 所以不會反映。B OCR 只是 ground truth，不影響 AI 計分本身。C feedback 頻率與計分邏輯無關。D 熱圖是統計輸出，不回饋到計分。",
+      "dig": {
+        "s": "回合切段條件與信心值盲區",
+        "m": "信心值高就代表結果可信",
+        "t": "信心值只覆蓋它被定義的那些不確定性來源；沒被建模的錯誤模式再高的信心也看不到",
+        "p": "列出 rally_engine 回合結束判定的所有錯誤模式，並為每一種設計一個可量測的信號納入 score_confidence"
+      }
+    },
+    {
+      "n": "P7-2",
+      "ty": "scenario",
+      "q": "player_tracker 決定不做姿態骨架、只做位置，主要的工程考量是？",
+      "o": [
+        "ROS 2 沒有標準的骨架關鍵點 message",
+        "Jetson 8 GB 共享記憶體同時跑球與人的模型會 OOM",
+        "轉播畫面解析度不足以辨識關節",
+        "姿態模型無法輸出 court 座標"
+      ],
+      "a": 1,
+      "ex": "CPU 與 GPU 共享 8 GB，扣掉 OS 與 ROS 約剩 5 到 6 GB，兩個 DNN 一起跑很容易撞牆。A 有 vision_msgs 可以自訂。C 720p 對關節偵測是夠的。D 任何像素輸出都能經 homography 轉座標。",
+      "dig": {
+        "s": "邊緣裝置的模型預算取捨",
+        "m": "功能越多越有展示價值",
+        "t": "邊緣部署先做記憶體與延遲預算表，再決定哪些功能進得了主線",
+        "p": "幫我做 Jetson Orin Nano 8GB 上球偵測 + 人物偵測的記憶體預算表，列出每個模型的估算與量測方法"
+      }
+    },
+    {
+      "n": "P7-3",
+      "ty": "concept",
+      "q": "ball_detector 的 cv 版與 trt 版被要求輸出完全相同的 BallDetection message，這樣設計的直接好處是？",
+      "o": [
+        "TensorRT 引擎可以直接載入 OpenCV 的參數",
+        "兩個版本可以同時跑並自動投票",
+        "下游節點完全不改，換偵測器成為可用同一份 bag 量化的實驗",
+        "省掉 cv_bridge 的影像格式轉換"
+      ],
+      "a": 2,
+      "ex": "介面固定，偵測器就是可替換的 plugin，召回率、fps、記憶體的三欄對照才有意義。A 兩者參數毫無關係。B 投票是另一個功能，不是介面相同的直接結果。D cv_bridge 在輸入端，跟輸出介面無關。",
+      "dig": {
+        "s": "介面穩定與可替換實作",
+        "m": "換模型就是換一個節點重寫",
+        "t": "把變動封在 plugin 邊界內，下游不動，實驗就能公平比較，這是 ros2_control 與 image_transport 都在用的模式",
+        "p": "示範用 pluginlib 讓 ball_detector 在啟動時以參數選擇 cv 或 trt 實作，含 CMake 與 plugin.xml"
+      }
+    },
+    {
+      "n": "P7-3",
+      "ty": "debug",
+      "q": "量測 camera stamp 到 RViz Marker 的 end-to-end latency 時，Mac 與 Jetson 分開跑，數字忽正忽負。第一個要檢查的是？",
+      "o": [
+        "兩台機器的時鐘沒有用 NTP 或 PTP 對齊",
+        "Marker 的 lifetime 設太短",
+        "compressed image transport 的壓縮品質",
+        "RViz 的 Fixed Frame 選錯"
+      ],
+      "a": 0,
+      "ex": "跨機用 header stamp 差算延遲，前提是兩邊時鐘一致；負延遲就是時鐘偏移的鐵證。B lifetime 影響顯示不影響時間戳。C 壓縮影響大小與延遲，但不會讓延遲變負。D Fixed Frame 影響座標不影響時間。",
+      "dig": {
+        "s": "跨機延遲量測的時鐘前提",
+        "m": "延遲就是收到的時間減發出的時間",
+        "t": "分散式系統量任何時間差之前先確認時鐘來源，否則量到的是時鐘偏移不是延遲",
+        "p": "給我 Mac 與 Jetson 用 chrony 或 PTP 對時的設定步驟，以及驗證偏移小於 1 ms 的方法"
+      }
+    },
+    {
+      "n": "P7-3",
+      "ty": "scenario",
+      "q": "Pixel 5 用 USB tethering 把影像串流進 Jetson，而不是直接接 USB 相機。這條路線的傳輸本質是？",
+      "o": [
+        "USB Video Class 裝置協定",
+        "MIPI CSI 經 USB 橋接",
+        "Bluetooth 高速影像 profile",
+        "USB 上跑的網路介面，影像走 RTSP 或 UDP"
+      ],
+      "a": 3,
+      "ex": "tethering 讓手機變成一張網卡，影像是網路串流，camera_node 用 GStreamer 的網路 source 接。A UVC 是相機直連才有。B MIPI 是板上排線，不走 USB。C 藍牙頻寬不夠影像。",
+      "dig": {
+        "s": "串流來源的傳輸層辨識",
+        "m": "接了 USB 線就是 USB 相機",
+        "t": "同一條線可以是裝置協定也可以是網路，決定了延遲、頻寬與 driver 三件事",
+        "p": "比較 UVC 直連、USB tethering 串流、MIPI CSI 三種來源在 Jetson 上的延遲、頻寬與 ROS 2 driver 選擇"
       }
     }
   ]

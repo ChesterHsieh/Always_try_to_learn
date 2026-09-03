@@ -152,6 +152,30 @@ Isaac Sim 訓練 → domain randomization → Gazebo 跨模擬器驗證
 
 ---
 
+## P7 · Pickleball Tracker（節點 P7-1 ~ P7-3）
+
+> 目標：單鏡頭 pickleball 球體追蹤 + 比賽分析，功能面對標 SwingVision，全 C++。
+> 從 YouTube 影片離線跑起，最後在 Jetson Orin Nano 上即時跑。**面試展示專案。**
+> 完整規格：[P7-pickleball-tracker/README.md](P7-pickleball-tracker/README.md)
+
+```
+影片 / Pixel 5 ──► ball_detector ──► ball_tracker ──► shot_engine ──► rally_engine ──► stats / RViz
+                      cv | trt          Kalman+tf      落點/In-Out      AI 計分
+```
+
+| 階段 | 產出 | 樹上節點 |
+|---|---|---|
+| Phase 0+1 | bag 重播 → 3D 軌跡、落點、In/Out、球速 | P7-1 |
+| Phase 2 | 回合切段、擊球分類、全自動 side-out 計分、熱圖 | P7-2 |
+| Phase 3 | TensorRT 偵測器、Pixel 5 串流、Jetson 即時、latency 數據 | P7-3 |
+
+### 驗收
+
+召回率 ≥ 90%、落點誤差 ≤ 15 cm、一局終局比分正確、Jetson 720p ≥ 30 fps、end-to-end ≤ 100 ms。
+加上 demo 影片與技術文件。
+
+---
+
 ## 專案筆記格式建議
 
 每個專案資料夾放：

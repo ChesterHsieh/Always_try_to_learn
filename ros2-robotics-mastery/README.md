@@ -25,6 +25,7 @@ cd docker && docker compose build && docker compose up -d
 | [`skill-tree/`](skill-tree/) | ⭐ 互動技能樹 v2（46 節點 / 138 題）。資料源 `tree_data.py` + `quiz_*.py`，`python3 build.py` 產生 `ros2-platform.html` |
 | [`projects/platform-lab/`](projects/platform-lab/) | ⭐ **Capstone 規格書**：always-on runtime、混沌演練、72h 運行、postmortem |
 | [`projects/can-lab/`](projects/can-lab/) | ⭐ SocketCAN：vcan → Jetson 實體 CAN（含購物清單與除錯速查） |
+| [`projects/P7-pickleball-tracker/`](projects/P7-pickleball-tracker/) | ⭐ **P7 Pickleball Tracker**：單鏡頭球體追蹤 + AI 計分，全 C++，面試展示專案（支線 P7-1~3） |
 | [`docs/04-jetson-orin-nano.md`](docs/04-jetson-orin-nano.md) | ⚠️ Jetson 刷機、韌體地雷 |
 | [`docs/05-version-matrix.md`](docs/05-version-matrix.md) | 版本相容矩陣——裝東西前先看 |
 | [`docs/`](docs/) 其他 | v1 時代的環境/課程/雲端筆記，仍然有效 |
@@ -33,7 +34,7 @@ cd docker && docker compose build && docker compose up -d
 
 ## 技能樹 v2 結構
 
-46 節點、10 章、225 h（主線 198 h ≈ 13 週 @ 15h/週）。
+49 節點、10 章、275 h（主線 198 h ≈ 13 週 @ 15h/週；含 P7 支線 50 h）。
 
 ```
 序章 · 立足點            4 節點  12h  Docker 環境、colcon、CLI
@@ -41,7 +42,7 @@ cd docker && docker compose build && docker compose up -d
 第二章 · 執行時平台       5 節點  23h  ⭐ systemd、lifecycle、bringup 編排、健康監控◆
 第三章 · 可靠性除錯       5 節點  23h  ⭐ strace/perf/OOM、混沌演練◆、RT 基礎
 第四章 · 可觀測性與交付    6 節點  24h  日誌管線、MCAP、Prometheus、Foxglove、CI◆、雲管線
-第五章 · Jetson 部署      4 節點  18h  刷機、容器、Mac↔Jetson 分散式◆
+第五章 · Jetson 部署      7 節點  68h  刷機、容器、Mac↔Jetson 分散式◆、支線 P7 Pickleball 追蹤 50h
 第六章 · 硬體介面         5 節點  24h  ⭐ SocketCAN◆、Jetson CAN、ros2_control、乾淨 API
 第七章 · C++ 生產力       4 節點  20h  RAII/rclcpp/CMake/sanitizers◆（可與中段並行）
 支線 · 模擬與手臂鳥瞰      3 節點  15h  URDF/Gazebo/MoveIt/Isaac 地圖級理解
@@ -80,4 +81,4 @@ python3 build.py     # 驗證 + 產生 ros2-platform.html（驗證不過 exit 1�
 
 ---
 
-*v2.0.0｜2026-09-01｜ROS 2 Jazzy（容器）＋ JetPack 6.x｜46 節點 / 138 題 / 225 h*
+*v2.0.0｜2026-09-01｜2026-09-03 加入 P7｜ROS 2 Jazzy（容器）＋ JetPack 6.x｜49 節點 / 147 題 / 275 h*

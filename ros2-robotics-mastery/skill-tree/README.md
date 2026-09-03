@@ -1,6 +1,6 @@
 # skill-tree v2
 
-單一資料來源：`tree_data.py`（META + 節點）＋ `quiz_a*.py`（題庫，經 `quiz_bank.py` 彙總）。
+單一資料來源：`tree_data.py`（META + 節點）＋ `quiz_a*.py` + `quiz_p7.py`（題庫，經 `quiz_bank.py` 彙總）。
 
 ```bash
 python3 build.py   # 驗證 + 產生 ros2-platform.html（單檔、可直接發布成 Artifact）
