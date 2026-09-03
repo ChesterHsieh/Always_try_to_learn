@@ -1,6 +1,6 @@
 # P7 · Pickleball Tracker —— 單鏡頭球體追蹤與比賽分析
 
-> 對應技能樹節點 **P7-1 / P7-2 / P7-3**（約 50 h）。
+> 對應技能樹 v2 節點 **P7-1 / P7-2 / P7-3**（第五章 Jetson 部署的支線，約 50 h）。
 > 起源：2026-09-02 與 Gemini 的討論（[分享連結](https://share.gemini.google/KddigVvt0owY)）。
 > 目標：做一個 **SwingVision 等級功能面** 的 ROS 2 感知＋分析管線，
 > 從 YouTube 影片離線跑起，最後在 Jetson Orin Nano 上即時跑。
@@ -105,7 +105,7 @@ court ──static──► camera ──► (image plane)
   └── court 原點：近端底線與中線交點；x 沿底線、y 朝對面、z 向上（右手系）
 ```
 
-所有 3D 輸出都在 `court` frame。這是 A1-14 tf2 的實戰題。
+所有 3D 輸出都在 `court` frame。這是 A1-7 tf2 的實戰題。
 
 ---
 
@@ -206,7 +206,7 @@ action/
   ProcessSession.action             # goal: video_path → feedback: percent, current_rally → result: Stats[]
 ```
 
-**跨版本注意**：msg 定義不得用 Jazzy 才有的型別，Humble 上要能編。這是 A9-2 的 task。
+**跨版本注意**：msg 定義不得用 Jazzy 才有的型別，Humble 上要能編。這是 A5-2 的 task。
 
 ---
 
@@ -214,10 +214,10 @@ action/
 
 | 階段 | 產出 | 前置節點 | 樹上節點 |
 |---|---|---|---|
-| **Phase 0 · 離線骨幹** | YouTube 影片 → MCAP bag；`camera_node`、`ball_detector(cv)`、`ball_tracker`；RViz 畫 2D 軌跡 | A1-6 launch、A1-12 rosbag、A5-2 cv_bridge | P7-1 |
-| **Phase 1 · 球場幾何** | `court_calibrator`、tf；`shot_engine` 出落點、In/Out、深度、方向、球速；RViz 3D 軌跡 | A1-14 tf2 | P7-1 |
-| **Phase 2 · 回合與比賽層** | `player_tracker`、`rally_engine`（切段、擊球分類、AI 計分）、`stats_node`、熱圖 | A1-4 action、A1-5 params | P7-2 |
-| **Phase 3 · Jetson 即時** | `ball_detector(trt)`、Pixel 5 串流、語音 Out、`Challenge` service、latency 量測、Mac↔Jetson 分散式 | A5-5 DNN、A9-2、A9-4 | P7-3 |
+| **Phase 0 · 離線骨幹** | YouTube 影片 → MCAP bag；`camera_node`、`ball_detector(cv)`、`ball_tracker`；RViz 畫 2D 軌跡 | A1-3 Params & Launch、A4-2 rosbag2/MCAP、A7-2 rclcpp | P7-1 |
+| **Phase 1 · 球場幾何** | `court_calibrator`、tf；`shot_engine` 出落點、In/Out、深度、方向、球速；RViz 3D 軌跡 | A1-7 tf2 與時間 | P7-1 |
+| **Phase 2 · 回合與比賽層** | `player_tracker`、`rally_engine`（切段、擊球分類、AI 計分）、`stats_node`、熱圖 | A1-2 Service & Action、A1-3 Params | P7-2 |
+| **Phase 3 · Jetson 即時** | `ball_detector(trt)`、Pixel 5 串流、語音 Out、`Challenge` service、latency 量測、Mac↔Jetson 分散式 | A5-4 邊緣推論、A5-3 Mac↔Jetson 分散式 | P7-3 |
 
 **Phase 2 的 AI 計分規則引擎**：
 - 回合結束條件：球出界（`BounceEvent.in_out == OUT`）、雙彈跳、觸網未過、球靜止 > 2 s
@@ -268,7 +268,7 @@ action/
 2. **整合測試以 bag 重播為基準**：`launch_testing` 重播固定 bag，斷言輸出 message 數量與關鍵欄位。
 3. **CI 過 `ament_lint`、`clang-tidy`、`ament_cmake_gtest`**，Jazzy 與 Humble 兩個 job 都要綠。
 4. **每個 PR 我要能用一句話說出每個測試在驗什麼**。說不出來的測試不合併。
-5. 每個 C++ 節點的 README 要有「資料流」與「為什麼這樣切 callback group」兩段，讓我能對照 A1-7 的知識審。
+5. 每個 C++ 節點的 README 要有「資料流」與「為什麼這樣切 callback group」兩段，讓我能對照 A1-4 Executor 與 Callback Group 的知識審。
 
 ---
 
