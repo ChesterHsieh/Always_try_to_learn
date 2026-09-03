@@ -26,7 +26,7 @@ docker compose exec ros2 bash
 
 | 路徑 | 內容 |
 |---|---|
-| [`skill-tree/`](skill-tree/) | ⭐ 互動式技能樹（66 節點）。`index.html` 直接開 |
+| [`skill-tree/`](skill-tree/) | ⭐ 互動式技能樹（69 節點）。`index.html` 直接開 |
 | [`docs/00-roadmap.md`](docs/00-roadmap.md) | 路線圖、里程碑、與既有專案的接口 |
 | [`docs/01-environment-setup.md`](docs/01-environment-setup.md) | Mac (Apple Silicon) + Docker + ROS 2 Jazzy |
 | [`docs/02-curriculum.md`](docs/02-curriculum.md) | 課程資源索引（已逐一驗證，含「不要浪費時間」清單） |
@@ -36,12 +36,13 @@ docker compose exec ros2 bash
 | [`docker/`](docker/) | 開發環境（Dockerfile + compose） |
 | [`ros2_ws/src/`](ros2_ws/src/) | 你的 ROS 2 package 放這裡（掛載進容器） |
 | [`projects/`](projects/) | 各章實作專案的規格與筆記 |
+| [`projects/P7-pickleball-tracker/`](projects/P7-pickleball-tracker/) | ⭐ **P7 Pickleball Tracker**：單鏡頭球體追蹤 + AI 計分，全 C++，面試展示專案 |
 
 ---
 
 ## 技能樹
 
-66 個節點、11 章、393 小時（主線 289 h / 支線 104 h）。
+69 個節點、11 章、443 小時（主線 289 h / 支線 154 h）。
 
 ```
 序章 · 立足點            5 節點   16 h   Docker 環境、colcon、CLI
@@ -49,11 +50,11 @@ docker compose exec ros2 bash
 第二章 · 機器人建模       5 節點   20 h   URDF、xacro、RViz、物理屬性
 第三章 · 模擬世界         5 節點   25 h   Gazebo Harmonic、ros_gz_bridge、感測器
 第四章 · 控制迴路         5 節點   28 h   ⭐ ros2_control（模擬↔真機的抽象層）
-第五章 · 感知             5 節點   23 h   相機、點雲、深度、DNN 推論
+第五章 · 感知             7 節點   58 h   相機、點雲、深度、DNN 推論、⭐ P7 Pickleball 追蹤
 第六章 · 導航（支線）      4 節點   25 h   SLAM、Nav2、Behavior Tree
 第七章 · 機械手臂         6 節點   47 h   ⭐⭐ 運動學理論、MoveIt 2、Pick & Place
 第八章 · Isaac 生態       6 節點   49 h   ⭐⭐ Isaac Sim、USD、Isaac Lab RL、sim-to-real
-第九章 · Jetson 部署      4 節點   25 h   刷機、Isaac ROS GEM、分散式部署
+第九章 · Jetson 部署      5 節點   40 h   刷機、Isaac ROS GEM、分散式部署、P7 即時追蹤
 終章 · 真實世界           4 節點   53 h   🏆 SO-101、LeRobot、Capstone
 ```
 
@@ -142,4 +143,4 @@ python3 build.py       # 產生 skill-tree.json 與 index.html（含驗證）
 
 ---
 
-*建立日期：2026-07-31｜ROS 2 Jazzy Jalisco｜66 節點 / 393 小時*
+*建立日期：2026-07-31｜更新：2026-09-03 加入 P7｜ROS 2 Jazzy Jalisco｜69 節點 / 443 小時*

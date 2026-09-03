@@ -809,6 +809,52 @@ N = [
  ],
 },
 
+{
+ "id": "P7-1", "act": "A5", "type": "notable", "track": "side",
+ "title": "P7 · Pickleball 離線追蹤", "en": "Ball Tracking Pipeline",
+ "x": 2060, "y": 1700, "hours": 20, "deps": ["A1-12", "A1-14", "A5-2"],
+ "desc": "P7 專案 Phase 0+1：YouTube 固定機位影片 → MCAP bag → 全 C++ 的 camera_node / ball_detector(cv) / ball_tracker / court_calibrator / shot_engine。球場四角 homography 建立 court frame，輸出 3D 落點、In/Out、球速。規格見 projects/P7-pickleball-tracker/README.md。",
+ "why": "★ 全樹第一個有真實輸入、有面試展示價值的專案。pickleball_msgs 介面一次定義完（對標 SwingVision 功能面），之後三個階段只填欄位。也是 tf2 與 rosbag 的實戰題。",
+ "tasks": [
+   "定義 pickleball_msgs 全部 msg/srv/action，Jazzy 與 Humble 都能編",
+   "找一段固定機位、看得到四角的 pickleball 影片，錄成 MCAP bag，記錄來源 URL 與 md5",
+   "camera_node（C++）：影片檔 → Image + CameraInfo，use_sim_time 下用影片時間戳",
+   "ball_detector(cv)：背景相減 + 顏色/形狀，輸出 BallDetection；附 gtest",
+   "ball_tracker：Kalman + 遺失補插，輸出 BallTrack；RViz Marker 畫出 2D 軌跡",
+   "court_calibrator：四角 → homography，發布 court→camera static tf 與 CourtModel",
+   "shot_engine：bounce/hit 偵測、In/Out、深度、方向、球速；RViz 3D 軌跡與落點",
+   "手標 200 幀 ground truth，量偵測召回率與落點誤差",
+ ],
+ "dod": "同一份 bag 重播，RViz 中看到 3D 軌跡與落點；召回率 ≥ 90%、落點誤差 ≤ 15 cm 有數據；每個節點的 gtest 我都能說出在驗什麼。",
+ "res": [
+   {"t": "P7 專案規格", "u": "../projects/P7-pickleball-tracker/README.md", "k": "read", "h": 1},
+   {"t": "TrackNet（球體熱圖追蹤）", "u": "https://github.com/yastrebksv/TrackNet", "k": "read", "h": 2},
+   {"t": "OpenCV homography 教學", "u": "https://docs.opencv.org/4.x/d9/dab/tutorial_homography.html", "k": "hands-on", "h": 2},
+   {"t": "rosbag2 MCAP 儲存格式", "u": "https://github.com/ros2/rosbag2/tree/jazzy/rosbag2_storage_mcap", "k": "read", "h": 1},
+ ],
+},
+{
+ "id": "P7-2", "act": "A5", "type": "normal", "track": "side",
+ "title": "P7 · 回合與 AI 計分", "en": "Rally & Match Engine",
+ "x": 2060, "y": 1870, "hours": 15, "deps": ["P7-1", "A1-4", "A1-5"],
+ "desc": "P7 專案 Phase 2：player_tracker（人物偵測，不做骨架）、rally_engine（回合切段、擊球分類 serve/return/dink/drop/drive/volley、side-out 計分狀態機）、stats_node（熱圖、進球率、球速分布）。ProcessSession action 匯入整段影片。",
+ "why": "從『看得到球』走到『看得懂比賽』。AI 計分只做全自動，錯誤要顯性化成 score_confidence，這是把 ML 不確定性放進 ROS 系統的練習。",
+ "tasks": [
+   "player_tracker：DNN 人物偵測 + 追蹤，擊球時最近球員 = hitter，輸出 PlayerState",
+   "rally_engine：回合結束條件（出界/雙彈跳/觸網/靜止）與贏家判定",
+   "擊球分類規則：以球速、落點深度、擊球高度、回合內序號分類，輸出 ShotEvent.stroke_type",
+   "side-out scoring 狀態機（0-0-2、發球權轉移、換邊），輸出 MatchState 與 score_confidence",
+   "stats_node：Stats 與 6x11 落點/擊球位置熱圖，RViz 顯示",
+   "ProcessSession action：匯入影片，feedback 回報進度",
+   "手標 100 拍與一局比分，量分類準確率與計分誤差",
+ ],
+ "dod": "一局比賽終局分數正確、point-by-point 錯誤 ≤ 2 分；擊球分類 ≥ 80%；熱圖能在 RViz 看到。",
+ "res": [
+   {"t": "USA Pickleball 官方規則（計分章節）", "u": "https://usapickleball.org/what-is-pickleball/official-rules/", "k": "read", "h": 1},
+   {"t": "ROS 2 Actions（C++）", "u": "https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Writing-an-Action-Server-Client/Cpp.html", "k": "hands-on", "h": 2},
+ ],
+},
+
 # ─────────────────────── ACT 6 · 導航（支線） ───────────────────────
 {
  "id": "A6-1", "act": "A6", "type": "normal", "track": "side",
@@ -1186,6 +1232,28 @@ N = [
  "dod": "有一份系統架構圖 + 實測的跨機延遲數據 + 斷線降級策略。",
  "res": [
    {"t": "ROS 2 Discovery Server 教學", "u": "https://docs.ros.org/en/jazzy/Tutorials/Advanced/Discovery-Server/Discovery-Server.html", "k": "hands-on", "h": 3},
+ ],
+},
+
+{
+ "id": "P7-3", "act": "A9", "type": "notable", "track": "side",
+ "title": "P7 · Jetson 即時追蹤", "en": "Real-time on Edge",
+ "x": 2110, "y": 2560, "hours": 15, "deps": ["P7-2", "A5-5", "A9-2"],
+ "desc": "P7 專案 Phase 3：ball_detector(trt) 用 TensorRT 取代傳統 CV、Pixel 5 經 USB tethering 串流進 Jetson、Challenge service（最近 N 拍線審）、語音 Out!、Mac(Jazzy)↔Jetson(Humble) 分散式：Jetson 跑相機+偵測，Mac 跑分析+RViz。",
+ "why": "★ 面試的關鍵數據都在這：720p ≥ 30 fps、end-to-end ≤ 100 ms、cv vs trt 三欄對照。也是 A9-4 分散式部署的具體題目。",
+ "tasks": [
+   "把 TrackNet 類或微調 YOLO 轉 TensorRT，包成 ball_detector(trt) plugin，輸出格式與 cv 版完全相同",
+   "同一份 bag 跑 cv 與 trt，做召回率 / fps / 記憶體三欄對照表",
+   "Pixel 5 USB tethering + GStreamer 串流，camera_node 支援 rtsp/udp 來源",
+   "Challenge service：回傳最近 N 拍 BounceEvent；viz_node 語音播 Out!",
+   "量 end-to-end latency（camera stamp → Marker），畫 latency budget 圖",
+   "Jetson 跑 camera+detector+tracker，Mac 跑 shot/rally/stats/viz，量跨機延遲",
+   "錄 demo 影片：overlay + RViz 並排；寫技術文件",
+ ],
+ "dod": "Jetson 上 720p ≥ 30 fps、latency ≤ 100 ms 有實測數據；demo 影片與技術文件完成。",
+ "res": [
+   {"t": "TensorRT C++ API", "u": "https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/c-api-docs.html", "k": "read", "h": 3},
+   {"t": "Jetson Accelerated GStreamer", "u": "https://docs.nvidia.com/jetson/archives/r36.4/DeveloperGuide/SD/Multimedia/AcceleratedGstreamer.html", "k": "read", "h": 2},
  ],
 },
 
