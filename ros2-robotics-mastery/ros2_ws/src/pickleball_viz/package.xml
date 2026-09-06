@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pickleball_viz</name>
+  <version>0.1.0</version>
+  <description>
+    P7 視覺化：把 BallTrack 畫成 RViz MarkerArray 軌跡。
+    Phase 1 加球場線與落點，Phase 3 加影像 overlay 與語音 Out。
+  </description>
+  <maintainer email="amazing24crazy@gmail.com">Chester Hsieh</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>visualization_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>pickleball_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export><build_type>ament_cmake</build_type></export>
+</package>

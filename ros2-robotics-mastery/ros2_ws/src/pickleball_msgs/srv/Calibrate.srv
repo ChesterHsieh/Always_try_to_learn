@@ -1,0 +1,10 @@
+# 球場校正：給四角像素座標，或 auto_detect=true 讓 court_calibrator 自動偵測。
+# corners_px 長度必須為 4（順序：近左、近右、遠右、遠左）。
+#
+# 註：欄位不可命名為 auto —— 那是 C/C++ 保留字，rosidl 產生的 struct 會編不過。
+bool auto_detect
+geometry_msgs/Point[] corners_px
+---
+CourtModel model
+bool success
+string message

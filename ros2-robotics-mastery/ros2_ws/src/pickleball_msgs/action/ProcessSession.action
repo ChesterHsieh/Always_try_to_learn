@@ -1,0 +1,8 @@
+# 離線處理一整段影片：Phase 0 的批次入口。
+string video_path
+---
+Stats[] player_stats
+uint32 rallies_total
+---
+float32 percent
+uint32 current_rally

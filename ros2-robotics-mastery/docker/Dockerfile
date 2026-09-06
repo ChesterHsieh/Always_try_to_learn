@@ -63,22 +63,43 @@ RUN if [ "$WITH_VNC" = "1" ]; then \
     fi
 
 # ── Python 工具（分析 rosbag 用得到）─────────────────────
+# 注意：open3d-cpu 在 linux/arm64 沒有 wheel，刻意不裝。
+# 需要點雲處理時改用容器內的 PCL，或在 x86 機器上另外處理。
 RUN pip3 install --break-system-packages --no-cache-dir \
       numpy pandas matplotlib pyarrow \
-      mcap mcap-ros2-support \
-      open3d-cpu || pip3 install --break-system-packages --no-cache-dir \
-      numpy pandas matplotlib pyarrow mcap mcap-ros2-support
+      mcap mcap-ros2-support
 
 # ── 非 root 使用者 ────────────────────────────────────────
-RUN if ! getent group $GID >/dev/null; then groupadd -g $GID $USERNAME; fi && \
-    if ! id -u $UID >/dev/null 2>&1; then \
-      useradd -m -u $UID -g $GID -s /bin/bash $USERNAME; fi && \
-    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME
+# Ubuntu Noble 的 base image 已內建 UID/GID 1000 的 ubuntu 帳號。
+# 若目標 UID 已被占用就把既有帳號改名，否則才新建，
+# 這樣掛載進來的檔案擁有者才會對得上 macOS 端的 501:20 對映。
+RUN set -eux; \
+    if getent group "$GID" >/dev/null; then \
+      existing_group="$(getent group "$GID" | cut -d: -f1)"; \
+      [ "$existing_group" = "$USERNAME" ] || groupmod -n "$USERNAME" "$existing_group"; \
+    else \
+      groupadd -g "$GID" "$USERNAME"; \
+    fi; \
+    if getent passwd "$UID" >/dev/null; then \
+      existing_user="$(getent passwd "$UID" | cut -d: -f1)"; \
+      if [ "$existing_user" != "$USERNAME" ]; then \
+        usermod -l "$USERNAME" -d "/home/$USERNAME" -m "$existing_user"; \
+      fi; \
+      usermod -g "$GID" -s /bin/bash "$USERNAME"; \
+    else \
+      useradd -m -u "$UID" -g "$GID" -s /bin/bash "$USERNAME"; \
+    fi; \
+    mkdir -p "/home/$USERNAME"; \
+    chown "$UID:$GID" "/home/$USERNAME"; \
+    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$USERNAME"; \
+    chmod 0440 "/etc/sudoers.d/$USERNAME"
 
 RUN mkdir -p /ros2_ws/src && chown -R $UID:$GID /ros2_ws
 
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# 用 0755 而非 chmod +x：build context 來自 macOS 時可能帶著 711 之類的模式，
+# 非 root 使用者會因為沒有讀取權限而無法執行 script。
+RUN chmod 0755 /entrypoint.sh
 
 USER $USERNAME
 WORKDIR /ros2_ws
