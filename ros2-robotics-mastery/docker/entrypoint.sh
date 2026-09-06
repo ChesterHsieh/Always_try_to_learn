@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+# build/install/log 是 docker named volume，首次建立時屬於 root，
+# 非 root 的 dev 使用者會無法寫入而導致 colcon build 失敗。
+# 每次啟動都確認一次擁有者，讓 volume 被刪掉重建後也能自動修好。
+for d in /ros2_ws/build /ros2_ws/install /ros2_ws/log; do
+  if [ -d "$d" ] && [ ! -w "$d" ]; then
+    sudo chown "$(id -u):$(id -g)" "$d" 2>/dev/null || true
+  fi
+done
+
 source /opt/ros/jazzy/setup.bash
 [ -f /ros2_ws/install/setup.bash ] && source /ros2_ws/install/setup.bash
 

@@ -1,0 +1,32 @@
+# Phase 0 參數。素材：1280x720 @ 30fps 的 PPA 轉播（README 第 7 節）。
+/**/camera_node:
+  ros__parameters:
+    video_path: ""            # 由 launch 引數帶入
+    frame_id: "camera"
+    loop: false
+    publish_video_time: true
+    publish_rate: 0.0         # 0 = 用影片原生 fps
+
+/**/ball_detector:
+  ros__parameters:
+    # 720p 下球的直徑約 5~12 px，面積上下限抓寬一點以免漏掉快速球的拖影。
+    min_area_px: 6.0
+    max_area_px: 600.0
+    min_circularity: 0.55
+    max_aspect_ratio: 1.8
+    mog2_history: 300
+    mog2_var_threshold: 24.0
+    publish_debug_image: true
+    # 右上角轉播比分板，不遮掉的話背景相減會一直把它當移動物體。
+    mask_rects: [890, 0, 390, 125]
+
+/**/ball_tracker:
+  ros__parameters:
+    expected_fps: 30.0
+    process_noise: 800.0
+    measurement_noise: 4.0
+    initial_covariance: 500.0
+    outlier_gate_px: 160.0
+    max_coast_frames: 8
+    pixels_to_meters: 0.01    # Phase 0 佔位；Phase 1 由 homography 取代
+    output_frame_id: "camera"

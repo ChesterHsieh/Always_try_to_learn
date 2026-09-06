@@ -1,0 +1,4 @@
+# 挑戰線審：回傳最近 N 次落點判定，供即時「Out!」複查。
+uint8 last_n
+---
+BounceEvent[] calls

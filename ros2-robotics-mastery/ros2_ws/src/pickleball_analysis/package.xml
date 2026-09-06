@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pickleball_analysis</name>
+  <version>0.1.0</version>
+  <description>
+    P7 分析層：shot_engine（落點/擊球偵測）、rally_engine（回合切段與 AI 計分）、
+    stats_node（統計與熱圖）。Phase 1-2 才會長出節點，目前只有規則引擎的骨架。
+  </description>
+  <maintainer email="amazing24crazy@gmail.com">Chester Hsieh</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>pickleball_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export><build_type>ament_cmake</build_type></export>
+</package>
