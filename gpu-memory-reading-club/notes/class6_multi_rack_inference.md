@@ -1,7 +1,7 @@
 # 第六堂課（最終章）講稿／索引 — 一個字，穿過一整排機櫃
 
-> **狀態：骨架已依 2026-09-14 四項決定修訂**——主角＝SGLang 96×H100；保留「四種資料」地圖；NVIDIA vs AMD 集中後段 3 頁；收尾只留全系列對照（1M context 移到附錄 A，不上投影片）。
-> 互動教具 [../interactive/rack_journey_map.html](../interactive/rack_journey_map.html) 已完成（第 13 頁指引；第 7、9 頁可直接切到教具第 2、3 層）。投影片 `class6_multi_rack_inference.pptx` 待標題鏈確認後產出。
+> **狀態：投影片已產出（20 頁）**，骨架依 2026-09-14 四項決定修訂——主角＝SGLang 96×H100；保留「四種資料」地圖；NVIDIA vs AMD 集中後段 3 頁；收尾只留全系列對照（1M context 移到附錄 A，不上投影片）。
+> 互動教具 [../interactive/rack_journey_map.html](../interactive/rack_journey_map.html) 已完成（第 13 頁指引；第 7、9 頁可直接切到教具第 2、3 層）。投影片 [../slides/class6_multi_rack_inference.pptx](../slides/class6_multi_rack_inference.pptx)（由 `slides/build/generate_class6.js` 產生）。
 > 前置：[第一堂](full_series.md)（roofline、記憶體階層）、[第二堂](class2_transformer_gpu.md)（EP 與互連頻寬階梯）、[第三堂](class3_engine_single_node.md)（AI ≈ B、分頁 KV、CUDA Graph）、[第四堂](class4_sglang_multi_node.md)（大規模 EP、PD 分離、router、容錯）、[第五堂](class5_china_models.md)（MLA、MoE、降精度）。
 
 ---
@@ -161,9 +161,9 @@
 1. proxy（或 llm-d sidecar）先把請求送給 prefill，prefill 只產第一個 token
 2. prefill 把 KV 留在自己 GPU 上，回傳 KV 的位址（block ids、engine id、host／port）
 3. proxy 把位址附在請求上轉給 decode
-4. 第一次接觸時經 ZMQ side channel 交換 NIXL metadata（lazy handshake）
-5. **decode 用單邊 RDMA read 從 prefill 的 GPU 記憶體「拉」KV**
-6. decode 繼續生成並串流回傳
+5. 第一次接觸時經 ZMQ side channel 交換 NIXL metadata（lazy handshake）
+6. **decode 用單邊 RDMA read 從 prefill 的 GPU 記憶體「拉」KV**
+7. decode 串流回傳；prefill 在 KV 被讀走（或逾時）後才釋放 block
 
 〔可查證：vLLM NIXL connector 文件〕
 
