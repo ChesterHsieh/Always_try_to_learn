@@ -1,12 +1,12 @@
 // 第六堂課（最終章）— 一個字，穿過一整排機櫃
-// 產生 ../class6_multi_rack_inference.pptx。沿用系列的深色「矽晶」主題。
+// 產生 ../class6_multi_rack_inference.html。沿用系列的深色「矽晶」主題。
 //
 // 主軸 = 拆散變便宜的前提：最常搬的資料，走最快的路。
 // 拆法 = 按「多常搬 × 一次多大」把資料分四種（請求 / KV / MoE 交換 / 權重），
 //        中段跟著一個請求依時序走，合回來指出真瓶頸＝一個 scale-up 域裝得下幾張卡。
 // 主角 = SGLang 96×H100（prefill 4 台 EP32、decode 9 台 EP72）；DeepSeek 官方只當開場鉤子。
 // 逐頁事實原子與數字來源見 ../../notes/class6_multi_rack_inference.md
-const pptxgen = require("pptxgenjs");
+const pptxgen = require("./pptx-html");
 
 const BG = "0E1726", BG2 = "16233A", BG3 = "1C2E4A";
 const INK = "EAF1FB", MUTE = "8FA6C4", LINE = "2A3D5C", FOOTC = "5C7299";
@@ -135,7 +135,7 @@ const PE = "收尾";
   card(s, MX + 0.3, 5.55, 11.3, 0.85, BG2, COMP);
   s.addText([
     { text: "通訊明明變多了，為什麼拆散反而便宜？", options: { bold: true, color: COMP } },
-    { text: "　—— 這一堂就跟著一個請求，把每一站的帳算出來。", options: { color: INK } },
+    { text: "　—— 把前五堂的零件裝回機櫃，跟著一個請求算帳。", options: { color: INK } },
   ], { x: MX + 0.55, y: 5.55, w: 10.8, h: 0.85, valign: "middle", fontFace: HEAD, fontSize: 16, margin: 0 });
   footer(s, P0);
 })();
@@ -646,4 +646,4 @@ const PE = "收尾";
   footer(s, PE);
 })();
 
-pres.writeFile({ fileName: "../class6_multi_rack_inference.pptx" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));
+pres.writeFile({ fileName: "../class6_multi_rack_inference.html" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));

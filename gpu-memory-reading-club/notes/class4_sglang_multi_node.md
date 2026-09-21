@@ -1,6 +1,6 @@
 # 第四堂課 講稿／索引 — SGLang 多機篇：從一台到一群（問題 ⑤–⑧）
 
-投影片：[../slides/class4_sglang_multi_node.pptx](../slides/class4_sglang_multi_node.pptx)（20 頁）｜重建：`cd ../slides/build && node generate_class4.js`
+投影片：[../slides/class4_sglang_multi_node.html](../slides/class4_sglang_multi_node.html)（20 頁）｜重建：`cd ../slides/build && node generate_class4.js`
 互動教具：可搭配 [serving_map.html](../interactive/serving_map.html) 的**模式 5（PD 分離）**——第三堂只用到模式 1–4。
 
 > 承接[第三堂](class3_engine_single_node.md)的同一條主幹：沿著 SGLang 遇到的問題走。①–④ 是單機，本堂做 ⑤–⑧。
@@ -186,10 +186,12 @@ GPU 叢集之所以能「規避」很多經典問題，**不是因為它更聰�
 
 用第三堂的數字（Llama-3-8B，128 KB/token）與第二堂的頻寬階梯：
 
-| 前綴長度 | KV 大小 | 走 NVLink（~900 GB/s） | 走 IB（~50 GB/s） | 重新 prefill |
+| 前綴長度 | KV 大小 | 走 NVLink 4（每方向 450 GB/s） | 走 IB（~50 GB/s） | 重新 prefill |
 |---|---|---|---|---|
-| 2,000 token | 256 MB | ~0.3 ms | ~5 ms | 數十 ms |
-| 32,000 token | 4 GB | ~4.5 ms | ~80 ms | 數百 ms ~ 秒級 |
+| 2,000 token | 256 MB | ~0.6 ms | ~5 ms | 數十 ms |
+| 32,000 token | 4 GB | ~9 ms | ~80 ms | 數百 ms ~ 秒級 |
+
+〔單向傳輸要用**每方向**頻寬：NVLink 4 規格頁的 900 GB/s 是雙向合計（見第二堂 §互連速查的單位約定）。舊版用 900 GB/s 算出 0.3 / 4.5 ms，偏樂觀 2×；結論不變。〕
 
 > **這個比值決定一切**：NVLink 域內幾乎永遠該搬；跨節點走乙太就要算清楚；前綴越長越該搬（重算是 O(n²)、搬是 O(n)）。
 > **這一頁把第二堂（頻寬階梯）、第三堂（KV 每 token 多少 bytes）、第四堂（路由決策）三堂串成一條線**，很適合當壓軸。
@@ -234,7 +236,7 @@ Cache-Aware Load Balancing / KV Cache Replication —— SGLang Router、**Moonc
 
 ## 8. 幾個會被問到的澄清（沿用第三堂的判準）
 
-- **「請求怎麼分配」和「模型怎麼切」是兩個層級**：一個副本可能自己就橫跨 8 張卡（TP=8），router 眼中它仍是「一台」。模型並行是第二堂 Part B 的內容，本堂只需一頁帶過。
+- **「請求怎麼分配」和「模型怎麼切」是兩個層級**：一個副本可能自己就橫跨 8 張卡（TP=8），router 眼中它仍是「一台」。模型平行是第二堂 Part B 的內容，本堂只需一頁帶過。
 - **可以快取的是「計算結果」，不可以快取的是「請求狀態」**（第三堂問題②×③ 的紅線）：KV 是計算結果所以可跨機複製；FSM 狀態、取樣種子屬於請求，不能。
 - **「RadixAttention vs PagedAttention」是假對立**（第三堂第 11 頁）：一個是記憶體配置層、一個是索引複用層。
 
@@ -250,3 +252,9 @@ Cache-Aware Load Balancing / KV Cache Replication —— SGLang Router、**Moonc
 - SGLang Router / cache-aware load balancing、Mooncake（Kimi）、vLLM KV connector / LMCache / NIXL、NVIDIA Dynamo —— **待補官方文件連結**
 - 分散式系統對照的教科書基礎：CAP、FLP、Lamport timestamp、Paxos/Raft、2PC —— 建議指向 *Designing Data-Intensive Applications*（本 repo 另有 `DDIA-in-real/` 專案可交叉引用）
 - 前置：[第三堂講稿](class3_engine_single_node.md)（分頁 KV、RadixAttention、continuous batching、FSM、chunked prefill）
+
+## 10. 承上啟下
+
+- **接第三堂**：第三堂結尾留下兩個「只是緩解」——chunked prefill（根治是本堂⑥ PD 分離）與「MoE 單卡不省容量」（本堂⑤ EP）。開場第 2 頁用八個問題全景把線接上。
+- **留下的問題**：本堂四個問題都是「框架從外面調」——一個模型權重都沒改。如果模型本身就把 KV 壓小、把活躍參數壓低呢？
+- **下一堂**（[第五堂](class5_china_models.md)）：模型端從裡面改——中國開源模型的五個旋鈕。本堂的 EP、PD 分離、router 會在[第六堂](class6_multi_rack_inference.md)被組裝回一整排機櫃、逐站算帳。

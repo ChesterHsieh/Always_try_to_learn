@@ -1,5 +1,5 @@
 // 第二堂課 — Transformer × GPU 框架：逐 block 上機（單卡）→ 單卡放不下時的資料平行
-// 產生 ../class2_transformer_gpu.pptx。沿用第一堂（full_series）的深色「矽晶」主題。
+// 產生 ../class2_transformer_gpu.html。沿用第一堂（full_series）的深色「矽晶」主題。
 //
 // 兩大部分：
 //   Part A · 單卡逐 block × GPU：玩具 transformer（T=6, d=6, 2 heads）每個 block
@@ -9,7 +9,7 @@
 //            資料平行(DP)是最直覺的第一招，以及 DP 切資料、不切模型，救不了「裝不下」的模型。
 //
 // 搭配互動教具：interactive/gpu_map.html（第 4 頁）、interactive/transformer_map.html（第 11 頁）
-const pptxgen = require("pptxgenjs");
+const pptxgen = require("./pptx-html");
 
 const BG = "0E1726", BG2 = "16233A", BG3 = "1C2E4A";
 const INK = "EAF1FB", MUTE = "8FA6C4", LINE = "2A3D5C", FOOTC = "5C7299";
@@ -544,7 +544,7 @@ const PA = "Part A · 單卡：Transformer 逐 block × GPU", PB = "Part B · �
   s.addText("卡間搬資料的速度差一個數量級往下掉。哪種平行「通訊多」，就得住在「線快」的那一層。", { x: MX, y: 1.45, w: 11.9, h: 0.4, fontFace: BODY, fontSize: 13.5, color: MUTE, margin: 0 });
   const ladder = [
     ["晶片內 HBM", "~3.35 TB/s", "（單卡基準）", INK, 6.6],
-    ["NVLink 5 / NVSwitch", "~1.8 TB/s / GPU", "scale-up：TP、EP 住這裡", GOOD, 5.4],
+    ["NVLink 5 / NVSwitch", "~1.8 TB/s 雙向", "scale-up：TP、EP 住這裡", GOOD, 5.4],
     ["跨節點 InfiniBand / Spectrum-X", "~50–100 GB/s / GPU", "scale-out：DP、PP 可容忍", COMP, 2.6],
     ["PCIe Gen5", "~64 GB/s", "沒 NVLink 時的卡間路（會被拖死）", WARN, 1.7],
   ];
@@ -565,7 +565,7 @@ const PA = "Part A · 單卡：Transformer 逐 block × GPU", PB = "Part B · �
   header(s, "16", "NVIDIA 解法① scale-up：把多顆綁成一顆大 GPU", GOOD);
   s.addText("NVLink + NVSwitch 用「記憶體語意」把整個機架的 GPU 連成一個高頻寬域——TP/EP 的家。", { x: MX, y: 1.45, w: 11.9, h: 0.4, fontFace: BODY, fontSize: 13.5, color: MUTE, margin: 0 });
   const tech = [
-    ["NVLink 5", "1.8 TB/s / GPU", "18 條 × 100 GB/s；≈ PCIe Gen5 的 14×", GOOD],
+    ["NVLink 5", "1.8 TB/s（雙向）", "18 條 × 100 GB/s；≈ PCIe Gen5 的 14×", GOOD],
     ["NVSwitch（4 代）", "全連通 fabric", "72 顆非阻塞互連；可擴到 576 GPU / 1 PB/s", MEM],
     ["GB200 NVL72", "72 顆 = 一個域", "130 TB/s 聚合頻寬，當一顆「大 GPU」用", COMP],
   ];
@@ -583,7 +583,7 @@ const PA = "Part A · 單卡：Transformer 逐 block × GPU", PB = "Part B · �
     { text: "：3.6 TB/s / GPU（NVLink 5 的 2×）\n", options: { color: MUTE } },
     { text: "Vera Rubin NVL72", options: { bold: true, color: INK, fontSize: 13 } },
     { text: "：260 TB/s 聚合\n", options: { color: MUTE } },
-    { text: "CES 2026 發表、H2 2026 出貨；NVL144/CPX 版把 prefill 拆出來做", options: { color: MUTE } },
+    { text: "CES 2026 發表、H2 2026 出貨；Rubin CPX 把 prefill 拆出來做（PD 分離，第四堂）", options: { color: MUTE } },
   ], { x: MX + 7.95, y: 2.62, w: 4.45, h: 2.25, valign: "top", fontFace: BODY, fontSize: 12, lineSpacingMultiple: 1.3, margin: 0 });
   takeaway(s, "scale-up 的意義：一個 NVLink 域內，72 顆 GPU 的 HBM 像一大池——大模型的 TP/EP 就攤在這池裡跑。", GOOD);
   footer(s, PB);
@@ -727,8 +727,8 @@ const PA = "Part A · 單卡：Transformer 逐 block × GPU", PB = "Part B · �
     s.addText(t, { x: MX + 1.1, y, w: 11.0, h: 0.5, fontFace: HEAD, fontSize: 18, bold: true, color: c, margin: 0 });
     s.addText(d, { x: MX + 1.1, y: y + 0.52, w: 11.2, h: 0.75, valign: "top", fontFace: BODY, fontSize: 13, color: MUTE, lineSpacingMultiple: 1.3, margin: 0 });
   });
-  s.addText("下一步：把 demo 在多卡 GPU 上實跑，量 all-reduce 頻寬與 TP 的通訊佔比。", { x: MX, y: 6.15, w: 11.9, h: 0.4, fontFace: BODY, fontSize: 12.5, color: FOOTC, margin: 0 });
+  s.addText("下一堂：先退回一台機器——推論引擎（SGLang × vLLM）怎麼把 batch 撐到幾百。", { x: MX, y: 6.15, w: 11.9, h: 0.4, fontFace: BODY, fontSize: 12.5, color: FOOTC, margin: 0 });
   footer(s, PB);
 })();
 
-pres.writeFile({ fileName: "../class2_transformer_gpu.pptx" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));
+pres.writeFile({ fileName: "../class2_transformer_gpu.html" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));

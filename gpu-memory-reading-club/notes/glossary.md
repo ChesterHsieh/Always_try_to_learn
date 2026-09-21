@@ -1,6 +1,6 @@
 # 術語與縮寫對照表（Glossary）
 
-整個讀書會系列（投影片、demo、三個互動地圖、合輯講稿）用到的縮寫、英文全稱、中文與一句話說明。
+整個讀書會系列（六堂投影片、demo、互動地圖、各堂講稿）用到的縮寫、英文全稱、中文與一句話說明。
 > 用法:第一次出現某縮寫時可回查這張表;括號內的 Part 對應 [合輯](full_series.md) 的篇章。
 > 校準說明:系列已更迭到聚焦版合輯(硬體架構 × Transformer)。下表仍保留**全部**術語以利回查,但標 ⊘ 者其正文已從合輯移除(ASR 案例、NVLink/GPUDirect/UVM),只在 demo 或概念背景出現——詳見合輯「## 聚焦版移除的內容」。
 
@@ -203,7 +203,7 @@
 |---|---|---|---|
 | scale-up | scale-up | 向上擴展 | 用記憶體語意(load/store、一致性)把多顆 GPU 綁成一顆大 GPU(NVLink 域內) |
 | scale-out | scale-out | 向外擴展 | 用網路訊息語意(RDMA)把多台節點串成一台 AI factory |
-| NVLink 5 | NVLink (5th gen) | (Blackwell 互連) | 每 GPU ~1.8 TB/s(18×100);NVLink 4(Hopper)~900 GB/s |
+| NVLink 5 | NVLink (5th gen) | (Blackwell 互連) | 每 GPU ~1.8 TB/s(18×100,雙向合計;每方向 900);NVLink 4(Hopper)~900 GB/s(雙向;每方向 450) |
 | NVL72 | GB200 NVL72 | (機架級 scale-up 域) | 72 顆 Blackwell 當一個記憶體域,130 TB/s aggregate(NVSwitch fabric 上限 576 GPU/1 PB/s) |
 | Blackwell | Blackwell (B200/GB200) | (NVIDIA GPU 世代) | Hopper 之後世代;NVLink 5、HBM3e |
 | RDMA | Remote Direct Memory Access | 遠端直接記憶體存取 | 一台機器的 NIC 直接讀寫另一台的記憶體,CPU 不插手 |
@@ -215,12 +215,65 @@
 | DPU | Data Processing Unit | 資料處理器 | 卸載網路/儲存/安全的處理器(NVIDIA = BlueField) |
 | BlueField | NVIDIA BlueField | (DPU 產品) | NVIDIA 的 DPU;CMX 用 BlueField-4 當儲存處理器 |
 | NCCL | NVIDIA Collective Communications Library | (集合通訊庫) | GPU 間 all-reduce/all-gather 等集合通訊,資料平行梯度同步靠它 |
-| CMX | Context Memory (storage) | 情境記憶儲存 | 2026 NVIDIA 提出;把 KV cache 卸載到乙太掛載 flash 的 G3.5 層,~5× tok/s、~5× 能效 |
+| CMX | Context Memory (storage) | 情境記憶儲存 | 2026 NVIDIA 提出;把 KV cache 卸載到乙太掛載 flash 的 G3.5 層,~5× tok/s、能效 ~4×(第二堂投影片;另有 ~5× 說法,以官方頁為準) |
 | G3.5 / context tier | context memory tier | 情境記憶層 | 記憶體階層新增的一層,夾在本機 SSD(G3)與共享儲存(G4)之間,專放 KV cache |
 | DOCA Memos | NVIDIA DOCA Memos | (CMX 軟體 SDK) | 把 KV cache 當一等公民管理/分享/放置的 SDK,跑在 BlueField 上 |
 | Dynamo | NVIDIA Dynamo | (分散式推論框架) | 協調 prefill/decode/KV cache,KV-aware 請求調度,整合 CMX |
 | NIXL | NVIDIA Inference Transfer Library | (推論搬運庫) | 協調 KV 在各記憶體/儲存層間搬運,decode 前把 KV prestage 回 HBM |
 | prestage | prestaging | 預先搬入 | 在 decode 之前把需要的 KV 從 CMX 搬回 HBM,不卡生成(prefetch 的一種) |
+
+## 13. 推論引擎(第三堂)
+
+| 縮寫 / 術語 | 英文全稱 | 中文 | 一句話說明 |
+|---|---|---|---|
+| SGLang | Structured Generation Language | (推論引擎) | 前端 DSL + RadixAttention + cache-aware 排程;「替你猜工作負載」的那一家 |
+| vLLM | vLLM | (推論引擎) | PagedAttention 起家;模型/硬體覆蓋最廣、後端可插拔 |
+| PagedAttention / 分頁 KV | PagedAttention | 分頁式 KV | KV 切成固定大小 block(16 token)、按需配置,浪費從 60–80% 降到 <4%;兩家共同地基 |
+| RadixAttention | RadixAttention (radix tree) | 基數樹前綴快取 | 用前綴樹索引已算過的 KV,任意 token 分叉點都能命中(SGLang) |
+| APC | Automatic Prefix Caching | 自動前綴快取 | vLLM 以鏈式雜湊逐 block 查表,命中須對齊 block 邊界 |
+| continuous batching | continuous / in-flight batching | 連續批次 | 排程單位從「一個請求」改成「一次 forward」,隨時插入/退出 |
+| chunked prefill | chunked prefill | 分塊 prefill | 長 prompt 切塊、每步固定 token 預算混 decode;緩解 TTFT vs ITL 衝突 |
+| TTFT | Time To First Token | 首字延遲 | 由 prefill(compute-bound)決定 |
+| ITL / TPOT | Inter-Token Latency / Time Per Output Token | 字間延遲 | 由 decode(memory-bound)決定 |
+| XGrammar | XGrammar | (結構化輸出後端) | 把 JSON schema/正則編成 FSM + 位元遮罩;SGLang、vLLM、TRT-LLM 預設後端 |
+| FSM | Finite State Machine | 有限狀態機 | 結構化輸出的約束;屬於「請求狀態」,不可跨請求共享 |
+| jump-forward | jump-forward decoding | 跳躍解碼 | 語法唯一確定時直接吐多個 token、不跑模型(SGLang) |
+| CUDA Graph | CUDA Graph | (kernel 錄放) | 把一整串 kernel launch 錄成圖、之後 replay,省 CPU 開銷 |
+| 投機解碼 | speculative decoding | 投機解碼 | 小模型/草稿先猜 k 個、大模型一次驗;權重讀 1 次換 k 倍 FLOPs(AI 從 1 變 k) |
+| MTP | Multi-Token Prediction | 多 token 預測 | 訓練時多預測幾步;推論時那些 head 當投機解碼的 draft(第五堂旋鈕④) |
+
+## 14. 多機推論服務(第四、六堂)
+
+| 縮寫 / 術語 | 英文全稱 | 中文 | 一句話說明 |
+|---|---|---|---|
+| EP | Expert Parallelism | 專家平行 | 把 MoE 專家散到多卡;每層兩次 all-to-all(dispatch + combine) |
+| dispatch / combine | dispatch / combine | 分派 / 匯回 | token 送去專家所在的卡 / 算完送回原卡;DeepSeek-V3 每字 58 層 × 2 = 116 次 |
+| EPLB | Expert Parallelism Load Balancer | 專家負載均衡器 | 熱門專家做副本、定期重排;專家熱點＝資料傾斜 |
+| DeepEP | DeepEP | (all-to-all 通訊庫) | DeepSeek 開源;normal 模式(prefill)與 low-latency 模式(decode,純 RDMA、可進 CUDA Graph) |
+| PD 分離 | prefill–decode disaggregation | 預填/解碼分離 | prefill 與 decode 放不同機器池、各自最佳配置,中間傳 KV |
+| KV 交接 | KV transfer | KV 傳輸 | PD 分離時 KV 從 prefill 機搬到 decode 機(SGLang 推、vLLM+NIXL 拉) |
+| DP attention | data-parallel attention | 資料平行注意力 | attention 各卡只算自己那批請求、KV 不重複(MLA 無法按 head 切時特別重要) |
+| TBO | Two-Batch Overlap | 雙批重疊 | 一批切兩個 micro-batch,一個通訊時另一個計算 |
+| cache-aware router | cache-aware load balancing | 快取感知路由 | 同時看前綴命中與各機負載來分流;router 的快取視圖是近似的 |
+| Mooncake | Mooncake | (Kimi 的 KV 中心架構) | Moonshot 以 KVCache 為中心的分離式服務架構;SGLang 的 KV 傳輸後端之一 |
+| straggler | straggler | 拖後腿節點 | 同步集合通訊下最慢那張卡決定整體速度;「慢了」與「掛了」難分 |
+| NVSHMEM / IBGDA | NVSHMEM / InfiniBand GPUDirect Async | (GPU 發起的 RDMA) | GPU 直接敲網卡門鈴、不經 CPU;DeepEP low-latency 模式的基礎 |
+| scale-up 域 | scale-up domain | 高速互連域 | 一組用 NVLink/xGMI 直連的卡(H100/B200 機 = 8、NVL72 = 72);第六堂的真瓶頸 |
+| xGMI | (AMD) Infinity Fabric link | (AMD 卡間互連) | MI355X 8 卡全網狀、無交換器;對任一卡每方向 ~77 GB/s |
+| RCCL / MoRI | ROCm Collective Comm. Library / MoRI | (AMD 通訊庫) | AMD 對應 NCCL / DeepEP+NIXL 的零件 |
+| UALink | Ultra Accelerator Link | (開放 scale-up 標準) | AMD Helios 先以乙太隧道(UALoE)實作 72 卡域 |
+
+## 15. 模型端的效率旋鈕(第五堂)
+
+| 縮寫 / 術語 | 英文全稱 | 中文 | 一句話說明 |
+|---|---|---|---|
+| MLA | Multi-head Latent Attention | 多頭潛在注意力 | K/V 壓成低秩 latent 再存;DeepSeek-V3 ≈ 70 KB/token(同規模 MHA ~4 MB) |
+| MoE | Mixture of Experts | 混合專家 | 每 token 只過少數專家;省 FLOPs 與權重讀取、單卡不省容量 |
+| 活躍參數 | active parameters | 活躍參數 | 每 token 實際用到的參數量(如 671B-A37B 的 37B);決定 decode 速度 |
+| DSA / CSA / MSA | DeepSeek / Compressed / MiniMax Sparse Attention | 稀疏注意力 | 保留完整 KV、每個 query 只看 top-k;KV 還在 → prefix caching/投機解碼仍可用 |
+| 線性注意力 | linear attention (Lightning / GDN / KDA) | 線性注意力 | 不存 KV、改固定大小遞迴狀態;打壞 KV 量化、前綴快取、投機解碼三個生產系統 |
+| QAT | Quantization-Aware Training | 量化感知訓練 | 訓練時就模擬低精度;Kimi K3「出廠就是 4-bit」 |
+| MXFP4 / NVFP4 | Microscaling FP4 / NVIDIA FP4 | (4-bit 浮點) | 區塊共享縮放的 4-bit 格式,對齊 Blackwell FP4 tensor core |
 
 ---
 

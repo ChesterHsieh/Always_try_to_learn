@@ -1,6 +1,6 @@
 # 第五堂課 講稿／索引 — 中國開源模型：把推論成本寫進架構本身
 
-投影片：[../slides/class5_china_models.pptx](../slides/class5_china_models.pptx)（16 頁）｜重建：`cd ../slides/build && node generate_class5.js`
+投影片：[../slides/class5_china_models.html](../slides/class5_china_models.html)（16 頁）｜重建：`cd ../slides/build && node generate_class5.js`
 
 > **主幹＝五個旋鈕**（壓 KV / 少算 / 少看 / 一次多產 / 降精度）。每一家實驗室只是在這五個旋鈕上轉了不同組合。
 > **承接第三、四堂**：那兩堂是「框架從**外面**調」（排程、記憶體管理、路由）——一個模型權重都沒改；這一堂是「模型從**裡面**改」。**兩邊打的是同一個敵人**：decode 的 memory-bound 與 KV cache。
@@ -60,7 +60,7 @@
 |---|---|---|
 | **MHA** | 每個 head 各存 K/V | Llama 式 32 heads：**512 KB** |
 | **GQA** | 多個 query head 共用一組 K/V | Llama-3-8B（8 KV heads）：**128 KB**（÷4） |
-| **MLA** | K/V 投影成低秩 latent 再存，用時解回 | DeepSeek-V3：**≈ 70 KB**（576 維 latent × 61 層 × 2B；同規模 MHA 推算 ~3.8 MB） |
+| **MLA** | K/V 投影成低秩 latent 再存，用時解回 | DeepSeek-V3：**≈ 70 KB**（576 維 latent × 61 層 × 2B；同規模 MHA 推算 ~4 MB（3.8 MiB），與第六堂第 8 頁同一個數） |
 
 DeepSeek-V2 論文自陳：MLA 讓 KV cache 相對 MHA **減少 93.3%**。Kimi K3 用 Gated MLA、GLM-5 也採用 MLA——**這個旋鈕已經是共識**。
 
@@ -220,14 +220,15 @@ DeepSeek-V3 報告第二 token 接受率 ~**85–90%**；Qwen3-Next 也內建 MT
 2. **五個旋鈕，一個目標。** 全都在回答「怎麼讓每產一個 token 少搬一點位元組」——第一堂 roofline 的分母，也是第三堂框架優化的另一半。
 3. **理論上更省 ≠ 實際上更快。** MiniMax M2 退回 full attention 是 2025–26 最重要的負面結果，而**驗證它需要的算力，正是它想省下來的那些**。
 
-> **全系列收束**：第一堂硬體 → 第二堂多卡 → 第三堂單機引擎 → 第四堂多機服務 → 第五堂模型架構。**同一個敵人，五個高度。**
+> **前五堂收束**：第一堂硬體 → 第二堂多卡 → 第三堂單機引擎 → 第四堂多機服務 → 第五堂模型架構。**同一個敵人，五個高度。**
+> **下一堂（最終章）**：[第六堂](class6_multi_rack_inference.md)把這五個高度裝回一整排機櫃——跟著一個 DeepSeek 請求走，會看到本堂的 MLA 讓 KV 交接只要 7 ms、MoE 稀疏讓每卡只放 4 個專家。
 
 ---
 
 ## Q&A 速查
 
 **Q：MoE 在單卡上不是不省記憶體嗎？稀疏化到底省什麼？**
-A：單卡不省容量（專家都要在 HBM），省的是每 token 的權重讀取量與 FLOPs。要連容量也省得靠 EP（第四堂⑤），代價是 all-to-all 通訊與專家負載不均。
+A：同第三堂 Q&A（省每 token 的權重讀取與 FLOPs、不省容量；容量要靠第四堂⑤ 的 EP）。本堂第 6 頁已講，被問到時一句帶過。
 
 **Q：長 context 那麼貴，稀疏注意力是不是必然的未來？**
 A：方向上是，但注意 MiniMax 的教訓：**線性**注意力目前在多跳推理與生態相容性上仍有實證問題；**稀疏**比較被接受，因為它不改變「KV 還在」這個前提。2026 的實務共識是**混合 + 稀疏**。

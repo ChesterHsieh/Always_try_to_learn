@@ -1,5 +1,5 @@
 // 第三堂課 — 推論引擎單機篇：八個問題，兩種解法（SGLang × vLLM）
-// 產生 ../class3_engine_single_node.pptx。沿用系列的深色「矽晶」主題。
+// 產生 ../class3_engine_single_node.html。沿用系列的深色「矽晶」主題。
 //
 // 主幹 = 問題導向。那八個問題不是 SGLang 專有的，是任何推論引擎都會撞到的；
 //        SGLang 的發展史剛好把它們依序列了出來。每個問題都對比兩家的「寫法」。
@@ -10,7 +10,7 @@
 //   問題④  CPU 排程吃掉 GPU 時間   → zero-overhead scheduler vs 多進程 + async（兩條路同一目標）
 //   天花板 投機解碼·MTP、量化（兩家都有）
 // 問題 ⑤–⑧（多機）留給第四堂。
-const pptxgen = require("pptxgenjs");
+const pptxgen = require("./pptx-html");
 
 const BG = "0E1726", BG2 = "16233A", BG3 = "1C2E4A";
 const INK = "EAF1FB", MUTE = "8FA6C4", LINE = "2A3D5C", FOOTC = "5C7299";
@@ -219,7 +219,7 @@ const P5 = "單機的天花板";
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
   header(s, "03", "地基①：所有問題的共同根源", WARN);
-  s.addText("在講任何機制之前，先確認「敵人是誰」。答案在第一堂就給過了。", { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
+  s.addText("先確認「敵人是誰」：第一堂的「<5% 之謎」，算到底是 0.34%。", { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
   card(s, MX, 1.85, 5.8, 3.4, BG2, WARN);
   s.addText("每產一個 token（batch = 1）", { x: MX + 0.28, y: 2.02, w: 5.2, h: 0.4, fontFace: HEAD, fontSize: 16, bold: true, color: INK, margin: 0 });
   [["搬（Bytes）", "整份權重讀一遍 = 2N bytes", MEM],
@@ -746,4 +746,4 @@ const P5 = "單機的天花板";
   footer(s, P5);
 })();
 
-pres.writeFile({ fileName: "../class3_engine_single_node.pptx" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));
+pres.writeFile({ fileName: "../class3_engine_single_node.html" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));
