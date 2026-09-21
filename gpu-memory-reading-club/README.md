@@ -66,6 +66,7 @@
 | **第三堂** | [class3_engine_single_node.pptx](slides/class3_engine_single_node.pptx)（27 頁） | [notes/class3_engine_single_node.md](notes/class3_engine_single_node.md) | [serving_map](interactive/serving_map.html)（模式 1–4） | **推論引擎單機篇**：問題 ①–④，每題對比 **SGLang × vLLM** 兩種寫法 |
 | **第四堂** | [class4_sglang_multi_node.pptx](slides/class4_sglang_multi_node.pptx)（20 頁） | [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) | [serving_map](interactive/serving_map.html)（模式 5） | **SGLang 多機篇**：問題 ⑤–⑧（大規模 EP／PD 分離／cache-aware router／容錯） |
 | **第五堂** | [class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁） | [notes/class5_china_models.md](notes/class5_china_models.md) | — | **模型架構**：中國開源模型的五個旋鈕（壓 KV／少算／少看／一次多產／降精度） |
+| **第六堂（最終章）** | 待產出（標題鏈確認後寫 `generate_class6.js`，20 頁） | [notes/class6_multi_rack_inference.md](notes/class6_multi_rack_inference.md)（骨架＋事實原子＋教具計算模型） | [rack_journey_map](interactive/rack_journey_map.html) | **組裝**：跟著一個請求（主角 SGLang 96×H100）穿過數個機櫃；真瓶頸＝scale-up 域大小；NVIDIA vs AMD 的條件式選型 |
 
 ### 三、四堂共用一條主幹：推論引擎會撞到的八個問題
 
@@ -209,7 +210,8 @@ gpu-memory-reading-club/
 │   ├── transformer_map.html    # 玩具級 decoder-only Transformer（T=5、d=6、2 heads）7 層 decoder 全景→…→計算子 matmul(L2⟷HBM)→FlashAttention(線上 softmax)→硬體 × 三模式 × GPU/TPU/Groq（KV 串流、tensor core tiling；第 25 頁指引）
 │   ├── interconnect_map.html   # NVIDIA 互連與通訊協定 6 層下鑽（全景階梯→NVLink/NVSwitch/C2C→PCIe→InfiniBand/Spectrum-X→GPUDirect→CMX）；scale-up/out 視角切換、IB↔乙太分頁、資料流動畫（獨立教具）
 │   ├── parallelism_map.html    # 玩具 Transformer 攤到多卡：單卡 → 裝不下 → DP → TP → PP → 互連硬體（第二堂第 23 頁指引）
-│   └── serving_map.html        # 推論服務地圖：Naive / Continuous batching / Paged KV / Radix 前綴共用 / PD 分離 五種模式的 GPU 時間軸、HBM 佔用與 roofline 位置（第三堂第 12 頁指引）
+│   ├── serving_map.html        # 推論服務地圖：Naive / Continuous batching / Paged KV / Radix 前綴共用 / PD 分離 五種模式的 GPU 時間軸、HBM 佔用與 roofline 位置（第三堂第 12 頁指引）
+│   └── rack_journey_map.html   # 機櫃群推論旅程地圖：全景（四種資料 × 四條路）/ KV 交接（SGLang 推 vs vLLM 拉 + 傳輸時間）/ Decode 一步（8 個專家落點、跨域比例、每卡 HBM）/ 時間帳；H100·B200·GB200 NVL72·MI355X 四種硬體切換（第六堂第 13 頁指引）
 ├── demos/             # 可重現的 demo 程式與量測腳本
 │   ├── 01_roofline_mini/
 │   ├── 02_pinned_vs_pageable/
@@ -274,5 +276,10 @@ gpu-memory-reading-club/
 - [x] **M12**：第五堂課 — 中國開源模型的五個旋鈕
   - 投影片 [slides/class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁）：五個旋鈕（壓 KV／少算／少看／一次多產／降精度）× 五個實驗室（DeepSeek／Kimi／MiniMax／Qwen／GLM）。含 **MiniMax M1→M2→M3 反例兩頁**（No Free Lunch：評測會騙人、理論 FLOPs ≠ wall-clock、卡在 KV cache／prefix caching／投機解碼三個生產系統）與**「為什麼他們連 kernel 都開源」**（FlashMLA / DeepEP / DeepGEMM / EPLB 各自讓哪個旋鈕跑得動）
   - 講稿 [notes/class5_china_models.md](notes/class5_china_models.md)
+- [ ] **M13**：第六堂課（最終章）— 一個字，穿過一整排機櫃
+  - 講稿／骨架 [notes/class6_multi_rack_inference.md](notes/class6_multi_rack_inference.md)（20 頁標題鏈、逐頁事實原子與強度、視覺決策、教具計算模型與 DeepEP 校準；**待標題鏈確認後產出投影片**）
+  - 2026-09-14 骨架決定：主角＝SGLang 96×H100（DeepSeek 官方只當鉤子）、保留四種資料地圖、AMD 集中後段 3 頁、收尾只留全系列對照（1M context 移附錄）
+  - [x] 互動教具 [interactive/rack_journey_map.html](interactive/rack_journey_map.html)（第 13 頁指引；第 7、9 頁對應第 2、3 層）
+  - 主軸：拆散變便宜的前提是「最常搬的資料走最快的路」——四種資料（請求／KV／MoE 交換／權重）× 四條路（前端乙太／RDMA／NVLink 域／儲存）；合回來指出真瓶頸是 scale-up 域大小（B200 vs GB200 每卡 4.4×），再推論 NVIDIA vs AMD（MI355X 一台 2.3 TB vs 8 卡網狀、Helios 72 卡）
 
 > 🎉 全系列內容已整併為單份合輯 + 第二/三堂課獨立場 + 五張互動地圖。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格（demo 05 已有 M2/MPS 實測數據）；把 interconnect_map / CMX 接進合輯投影片（目前為獨立教具）；新增 demo 06「vLLM batch sweep + prefix caching 開關」實測，回填第三堂的示意值。
