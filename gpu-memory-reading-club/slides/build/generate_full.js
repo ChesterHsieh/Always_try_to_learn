@@ -1,5 +1,5 @@
 // 合輯 — GPU 記憶體與資料搬遷讀書會：S1–S5 全系列重編版
-// 產生 ../full_series.pptx。沿用深色「矽晶」主題。
+// 產生 ../full_series.html。沿用深色「矽晶」主題。
 //
 // 與單場版的差異（去重與重排）：
 //   - 刪除各場「回顧上一場 / 下一場預告」頁
@@ -9,7 +9,7 @@
 //   - tiling 兩頁合一；ASR 已移除（聚焦硬體×Transformer）；NVLink/UVM 已移除；比較表+決策樹合一
 //   - 五頁 demo 預告 → 一頁總表（含實測數字）
 //   - S5 的 Amdahl 前移到「機器」篇；其餘共同演化內容收在最後一篇
-const pptxgen = require("pptxgenjs");
+const pptxgen = require("./pptx-html");
 
 const BG = "0E1726", BG2 = "16233A", BG3 = "1C2E4A";
 const INK = "EAF1FB", MUTE = "8FA6C4", LINE = "2A3D5C", FOOTC = "5C7299";
@@ -28,7 +28,7 @@ pres.title = "GPU × Transformer — 硬體架構聚焦版";
 let PAGE = 0; // 自動頁碼
 const base = (s) => { s.background = { color: BG }; PAGE += 1; };
 function runningHeader(s) {
-  s.addText("GPU 記憶體與資料搬遷讀書會 · 合輯", { x: W - 5.2, y: 0.3, w: 4.5, h: 0.3, align: "right", fontFace: BODY, fontSize: 10, color: MUTE, margin: 0 });
+  s.addText("讀書會 · 第一堂課 · 硬體 × Transformer", { x: W - 5.2, y: 0.3, w: 4.5, h: 0.3, align: "right", fontFace: BODY, fontSize: 10, color: MUTE, margin: 0 });
 }
 function footer(s, part) {
   s.addText(part, { x: MX, y: FOOT_Y, w: 8, h: 0.3, fontFace: BODY, fontSize: 9, color: FOOTC, margin: 0 });
@@ -80,7 +80,7 @@ function takeaway(s, text, color) {
 }
 
 const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模型上機",
-      P4 = "Part 4 · 資料搬遷", P5 = "Part 5 · 共同演化", P0 = "GPU 記憶體與資料搬遷 · 合輯";
+      P4 = "Part 4 · 資料搬遷", P5 = "Part 5 · 共同演化", P0 = "讀書會 · 第一堂課";
 
 // ============================================================ 1 標題
 (() => {
@@ -90,14 +90,14 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
   s.addShape(pres.shapes.OVAL, { x: xr + 0.7, y: 1.74, w: 0.16, h: 0.16, fill: { color: COMP }, line: { type: "none" } });
   s.addText("roofline → 共同演化", { x: 8.8, y: 3.6, w: 3.8, h: 0.3, align: "center", fontFace: MONO, fontSize: 10, color: MUTE, margin: 0 });
 
-  s.addText("GPU 記憶體與資料搬遷讀書會  ·  S1–S5 全系列合輯", { x: MX, y: 1.6, w: 9, h: 0.4, fontFace: BODY, fontSize: 15, color: MEM, bold: true, charSpacing: 1, margin: 0 });
+  s.addText("GPU 記憶體與資料搬遷讀書會  ·  第一堂課", { x: MX, y: 1.6, w: 9, h: 0.4, fontFace: BODY, fontSize: 15, color: MEM, bold: true, charSpacing: 1, margin: 0 });
   s.addText([
     { text: "速度的故事：", options: { breakLine: true } },
     { text: "平行度 × 資料搬運", options: {} },
   ], { x: MX, y: 2.35, w: 8.3, h: 2.0, fontFace: HEAD, fontSize: 46, bold: true, color: INK, lineSpacingMultiple: 1.06, margin: 0 });
   s.addText("從 roofline 與記憶體階層出發，看懂訓練/推論的瓶頸、資料搬遷的每道關卡，", { x: MX, y: 4.75, w: 11.5, h: 0.45, fontFace: BODY, fontSize: 17, color: MUTE, margin: 0 });
   s.addText("最後拉高視角：模型設計與計算機結構如何互相塑造（CNN → Transformer → 混合架構）。", { x: MX, y: 5.25, w: 11.5, h: 0.45, fontFace: BODY, fontSize: 17, color: MUTE, margin: 0 });
-  s.addText("聽眾：data science 背景 · 原 S1–S5 五場內容重編去重", { x: MX, y: 6.05, w: 11.0, h: 0.4, fontFace: BODY, fontSize: 13, color: FOOTC, margin: 0 });
+  s.addText("聽眾：data science 背景 · 六堂系列第一堂（原 S1–S5 重編）", { x: MX, y: 6.05, w: 11.0, h: 0.4, fontFace: BODY, fontSize: 13, color: FOOTC, margin: 0 });
 })();
 
 // ============================================================ 2 兩個謎題
@@ -110,7 +110,7 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
   s.addText("< 5%", { x: 3.0, y: 2.7, w: 7.3, h: 1.35, align: "center", fontFace: MONO, fontSize: 78, bold: true, color: COMP, margin: 0 });
   s.addText("同一張 H100，batch=1 的 LLM 解碼，tensor core 利用率常不到 5%——買了全世界最貴的算力，卻幾乎用不到。為什麼？", { x: 3.35, y: 4.25, w: 6.6, h: 1.0, align: "center", fontFace: BODY, fontSize: 15, color: INK, lineSpacingMultiple: 1.3, margin: 0 });
 
-  takeaway(s, "答案不在「算力不夠」，而在「資料搬不夠快 + 平行度不夠」——整份合輯就在拆這件事。");
+  takeaway(s, "答案不在「算力不夠」，而在「資料搬不夠快 + 平行度不夠」——這一堂就在拆這件事。");
   footer(s, P0);
 })();
 
@@ -225,7 +225,7 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
     [cell("Shared memory / L1", COMPTINT), cell("數十 TB/s", COMPTINT), cell("程式可控", COMPTINT), cell("tiling 的槓桿（Part 2）", COMPTINT)],
     [cell("L2 cache"), cell("數 ~ 數十 TB/s"), cell("硬體"), cell("全 SM 共用")],
     [cell("HBM（GPU 全域）", MEMTINT), cell("2 ~ 4.8 TB/s", MEMTINT), cell("程式配置", MEMTINT), cell("A100~2 / H100~3.35 / H200~4.8", MEMTINT)],
-    [cell("NVLink（GPU↔GPU）"), cell("~900 GB/s"), cell("—"), cell("比 PCIe 快一個量級")],
+    [cell("NVLink（GPU↔GPU）"), cell("~900 GB/s（雙向）"), cell("—"), cell("比 PCIe 快一個量級")],
     [cell("PCIe（Host↔Device）", WARNTINT), cell("Gen4 ~32 / Gen5 ~64 GB/s", WARNTINT), cell("—", WARNTINT), cell("最常被跨越的瓶頸", WARNTINT)],
     [cell("CPU DRAM（DDR5）"), cell("~50 ~ 100+ GB/s"), cell("OS"), cell("主機記憶體")],
     [cell("NVMe SSD"), cell("~3 ~ 7 GB/s"), cell("OS"), cell("資料集 / 權重來源")],
@@ -984,14 +984,14 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
     [cell("05_flops_vs_parallelism"), cell("Part 5"), cell("FLOPs ≠ 速度"), cell("LSTM 輸給 FLOPs 多 1.75× 的 transformer；depthwise ÷8.7 FLOPs 只 ÷3.7 時間（M2 實測）", MEM)],
   ];
   s.addTable(rows, { x: MX, y: 1.95, w: 11.9, colW: [2.9, 1.3, 3.0, 4.7], rowH: 0.62, fontFace: BODY, fontSize: 12, color: INK, valign: "middle", align: "left", border: { type: "solid", color: LINE, pt: 1 } });
-  s.addText("程式在 repo 的 demos/ 下，每個資料夾一個 run.py + README。計時規範：warmup → 同步圍住 → 取中位數。", { x: MX, y: 6.05, w: 11.9, h: 0.4, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
+  s.addText("程式在 repo 的 demos/ 下，每個資料夾一個 run.py（用法見 README）。計時規範：warmup → 同步圍住 → 取中位數。", { x: MX, y: 6.05, w: 11.9, h: 0.4, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
   footer(s, P0);
 })();
 
 // 36 — 全系列帶走
 (() => {
   const s = pres.addSlide(); base(s);
-  s.addText("全系列帶走三句話", { x: MX, y: 0.8, w: 11.9, h: 0.7, fontFace: HEAD, fontSize: 32, bold: true, color: INK, margin: 0 });
+  s.addText("第一堂帶走三句話", { x: MX, y: 0.8, w: 11.9, h: 0.7, fontFace: HEAD, fontSize: 32, bold: true, color: INK, margin: 0 });
   const items = [
     { n: "1", t: "先問 compute-bound 還是 memory-bound——用算術強度那把尺。", d: "很多「慢」是頻寬問題不是算力問題；換更貴的算力救不了 memory-bound。", c: MEM },
     { n: "2", t: "瓶頸＝資料必經的最慢那段路；省不掉就藏起來。", d: "tiling 把資料留在快的地方、pinned+overlap 把搬運藏在運算後面、選型看頻寬+容量。", c: COMP },
@@ -1007,8 +1007,8 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
   card(s, MX, 5.6, 11.9, 1.1, BG2);
   s.addShape(pres.shapes.RECTANGLE, { x: MX, y: 5.6, w: 0.12, h: 1.1, fill: { color: MEM }, line: { type: "none" } });
   s.addText([
-    { text: "速度的故事，大半是「資料在哪、怎麼搬、誰能平行」的故事。 🎉", options: { color: MEM, bold: true } },
+    { text: "速度的故事，大半是「資料在哪、怎麼搬、誰能平行」。下一堂：逐 block 上機。", options: { color: MEM, bold: true } },
   ], { x: MX + 0.4, y: 5.6, w: 11.3, h: 1.1, valign: "middle", fontFace: BODY, fontSize: 17, margin: 0 });
 })();
 
-pres.writeFile({ fileName: "../full_series.pptx" }).then((f) => console.log("written:", f, `(${PAGE} slides)`));
+pres.writeFile({ fileName: "../full_series.html" }).then((f) => console.log("written:", f, `(${PAGE} slides)`));

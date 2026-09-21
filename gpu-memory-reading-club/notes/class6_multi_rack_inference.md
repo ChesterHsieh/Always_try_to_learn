@@ -1,7 +1,7 @@
 # 第六堂課（最終章）講稿／索引 — 一個字，穿過一整排機櫃
 
 > **狀態：投影片已產出（20 頁）**，骨架依 2026-09-14 四項決定修訂——主角＝SGLang 96×H100；保留「四種資料」地圖；NVIDIA vs AMD 集中後段 3 頁；收尾只留全系列對照（1M context 移到附錄 A，不上投影片）。
-> 互動教具 [../interactive/rack_journey_map.html](../interactive/rack_journey_map.html) 已完成（第 13 頁指引；第 7、9 頁可直接切到教具第 2、3 層）。投影片 [../slides/class6_multi_rack_inference.pptx](../slides/class6_multi_rack_inference.pptx)（由 `slides/build/generate_class6.js` 產生）。
+> 互動教具 [../interactive/rack_journey_map.html](../interactive/rack_journey_map.html) 已完成（第 13 頁指引；第 7、9 頁可直接切到教具第 2、3 層）。投影片 [../slides/class6_multi_rack_inference.html](../slides/class6_multi_rack_inference.html)（由 `slides/build/generate_class6.js` 產生）。
 > 前置：[第一堂](full_series.md)（roofline、記憶體階層）、[第二堂](class2_transformer_gpu.md)（EP 與互連頻寬階梯）、[第三堂](class3_engine_single_node.md)（AI ≈ B、分頁 KV、CUDA Graph）、[第四堂](class4_sglang_multi_node.md)（大規模 EP、PD 分離、router、容錯）、[第五堂](class5_china_models.md)（MLA、MoE、降精度）。
 
 ---
@@ -9,6 +9,8 @@
 ## 0. 這一堂要回答什麼
 
 **聽眾的原始問題**：當運行單位是數個機櫃、數十個 node 時，SGLang / vLLM 怎麼把 DeepSeek 這種 671B MoE 跑完「一輪」inference？換成 NVIDIA 或 AMD 硬體，差在哪？
+
+**接上一堂的口白**：「第五堂看的是模型從裡面改——MLA、MoE、降精度。今天把前五堂的零件全部裝回一整排真實的機櫃，看它們在哪一站發揮作用。」
 
 **第四堂 vs 本堂的分工**：第四堂是「問題導向」——EP、PD 分離、router、容錯，一題一題拆開講。本堂是「組裝導向」——**把那些零件裝回一整排真實的機櫃，跟著一個請求從進門走到吐出最後一個字**，每一站算清楚：搬什麼、搬多大、走哪條線、花幾毫秒。
 
@@ -436,7 +438,7 @@ SemiAnalysis InferenceX（DeepSeek-R1 FP4、1K/1K、Dynamo + TRT-LLM、MTP、**1
 - 公開文獻只有 KV 傳輸**頻寬**，沒有端到端交接**毫秒數**；第 8 頁的 ms 全是推算。
 - LMSYS 96×H100 原文**未載明網卡配置**；本堂以 DGX H100 典型的每卡一張 400G 估。
 - TBO 的 decode +35% 是在「128 序列／卡、模擬 MTP」條件下量的；第 10 頁用它反推 124 ms 是跨條件套用。
-- Vera Rubin 的命名在 CES 2026 前從 NVL144 改回 **VR NVL72**（72 個封裝），第二堂講稿寫的是舊名，需同步。
+- Vera Rubin 的命名在 CES 2026 前從 NVL144 改回 **VR NVL72**（72 個封裝）。第二堂講稿與投影片已同步（2026-09-21：「NVL144/CPX 版」改寫為「Rubin CPX」）。
 - AMD xGMI「每條 76.8 GB/s × 7 條」是研究推論（SemiAnalysis 原文寫 per GPU）；Helios 的 225–245 kW、12 顆 Tomahawk 6 只見於 StorageReview。
 - LMSYS × AMD 的 $0.169／1M 是廠商合寫、只對照 B200；24 張 MI355X 的 EP/DP 切法原文不明確。
 - Helios 截至 2026-09-14 **查不到公開的客戶實際到貨紀錄**。

@@ -1,5 +1,5 @@
 // 第四堂課 — SGLang 多機篇：從一台到一群（問題 ⑤–⑧）
-// 產生 ../class4_sglang_multi_node.pptx。沿用系列的深色「矽晶」主題。
+// 產生 ../class4_sglang_multi_node.html。沿用系列的深色「矽晶」主題。
 //
 // 主幹延續第三堂：沿著 SGLang 遇到的問題走。①–④ 是單機（第三堂），⑤–⑧ 是多機（本堂）。
 // 開場框架：用「經典分散式系統的八類共同問題」當影子，逐格對照 GPU 推論叢集
@@ -8,7 +8,7 @@
 //   ⑥ prefill 與 decode 互擾          → PD 分離
 //   ⑦ 多副本：局部性 vs 負載均衡      → cache-aware router + KV 複製（壓軸推導：該搬還是該重算）
 //   ⑧ 副本掛掉                        → 容錯（KV 是可重算的快取）
-const pptxgen = require("pptxgenjs");
+const pptxgen = require("./pptx-html");
 
 const BG = "0E1726", BG2 = "16233A", BG3 = "1C2E4A";
 const INK = "EAF1FB", MUTE = "8FA6C4", LINE = "2A3D5C", FOOTC = "5C7299";
@@ -446,16 +446,16 @@ const PZ = "收尾";
     { x: MX + 0.28, y: 1.8, w: 11.3, h: 0.85, align: "center", valign: "middle", fontFace: MONO, fontSize: 16, bold: true, color: COMP, margin: 0 });
   s.addText("以 Llama-3-8B（128 KB/token）估算", { x: MX, y: 2.82, w: 6, h: 0.32, fontFace: HEAD, fontSize: 14, bold: true, color: INK, margin: 0 });
   tableGrid(s, MX, 3.2, 11.9, [
-    { t: "前綴長度", w: 2.2 }, { t: "KV 大小", w: 2.0 }, { t: "走 NVLink（~900 GB/s）", w: 2.9 }, { t: "走 IB（~50 GB/s）", w: 2.4 }, { t: "重新 prefill", w: 2.4 },
+    { t: "前綴長度", w: 2.2 }, { t: "KV 大小", w: 2.0 }, { t: "走 NVLink（450 GB/s）", w: 2.9 }, { t: "走 IB（~50 GB/s）", w: 2.4 }, { t: "重新 prefill", w: 2.4 },
   ], [
-    ["2,000 token", "256 MB", "~0.3 ms", "~5 ms", "數十 ms"],
-    ["32,000 token", "4 GB", "~4.5 ms", "~80 ms", "數百 ms ~ 秒級"],
+    ["2,000 token", "256 MB", "~0.6 ms", "~5 ms", "數十 ms"],
+    ["32,000 token", "4 GB", "~9 ms", "~80 ms", "數百 ms ~ 秒級"],
   ], MEM, 11.5);
   card(s, MX, 4.65, 11.9, 1.2, BG2, GOOD);
   s.addText("三條決策原則", { x: MX + 0.28, y: 4.73, w: 4, h: 0.3, fontFace: HEAD, fontSize: 14, bold: true, color: GOOD, margin: 0 });
   s.addText("① NVLink 域內幾乎永遠該搬　　② 跨節點走乙太要算清楚，短前綴常常不如重算　　③ 前綴越長越該搬——因為重算是 O(n²)、搬是 O(n)",
     { x: MX + 0.28, y: 5.08, w: 11.3, h: 0.7, valign: "top", fontFace: BODY, fontSize: 12.5, color: MUTE, lineSpacingMultiple: 1.35, margin: 0 });
-  takeaway(s, "數字為量級估算（未計協定開銷與 prefill 的實際 FLOPs 曲線），用來建立決策直覺，不是設定閾值的依據。", COMP);
+  takeaway(s, "數字為量級估算（頻寬取每方向；未計協定開銷與 prefill 曲線），用來建立決策直覺，不是設定閾值的依據。", COMP);
   footer(s, P7);
 })();
 
@@ -566,7 +566,7 @@ const PZ = "收尾";
     s.addText(d, { x: MX + 5.0, y, w: 6.7, h: 0.74, valign: "middle", fontFace: BODY, fontSize: 11.5, color: MUTE, margin: 0 });
   });
   card(s, MX, 6.0, 11.9, 0.75, BG2, GOOD);
-  s.addText("三、四堂共用一條主幹（SGLang 的八個問題）；第五堂是另一個軸——框架從外面調 vs 模型從裡面改。",
+  s.addText("三、四堂共用一條主幹（八個問題）；第五堂換軸：模型從裡面改；第六堂把全部裝回機櫃。",
     { x: MX + 0.28, y: 6.0, w: 11.3, h: 0.75, align: "center", valign: "middle", fontFace: HEAD, fontSize: 14, bold: true, color: GOOD, margin: 0 });
   footer(s, PZ);
 })();
@@ -590,4 +590,4 @@ const PZ = "收尾";
   footer(s, PZ);
 })();
 
-pres.writeFile({ fileName: "../class4_sglang_multi_node.pptx" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));
+pres.writeFile({ fileName: "../class4_sglang_multi_node.html" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));

@@ -1,11 +1,13 @@
 # 第三堂課 講稿／索引 — 推論引擎單機篇：八個問題，兩種解法（SGLang × vLLM）
 
-投影片：[../slides/class3_engine_single_node.pptx](../slides/class3_engine_single_node.pptx)（27 頁）｜重建：`cd ../slides/build && node generate_class3.js`
+投影片：[../slides/class3_engine_single_node.html](../slides/class3_engine_single_node.html)（27 頁）｜重建：`cd ../slides/build && node generate_class3.js`
 互動地圖：[serving_map.html](../interactive/serving_map.html)（第 16 頁指引，**本堂只用模式 1–4**，模式 5 PD 分離留給第四堂）
 
 > **主幹＝問題導向，而且一個問題兩種寫法。**
 > 那八個問題**不是 SGLang 專有的，是任何推論引擎都會撞到的**——SGLang 的發展史剛好把它們依序列了出來。所以最好的學法是：**一個問題、兩種解法，對比之後就看得到兩家哲學的差異。**
 > 本堂做 ①–④（單機），⑤–⑧ 是[第四堂](class4_sglang_multi_node.md)（多機）。前置：第一堂 roofline 與記憶體階層、第二堂多卡平行與互連。
+>
+> **接上一堂的口白**：「上一堂我們把卡連起來了，但留下一個沒解的問題：decode 要 batch 拉到幾百才吃得滿算力，而 DP 救不了單一請求的延遲。今天先退回**一台機器**——卡連起來之前，一台都還沒餵飽。」（第二堂的平行偏訓練視角；推論的多機版本在第四堂。）
 
 ---
 
@@ -86,7 +88,7 @@
 ### 推導 1 — batch=1 的 decode 只用 0.34% 算力
 
 權重 fp16、參數量 $N$：搬 $2N$ bytes、算 $2N$ FLOPs → **AI = 1 FLOP/Byte**。
-H100 ridge point = 990 TFLOPS ÷ 3.35 TB/s ≈ **296** → 利用率上限 ≈ **0.34%**。（A100 ≈ 0.6%，**卡越強越浪費**。）
+H100 ridge point = 990 TFLOPS ÷ 3.35 TB/s ≈ **296** → 利用率上限 ≈ **0.34%**。（A100 ≈ 0.6%，**卡越強越浪費**。）這就是第一堂開場謎題「<5%」算到底的值——本頁是回顧，一分鐘帶過即可，推導細節指回第一堂第 10–13、18 頁。
 
 ### 推導 2 — AI ≈ B
 

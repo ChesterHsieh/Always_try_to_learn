@@ -1,10 +1,10 @@
 // 第五堂課 — 中國開源模型：把推論成本寫進架構本身
-// 產生 ../class5_china_models.pptx。沿用系列的深色「矽晶」主題。
+// 產生 ../class5_china_models.html。沿用系列的深色「矽晶」主題。
 //
 // 主幹 = 五個旋鈕（壓 KV / 少算 / 少看 / 一次多產 / 降精度），
 //        每一家實驗室只是在這五個旋鈕上轉了不同組合。
 // 承接第三/四堂：框架從「外面」調（排程與記憶體管理），模型從「裡面」改（架構本身）——打的是同一個敵人。
-const pptxgen = require("pptxgenjs");
+const pptxgen = require("./pptx-html");
 
 const BG = "0E1726", BG2 = "16233A", BG3 = "1C2E4A";
 const INK = "EAF1FB", MUTE = "8FA6C4", LINE = "2A3D5C", FOOTC = "5C7299";
@@ -122,7 +122,7 @@ const PL = "五個實驗室";
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
   header(s, "02", "承接前兩堂：同一個敵人，兩個方向", MEM);
-  s.addText("回到第三堂的那把尺：AI = FLOPs ÷ Bytes。decode 的 AI ≈ 1，所以 GPU 大半閒置。", { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
+  s.addText("回到第一堂的那把尺：AI = FLOPs ÷ Bytes。decode 的 AI ≈ 1，所以 GPU 大半閒置。", { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
   card(s, MX, 1.85, 5.8, 2.6, BG2, MEM);
   s.addText("框架的做法：動分子", { x: MX + 0.28, y: 1.98, w: 5.2, h: 0.4, fontFace: HEAD, fontSize: 17, bold: true, color: MEM, margin: 0 });
   s.addText("把 batch 撐大撐滿 → 同一次權重讀取被更多 token 分攤 → AI ≈ B", { x: MX + 0.28, y: 2.45, w: 5.2, h: 0.6, valign: "top", fontFace: BODY, fontSize: 12, color: MUTE, lineSpacingMultiple: 1.3, margin: 0 });
@@ -169,7 +169,7 @@ const PL = "五個實驗室";
   const evo = [
     ["MHA", "每個 head 各存 K/V", "Llama 式 32 heads：512 KB/token", WARN],
     ["GQA", "多個 query head 共用一組 K/V", "Llama-3-8B（8 KV heads）：128 KB/token（÷4）", COMP],
-    ["MLA", "K/V 投影成低秩 latent 再存，用時解回", "DeepSeek-V3：≈ 70 KB/token（同規模 MHA 推算 ~3.8 MB）", GOOD],
+    ["MLA", "K/V 投影成低秩 latent 再存，用時解回", "DeepSeek-V3：≈ 70 KB/token（同規模 MHA 推算 ~4 MB）", GOOD],
   ];
   evo.forEach(([t, d, n, c], i) => {
     const x = MX + i * 4.03;
@@ -443,9 +443,9 @@ const PL = "五個實驗室";
       s.addText(t, { x: MX + 1.1, y, w: 11.0, h: 0.5, fontFace: HEAD, fontSize: 18, bold: true, color: c, margin: 0 });
       s.addText(d, { x: MX + 1.1, y: y + 0.52, w: 11.2, h: 0.9, valign: "top", fontFace: BODY, fontSize: 12.5, color: MUTE, lineSpacingMultiple: 1.3, margin: 0 });
     });
-  s.addText("全系列收束：第一堂硬體 → 第二堂多卡 → 第三堂單機引擎 → 第四堂多機服務 → 第五堂模型架構。同一個敵人，五個高度。",
+  s.addText("前五堂：硬體 → 多卡 → 單機引擎 → 多機服務 → 模型架構。下一堂（最終章）把五個高度裝回一整排機櫃。",
     { x: MX, y: 6.25, w: 11.9, h: 0.4, fontFace: BODY, fontSize: 12.5, color: FOOTC, margin: 0 });
   footer(s, PL);
 })();
 
-pres.writeFile({ fileName: "../class5_china_models.pptx" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));
+pres.writeFile({ fileName: "../class5_china_models.html" }).then((f) => console.log("✅ 產生：" + f + "（" + PAGE + " 頁）")).catch((e) => console.error(e));

@@ -1,6 +1,6 @@
 # 第二堂課 講稿／索引 — Transformer × GPU：逐 block 上機（單卡）→ 多卡的資料平行與互連
 
-投影片：[../slides/class2_transformer_gpu.pptx](../slides/class2_transformer_gpu.pptx)（24 頁）｜重建：`cd ../slides/build && node generate_class2.js`
+投影片：[../slides/class2_transformer_gpu.html](../slides/class2_transformer_gpu.html)（24 頁）｜重建：`cd ../slides/build && node generate_class2.js`
 互動地圖 ×3：
 - [gpu_map.html](../interactive/gpu_map.html)（第 4 頁指引）：Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 下鑽。
 - [transformer_map.html](../interactive/transformer_map.html)（第 11 頁指引）：玩具 **decoder-only** Transformer，decoder 全景 → Block（masked self-attn + FFN）→ Attention → Head → 計算子(L2⟷HBM) → FlashAttention(線上 softmax) → 硬體。
@@ -84,10 +84,11 @@
 數字為約略值，以官方規格為準。scale-up＝機架內用「記憶體語意」把多顆綁成一顆大 GPU；scale-out＝跨節點用「訊息語意」（RDMA）。
 
 ### scale-up（NVLink / NVSwitch）— TP / EP 的家
-- **NVLink 4（Hopper, H100/H200）**：~900 GB/s / GPU。
-- **NVLink 5（Blackwell, GB200）**：**1.8 TB/s / GPU**（18 條 × 100 GB/s，≈ PCIe Gen5 的 14×）。
+- **NVLink 4（Hopper, H100/H200）**：~900 GB/s / GPU（**雙向合計**；每方向 450 GB/s）。
+- **NVLink 5（Blackwell, GB200）**：**1.8 TB/s / GPU**（雙向合計；18 條 × 100 GB/s，≈ PCIe Gen5 雙向的 14×；每方向 900 GB/s）。
+- ⚠️ **單位約定**：NVIDIA 規格頁的 NVLink 數字都是**雙向合計**；IB / 乙太的 400G ≈ 50 GB/s 是**每方向**。本堂投影片照官方寫法（已標「雙向」），[第六堂](class6_multi_rack_inference.md)計算單向傳輸時間時一律換成每方向（NVLink 4 = 450、NVLink 5 = 900 GB/s）。
 - **NVSwitch（4 代）**：72 個 NVLink 5 埠 / 晶片；**GB200 NVL72＝72 顆一個 NVLink 域、130 TB/s 聚合**；fabric 可擴到 576 GPU / 1 PB/s。
-- **NVLink 6（Rubin, 2026 最新）**：**3.6 TB/s / GPU**（NVLink 5 的 2×）；**Vera Rubin NVL72＝260 TB/s 聚合**。CES 2026（1/5）發表、GTC 2026（3/16）、H2 2026 出貨。NVL144 / CPX 版把 **prefill 拆出來**專做（disaggregated prefill/decode）。
+- **NVLink 6（Rubin, 2026 最新）**：**3.6 TB/s / GPU**（雙向；NVLink 5 的 2×）；**Vera Rubin NVL72＝260 TB/s 聚合**（CES 2026 前由舊名 NVL144 改回 NVL72，數的是 72 個封裝）。CES 2026（1/5）發表、GTC 2026（3/16）、H2 2026 出貨；第六堂引用 2026-05-31 宣布量產、秋季出貨。**Rubin CPX** 把 **prefill 拆出來**專做（即 PD 分離，第四堂問題⑥）。
 
 ### in-network（SHARP + NCCL）
 - **SHARP（Scalable Hierarchical Aggregation and Reduction Protocol）**：把 all-reduce / reduce / broadcast 的加總**直接在 NVSwitch / IB 交換器的 ASIC 裡算完** → 省 NVLink 頻寬、也把 GPU 的 SM 解放出來算模型。
@@ -102,7 +103,7 @@
 ### CMX（Context Memory，2026 新招）— 直接打 decode 的頻寬/容量牆
 - **BlueField-4 STX** 儲存架構（GTC 2026 發表）：把 KV cache 標準化成三層 **GPU HBM → CPU DRAM → NVMe flash**，由 BlueField-4 DPU 排 I/O，讓 GPU 不必等儲存。
 - 用 **Spectrum-X** 的低延遲 RDMA 存取共享 KV cache；**DOCA** 管理、**Dynamo + NIXL** 統籌 prefill/decode/KV，支援 **prefill–decode 拆分**與**前綴重用**。
-- 官方數字：**~5× token 吞吐、~4× 能源效率、~2× 資料載入**；H2 2026 出貨。呼應第一堂 Part 3（decode memory-bound、KV cache）與 Part 4（prefetch）。
+- 官方數字：**~5× token 吞吐、~4× 能源效率、~2× 資料載入**；H2 2026 出貨。（⚠️ [glossary.md](glossary.md) 舊版寫「~5× 能效」，兩者不一致，開講前以官方頁為準。）呼應第一堂 Part 3（decode memory-bound、KV cache）與 Part 4（prefetch）。
 
 ---
 
@@ -135,7 +136,7 @@
 
 ## 檔案與重建
 
-- 投影片：`slides/build/generate_class2.js`（pptxgenjs，深色矽晶主題）→ `slides/class2_transformer_gpu.pptx`（24 頁）。
+- 投影片：`slides/build/generate_class2.js`（經 pptx-html 轉成 HTML，深色矽晶主題）→ `slides/class2_transformer_gpu.html`（24 頁）。
 - 互動地圖：`interactive/parallelism_map.html`（單檔、離線、無相依；6 層，TP/PP 含「一層」權重矩陣解剖）。
 - 相關第一堂內容（roofline、KV cache、decode memory-bound、FlashAttention/GQA、TPU/Groq）：[full_series.md](full_series.md)、[transformer_interactive.md](transformer_interactive.md)；縮寫全稱見 [glossary.md](glossary.md)（§11 系統/平行、§12 NVIDIA 互連與 CMX）。
 
@@ -145,3 +146,9 @@
 - Rubin / NVLink 6（CES 2026）：<https://nvidianews.nvidia.com/news/rubin-platform-ai-supercomputer>
 - SHARP in-network computing / NCCL 2.27：<https://developer.nvidia.com/blog/advancing-performance-with-nvidia-sharp-in-network-computing/>、<https://developer.nvidia.com/blog/enabling-fast-inference-and-resilient-training-with-nccl-2-27/>
 - CMX（BlueField-4 Context Memory Storage）：<https://developer.nvidia.com/blog/introducing-nvidia-bluefield-4-powered-inference-context-memory-storage-platform-for-the-next-frontier-of-ai/>、<https://www.nvidia.com/en-us/data-center/ai-storage/cmx/>
+
+## 承上啟下
+
+- **接第一堂**：開場第 2 頁那句「延續第一堂：roofline · 記憶體階層 · KV cache · decode 的 memory-bound」是本堂的前提；Part A 第 8 頁回收第一堂「<5% 利用率之謎」——謎底就發生在 attention 這個 block。
+- **留給第三堂的問題**：DP 的第④個問題「推論延遲無解」與「decode 要大 batch 才吃得滿算力」本堂都沒解。Part B 的平行與互連是偏**訓練式**（bulk-synchronous、梯度同步）的視角。
+- **下一堂**（[第三堂](class3_engine_single_node.md)）：**先退回一台機器**——推論引擎（SGLang × vLLM）怎麼把 batch 從 1 撐到幾百。多卡、多機的推論問題留到第四堂，並在第四堂 Part A 對照「訓練（本堂）vs 推論服務」的差別。

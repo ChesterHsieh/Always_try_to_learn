@@ -1,287 +1,79 @@
 # GPU 記憶體與資料搬遷讀書會
 
-**從計算機組織與 GPU 架構，理解為什麼 inference / training 的「資料搬遷」與「記憶體相關速度」差這麼多。**
+**網站入口：<https://chesterhsieh.github.io/Always_try_to_learn/gpu-memory-reading-club/>**
 
-這是一個面向 data science 背景聽眾的技術讀書會系列。我們不停在「換更貴的卡就會更快」的結論，而是往下挖一層：**資料在硬體裡到底走了哪幾站、每一站的頻寬與延遲差幾個數量級、為什麼同一個任務換個架構速度差十倍。** 最後用幾個簡單、可重現的 demo，量化「預先把資料搬到對的地方（prefetch / staging）」帶來的效能差異。
+六堂課，給會寫 PyTorch、但沒碰過 CUDA 與計算機組織的 data science／ML 工程師。從一張 GPU 的記憶體階層出發，一路走到上百張卡的推論叢集。投影片、講稿、互動教具和複習測驗全部是網頁，從首頁 [index.html](index.html) 進入。
 
----
+## 故事線
 
-## 1. 讀書會目標
+**同一個敵人，六個高度：decode 是 memory-bound，每產一個字，都要把整份權重和 KV 從記憶體搬一遍。**
 
-讀完整個系列，聽眾應該能回答：
+整個系列只用兩個心智模型：
 
-1. **為什麼會慢？** 一個運算是被 *算力（compute-bound）* 卡住，還是被 *記憶體頻寬（memory-bound）* 卡住？怎麼一眼判斷？
-2. **資料走了哪幾站？** 從 SSD → CPU DRAM → PCIe → GPU HBM → L2 → shared memory → register，每一站的頻寬/延遲差幾個數量級？瓶頸通常在哪一段？
-3. **training 跟 inference 差在哪？** 為什麼訓練多半 compute-bound、自迴歸推論（autoregressive decode）卻是 memory-bound？KV cache 扮演什麼角色？
-4. **以 ASR 為例**：同樣是把語音轉文字，為什麼 attention decoder 架構比 CTC 架構慢？慢在哪一層？
-5. **各種 GPU / 記憶體方案怎麼選？** HBM vs GDDR、PCIe vs NVLink、GPUDirect Storage、Unified Memory、Apple 統一記憶體、Grace Hopper——它們在「容量 / 頻寬 / 成本」三角上各站哪裡？
-6. **怎麼動手優化？** pinned memory、CUDA stream overlap、prefetch、GPUDirect——預先搬資料實際能省多少？
+- **Roofline**：算術強度 = FLOPs ÷ 搬動的 Bytes。低於 ridge point（H100 約 300 FLOPs/Byte）就是 memory-bound，換更強的算力也沒用。
+- **記憶體階層**：每離運算單元遠一站就慢一個數量級。瓶頸是資料必經的最慢那段路。
 
-## 2. 聽眾與前提
-
-- **對象**：data science / ML 背景，會寫 Python、用過 PyTorch，但不一定碰過 CUDA、計算機組織。
-- **可以講細**：因為聽眾有 DS 底，roofline、arithmetic intensity、記憶體階層這些可以認真推導，不需要過度簡化。
-- **不假設**：不假設聽眾懂 GPU 微架構（SM / warp / tensor core）或 CUDA memory model——這些會從頭建立。
-- **每場時長**：預設 60–90 分鐘（理論 40–50 分鐘 + demo / 討論 20–40 分鐘），可依場次合併或拆分。
-
-## 3. 一條主線：兩個心智模型
-
-整個系列只靠兩個模型撐起來，反覆套用到不同硬體與任務上。
-
-### 模型 A — Roofline：你被誰卡住？
-
-定義 **算術強度（Arithmetic Intensity, AI）= 完成運算所需 FLOPs ÷ 需搬動的位元組數（FLOPs/Byte）**。
-
-- AI 高 → 每讀一個 byte 就做很多運算 → **compute-bound**，瓶頸是峰值算力。
-- AI 低 → 大部分時間在等資料 → **memory-bound**，瓶頸是記憶體頻寬。
-- 分水嶺（ridge point）= 峰值算力 ÷ 峰值頻寬。
-
-> 範例（約略值，以官方規格為準）：H100 SXM ≈ 990 TFLOPS(BF16 tensor) ÷ 3.35 TB/s ≈ **~300 FLOPs/Byte** 才能餵飽算力。許多 inference 運算的 AI 只有個位數 → 注定 memory-bound，換更強的 tensor core 也沒用。
-
-### 模型 B — 記憶體階層：資料離運算單元越遠，越慢一個數量級
-
-| 層級 | 代表頻寬（約略，數量級概念） | 相對延遲 | 備註 |
+| 堂 | 主題 | 接住上一堂的什麼、留下什麼 | 教材 |
 |---|---|---|---|
-| Register | 數十 TB/s | ~1 | 晶片內最快 |
-| Shared memory / L1 | 數十 TB/s | ~數十 cycle | 程式可控（tiling 的關鍵） |
-| L2 cache | 數 TB/s ~ 數十 TB/s | ~數百 cycle | |
-| **HBM（GPU global memory）** | **2 ~ 4.8 TB/s** | ~數百 ns | A100 ~2TB/s、H100 ~3.35TB/s、H200 ~4.8TB/s |
-| NVLink（GPU↔GPU / C2C） | ~900 GB/s（NVLink 4） | | 比 PCIe 快一個量級 |
-| PCIe（Host↔Device） | Gen4 x16 ~32 GB/s、Gen5 ~64 GB/s | µs 級 | **最常被跨越、也最常見的瓶頸** |
-| CPU DRAM（DDR5） | ~50 ~ 100+ GB/s | | |
-| NVMe SSD | ~3 ~ 7 GB/s（PCIe Gen4） | µs~ms | 資料集 / 大模型權重來源 |
+| 1 | 硬體 × Transformer | 用 roofline 和記憶體階層解開謎題：H100 在 batch=1 解碼時，算力利用率為什麼不到 5%。留下的問題：模型大到一張卡裝不下怎麼辦？ | [投影片](slides/full_series.html)・[講稿](notes/full_series.md) |
+| 2 | Transformer × GPU：一張卡到多張卡 | 玩具 Transformer 逐 block 對到 GPU 單元；裝不下之後只能切模型（TP／PP／EP），切法可不可行由互連決定。留下的問題：decode 要把 batch 拉到幾百才吃得滿算力。 | [投影片](slides/class2_transformer_gpu.html)・[講稿](notes/class2_transformer_gpu.md) |
+| 3 | 推論引擎單機篇：SGLang × vLLM | 退回一台機器，看引擎怎麼把 batch 從 1 撐到幾百。問題①–④：程式難平行、前綴重算、輸出不可控、CPU 成瓶頸，每題對照兩家寫法。 | [投影片](slides/class3_engine_single_node.html)・[講稿](notes/class3_engine_single_node.md) |
+| 4 | SGLang 多機篇 | 用經典分散式系統的八類問題當影子，解問題⑤–⑧：大規模 EP、PD 分離、cache-aware router、容錯。壓軸是「KV 該搬還是該重算」。 | [投影片](slides/class4_sglang_multi_node.html)・[講稿](notes/class4_sglang_multi_node.md) |
+| 5 | 中國開源模型的五個旋鈕 | 框架從外面調到頭了，改成模型從裡面改：壓 KV、少算、少看、一次多產、降精度。MiniMax 是「理論更省、實際不一定更快」的反例。 | [投影片](slides/class5_china_models.html)・[講稿](notes/class5_china_models.md) |
+| 6 | 最終章：一個字，穿過一整排機櫃 | 跟著一個請求穿過 SGLang 96×H100 叢集，按「多常搬 × 一次多大」把資料分四種。真瓶頸是一個 scale-up 域裝得下幾張卡，由此推 NVIDIA 與 AMD 的選型。 | [投影片](slides/class6_multi_rack_inference.html)・[講稿](notes/class6_multi_rack_inference.md) |
 
-**一句話心法**：資料搬運的瓶頸＝它必須經過的「最慢那一段路」。HBM 內部很快，但只要被迫跨 PCIe 反覆進出，整體就被 PCIe 拖住——這就是「memory 站一進一出」的代價。
+一句話版：硬體的尺 → 單卡到多卡 → 單機引擎 → 多機服務 → 模型架構 → 裝回機櫃。
 
-## 4. 課程地圖
+每堂 8 題的[複習測驗](quiz/index.html)，難度依序是辨識 → 邊界 → 遷移 → 取捨。答錯先給針對你所選選項的提示，再錯才公布答案，最後產生一段可以貼給 Claude 繼續深挖的 prompt。
 
-### 4.0 實際開講場次（交付單位）
-
-「S1–S5」是**內容來源大綱**（§4.1／§5），實際開講與維護的是下面這幾堂課，每堂一份獨立投影片 + 講稿 + 互動教具：
-
-| 堂 | 投影片 | 講稿 | 互動教具 | 這一堂在看哪一層 |
-|---|---|---|---|---|
-| **第一堂** | [full_series.pptx](slides/full_series.pptx)（34 頁） | [notes/full_series.md](notes/full_series.md) | [gpu_map](interactive/gpu_map.html)、[transformer_map](interactive/transformer_map.html) | **硬體本身**：roofline、記憶體階層、GPU 單元、Transformer 上機 |
-| **第二堂** | [class2_transformer_gpu.pptx](slides/class2_transformer_gpu.pptx)（24 頁） | [notes/class2_transformer_gpu.md](notes/class2_transformer_gpu.md) | [parallelism_map](interactive/parallelism_map.html) | **一張卡 → 多張卡**：逐 block 對應 GPU 單元；DP/TP/PP/EP 與互連 |
-| **第三堂** | [class3_engine_single_node.pptx](slides/class3_engine_single_node.pptx)（27 頁） | [notes/class3_engine_single_node.md](notes/class3_engine_single_node.md) | [serving_map](interactive/serving_map.html)（模式 1–4） | **推論引擎單機篇**：問題 ①–④，每題對比 **SGLang × vLLM** 兩種寫法 |
-| **第四堂** | [class4_sglang_multi_node.pptx](slides/class4_sglang_multi_node.pptx)（20 頁） | [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) | [serving_map](interactive/serving_map.html)（模式 5） | **SGLang 多機篇**：問題 ⑤–⑧（大規模 EP／PD 分離／cache-aware router／容錯） |
-| **第五堂** | [class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁） | [notes/class5_china_models.md](notes/class5_china_models.md) | — | **模型架構**：中國開源模型的五個旋鈕（壓 KV／少算／少看／一次多產／降精度） |
-| **第六堂（最終章）** | [class6_multi_rack_inference.pptx](slides/class6_multi_rack_inference.pptx)（20 頁） | [notes/class6_multi_rack_inference.md](notes/class6_multi_rack_inference.md)（骨架＋事實原子＋教具計算模型） | [rack_journey_map](interactive/rack_journey_map.html) | **組裝**：跟著一個請求（主角 SGLang 96×H100）穿過數個機櫃；真瓶頸＝scale-up 域大小；NVIDIA vs AMD 的條件式選型 |
-
-### 三、四堂共用一條主幹：推論引擎會撞到的八個問題
-
-不照功能表講，照**問題**講——每個機制都是被一個具體痛點逼出來的。而且**這八個問題不是某一家專有的**（SGLang 的發展史剛好把它們依序列了出來），**兩家都給了答案**，所以第三堂每一題都對比 SGLang 與 vLLM 的寫法。八個問題由淺入深剛好走完「編程模型 → 單機記憶體 → 單機排程 → 多卡 → 多機」：
-
-| # | 遇到的問題 | 解法 | 場次 |
-|---|---|---|---|
-| ① | LLM 程式（多次呼叫、分支、工具）難寫又跑不快 | SGLang：前端 DSL｜**vLLM：沒有對應物**（職責邊界的選擇） | 第三堂 |
-| ② | 這些程式天然共享大量前綴，卻被反覆重算 | 共同：分頁 KV + continuous batching｜索引：radix tree vs 鏈式雜湊表｜排程：主動 vs 被動 | 第三堂 |
-| ③ | 結構化輸出逐 token 檢查語法太慢、格式仍不保證 | 共同：XGrammar FSM + 位元遮罩｜差異：SGLang 的 jump-forward（約 3× 吞吐） | 第三堂 |
-| ④ | GPU 一步只要 5–10 ms，CPU 排程反而成了瓶頸 | 共同：CUDA Graph + chunked prefill｜SGLang：zero-overhead scheduler｜vLLM：多進程 + async | 第三堂 |
-| ⑤ | 大 MoE（DeepSeek）單機放不下、專家負載不均 | 大規模 EP + DeepEP / EPLB | 第四堂 |
-| ⑥ | prefill 與 decode 互相干擾（TTFT vs ITL） | PD 分離 | 第四堂 |
-| ⑦ | 多副本之間：快取局部性 vs 負載均衡此消彼長 | cache-aware router + KV 複製 | 第四堂 |
-| ⑧ | 副本掛掉，進行中的請求與它的 KV 怎麼辦 | 容錯 | 第四堂 |
-
-> **第四堂的開場框架**：先用「**經典分散式系統的八類共同問題**」（時間與順序、一致性、容錯、共識、通訊、並發、可擴展性、可觀測性）當影子，逐格對照到 GPU 叢集——看清楚哪些是被**規避**掉的（拜占庭、共識、CAP，因為放棄了「互不信任」與「執行期協商」）、哪些**變形**了（因果順序 → barrier 與 pipeline bubble；通訊可靠性 → 通訊效率）、哪些反而被**放大**成核心（可擴展性、部分失效、可觀測性）。關鍵轉折：**推論服務比訓練更像傳統分散式系統**——它是長期在線、有 SLO、有狀態（KV）散在各機的服務，所以「可用性」與「快取視圖不一致」這兩件在訓練場景可以忽略的事，在這裡回來了。詳見 [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md) §1。
-
-> **第五堂是另一個軸**：三、四堂是「框架從**外面**調」（一個模型權重都沒改），第五堂是「模型從**裡面**改」。兩邊打的是同一個敵人——decode 的 memory-bound 與 KV cache。
-
-### 4.1 內容來源大綱（S1–S5）
-
-| 場次 | 主題 | 核心問題 | 對應 demo |
-|---|---|---|---|
-| **S1** | 為什麼會慢？Roofline 與記憶體階層 | compute-bound vs memory-bound 怎麼判斷 | Roofline 實測、latency 數量級 |
-| **S2** | GPU 架構與 HBM：資料在晶片內怎麼走 | SM / warp / tensor core / HBM / shared memory | pinned vs pageable 傳輸、tiling 直覺 |
-| **S3** | Training vs Inference 的瓶頸差異（以 ASR 為例） | 為什麼 decode 是 memory-bound、KV cache 的角色 | batch sweep decode、ASR encoder/decoder 剖析 |
-| **S4** | 資料搬遷的關卡與記憶體方案 | PCIe / NVLink / GPUDirect Storage / Unified Memory | **prefetch / stream overlap 對照（壓軸 demo）** |
-| **S5** | 平行運算與軟硬體共同演化（番外進階場） | 為什麼平行度就是一切、模型設計 ⇄ 計算機結構怎麼互相塑造 | FLOPs vs 平行度（LSTM vs Transformer、dense vs depthwise） |
-
-> 彈性：若只辦一場 keynote，可走「S1 心智模型 → S3 ASR 案例 → S4 壓軸 demo」精簡線；完整讀書會則四場循序，S5 可作系列後的進階加場。
-> **S1–S5 合輯**（[slides/full_series.pptx](slides/full_series.pptx)，34 頁）是目前唯一維護的投影片，**聚焦「硬體架構 × Transformer」**：重編去重後的單份，五篇章「機器 → 一把尺 → 模型上機 → 資料搬遷 → 共同演化」。相對早期版**已移除 ASR 案例、NVLink/GPUDirect、Unified Memory 三種、進出站(PCIe/pinned)、靜態的「CPU vs GPU」與「GPU 解剖」（GPU 結構改由互動地圖承擔），並把「心法」折進記憶體階層頁**（以下 §4/§5 為原始 S1–S5 場次大綱，屬內容來源；合輯為其聚焦衍生版）。兩個互動環節：第 4 頁搭配 [interactive/gpu_map.html](interactive/gpu_map.html)（Cluster 下鑽到 SM、再到 CUDA/Tensor core）、第 25 頁搭配 [interactive/transformer_map.html](interactive/transformer_map.html)（玩具級 **decoder-only** Transformer，7 層 decoder 全景（自回歸）→Block（masked self-attn + FFN）→Attention→Head→計算子 matmul(L2⟷HBM)→FlashAttention(線上 softmax)→硬體 × 訓練/Prefill/Decode × GPU/TPU/Groq，含 KV cache 串流與 tensor core tiling，報告見 [notes/transformer_interactive.md](notes/transformer_interactive.md)）。第 8 頁「三層記憶體每 GB 價格」+「各家加速器比較」、TPU/Groq 硬體專頁見第 27–28 頁。次序對照見 [notes/full_series.md](notes/full_series.md)。單場版 pptx 已刪除，可由 `slides/build/generate_sX.js` 重建。
-
-## 5. 各場詳細大綱
-
-### S1 — 為什麼會慢？Roofline 與記憶體階層
-
-- **學習目標**：建立「先問是 compute-bound 還是 memory-bound」的反射動作。
-- **大綱**：
-  1. 一個熱身謎題：同樣的 GPU，為什麼 batch=1 的 LLM 解碼只用到 <5% 的算力？
-  2. CPU vs GPU 設計哲學：latency-oriented（大 cache、亂序執行）vs throughput-oriented（大量 thread 藏延遲）。
-  3. Arithmetic Intensity 推導 + Roofline 圖。
-  4. 記憶體階層全景（模型 B 的表）＋「latency numbers every DS should know」。
-- **關鍵數字**：ridge point 計算、各層頻寬數量級。
-- **Demo**：`demos/01_roofline_mini` — 跑不同形狀的矩陣乘法，量到的 TFLOPS 對照 roofline，看到瘦長矩陣掉進 memory-bound 區。
-
-### S2 — GPU 架構與 HBM：資料在晶片內怎麼走
-
-- **學習目標**：知道一個 kernel 從 HBM 取資料、經 L2、進 shared memory、到 register 的路徑，理解 HBM 為何存在。
-- **大綱**：
-  1. GPU 微架構：SM、warp（32 thread 一組）、CUDA core vs tensor core。
-  2. GPU 記憶體階層：global(HBM) / L2 / shared(L1) / register，各自誰能控制。
-  3. **HBM vs GDDR**：3D 堆疊、寬匯流排、為什麼資料中心卡用 HBM、成本與功耗代價。
-  4. Shared memory 與 tiling：為什麼「把資料留在晶片內重複用」能把 memory-bound 變 compute-bound（矩陣乘法 tiling 的直覺）。
-  5. Host↔Device 的橋：pinned（page-locked）vs pageable memory、DMA、為什麼 pageable 要過 bounce buffer。
-- **Demo**：`demos/02_pinned_vs_pageable` — 量 pinned vs pageable 的 H2D 頻寬差異（常見 ~1.5–2×）。
-
-### S3 — Training vs Inference 的瓶頸差異（以 ASR 為例）
-
-- **學習目標**：講清楚「為什麼訓練吃算力、自迴歸推論吃頻寬」，並用 ASR 落地。
-- **大綱**：
-  1. Training：大 batch → 大 GEMM → AI 高 → compute-bound；但 activations / gradients / optimizer states（Adam ≈ 2× 參數量 fp32）造成**容量**壓力。
-  2. Inference 兩階段：
-     - **Prefill**（吃整段 prompt）→ 大 GEMM → compute-bound。
-     - **Decode**（一次一 token、batch 小）→ GEMV、AI≈1–2 → **memory-bound**：每產一個 token 要把整份權重從 HBM 讀一遍。
-     - 粗估：7B fp16 ≈ 14 GB，÷ 3.35 TB/s ≈ 每 token ~4 ms 下限 → batch=1 約 ~250 tok/s 天花板。
-  3. **KV cache**：避免重算，但隨序列長度變大、每步都要讀 → 同時是頻寬與容量壓力。
-  4. **ASR 案例**（本場主軸）：
-     - Whisper 類（attention encoder–decoder）：encoder 平行、快；**decoder 自迴歸、逐 token、memory-bound → 延遲主因**。
-     - wav2vec2 + CTC：無自迴歸 decode、encoder 一次出結果 → 高度平行、推論快。
-     - 結論：**決定速度的不是 FLOPs 總量，而是記憶體存取型態與可平行度**。
-- **Demo**：`demos/03_decode_memory_bound` — 小模型 decode 的 batch sweep（batch=1 延遲≈權重/頻寬，加大 batch 幾乎不增加單步延遲 → 吞吐線性上升）；附 ASR encoder vs decoder 時間佔比剖析。
-
-### S4 — 資料搬遷的關卡與記憶體方案（壓軸 demo 場）
-
-- **學習目標**：盤點資料進出 GPU 的每一關，能在「容量/頻寬/成本」上替不同情境選方案。
-- **大綱**：
-  1. **進出站**：H2D / D2H copy、PCIe 為何是常見瓶頸、NVLink 如何改善多卡。
-  2. **SSD → GPU**：傳統路徑（SSD→CPU bounce buffer→HBM，CPU 介入兩跳）vs **GPUDirect Storage**（DMA 直達 HBM、繞過 CPU）；適用大資料集載入、大權重載入、KV cache offload。
-  3. **Unified Memory**：
-     - CUDA UVM：單一指標、page fault 觸發遷移、可超額配置（oversubscription），`cudaMemPrefetchAsync` 預取藏延遲；存取型態差會 thrash。
-     - **Apple 統一記憶體**：CPU/GPU 共用同一塊實體記憶體、**零複製**（與 NVIDIA「遷移式」UVM 本質不同）。
-     - **Grace Hopper**：Grace(LPDDR5X) + Hopper(HBM3) 以 NVLink-C2C(~900GB/s) 硬體一致性連接 → 又大又快的統一記憶體。
-  4. **GPU / 記憶體方案比較表**（見下節）。
-  5. **壓軸 demo**：`demos/04_prefetch_overlap` — 用 CUDA stream 把「搬下一批資料」與「算這一批」重疊（prefetch），對照 naïve 序列版本的吞吐提升；延伸到 DataLoader 的 `num_workers` + `pin_memory` + prefetch 對訓練 step time 的影響。
-
-### S5 — 平行運算與軟硬體共同演化：從 CNN 到 Transformer 到混合架構（番外進階場）
-
-- **學習目標**：理解「GPU 不是快，是寬」；能用三個硬體問題（平行軸 / AI / 序列鏈長）解讀模型架構的演化與取捨。
-- **大綱**：
-  1. 熱身：GPU 的單執行緒比 CPU 慢——GPU 把電晶體全換成寬度，沒有平行度就沒有 GPU。
-  2. 數字感 + Amdahl：H100 ≈ 16,896 條 lane、要 10⁵ 量級 thread 在飛；序列相依的 (1−p) 是加速天花板。
-  3. 平行度是模型「暴露」出來的：DL 的平行軸（batch / pixel / channel / token / layer）。
-  4. **硬體 → 模型**：CNN 等了 23 年等到 GPU（AlexNet）、hardware lottery；Transformer 的誕生動機就是平行化（取代 RNN 的序列鏈）。
-  5. **模型 → 硬體**：tensor core、TPU systolic array、H100 Transformer Engine、H200 141GB、精度 fp32→fp4 的共同演化。
-  6. **SOTA case studies**：MobileNet vs ConvNeXt（FLOPs ≠ 速度）；FlashAttention（演算法遷就記憶體階層）與 MQA/GQA（架構遷就頻寬）；Mamba/SSM 與混合架構（Jamba / Griffin / Conformer——呼應 S3 的 ASR）。
-  7. 收束框架：設計/選模型前先問三個硬體問題。
-- **Demo**：`demos/05_flops_vs_parallelism` — (A) 同規模 LSTM vs Transformer block：FLOPs 多 1.75× 反而快 ~2×；(B) dense vs depthwise conv：FLOPs ÷8.7 但時間只 ÷3.7（Apple M2 實測）。
-
-### 各 GPU / 記憶體方案速覽（約略值，選型用，以官方規格為準）
-
-| 方案 | 記憶體型態 | 容量級距 | 頻寬級距 | 定位 |
-|---|---|---|---|---|
-| RTX 4090 | GDDR6X | 24 GB | ~1 TB/s | 開發 / 本機實驗 |
-| A100 80GB | HBM2e | 80 GB | ~2 TB/s | 訓練 / 推論通用 |
-| H100 SXM | HBM3 | 80 GB | ~3.35 TB/s | 訓練 / 推論主力 |
-| H200 | HBM3e | 141 GB | ~4.8 TB/s | LLM 推論（吃頻寬+容量） |
-| Apple M 系列 | 統一 LPDDR | 可達 128–192 GB+ | ~400–800 GB/s | 本機跑大模型（容量夠、頻寬低 → 慢但跑得動） |
-| Grace Hopper GH200 | HBM3 + LPDDR5X | 96 GB HBM + ~480 GB | HBM ~4 TB/s | 超大模型 / 大 KV cache |
-
-> 選型心法：**自迴歸推論（memory-bound）看頻寬與容量，不是峰值 FLOPS。** 這就是為什麼 Apple 統一記憶體「跑得動大模型但慢」、H200/Grace Hopper 主打頻寬與容量。
-
-## 6. Demo 總表
-
-| Demo | 展示的核心概念 | 量測指標 | 預期觀察 |
-|---|---|---|---|
-| `01_roofline_mini` | compute vs memory bound | 達成 TFLOPS vs 矩陣形狀 | 瘦長矩陣掉進 memory-bound |
-| `02_pinned_vs_pageable` | 進出站與 DMA | H2D 頻寬 (GB/s) | pinned 快 ~1.5–2× |
-| `03_decode_memory_bound` | training vs inference 瓶頸 | tokens/s vs batch | batch=1 受頻寬限、加 batch 吞吐線性升 |
-| `04_prefetch_overlap` | **預先搬資料的效益（壓軸）** | 吞吐 / step time | stream overlap / prefetch 明顯提升 |
-| `05_flops_vs_parallelism` | FLOPs ≠ 速度（S5） | GFLOPs / ms / 達成 TFLOPS | LSTM 輸給 FLOPs 更多的 transformer；depthwise 省 FLOPs 不省時間 |
-
-- **工具**：`torch.cuda.Event`（計時）、`torch.profiler`、`nvidia-smi dmon`、Nsight Systems（`nsys`）看時間軸上的 memcpy 停頓。
-- **環境**：優先用既有 `lora-image-gen` 的 RunPod GPU 流程跑（見根目錄 README）；本機 Apple Silicon 可跑 Apple 統一記憶體對照組。
-
-## 7. 產出物與資料夾結構
-
-每場交付：**投影片（.pptx）+ 講稿（speaker script）+ demo 程式 + 筆記**。
+## 資料夾
 
 ```
 gpu-memory-reading-club/
-├── README.md          # 本檔：系列主規劃
-├── slides/            # 投影片（pptxgenjs 腳本產生，見 slides/build/）
-│   ├── full_series.pptx        # 第一堂課：S1–S5 合輯（34 頁，硬體架構 × Transformer）
-│   ├── class2_transformer_gpu.pptx     # 第二堂課：Transformer × GPU 框架（24 頁，單卡逐 block → 多卡平行與互連）
-│   ├── class3_engine_single_node.pptx  # 第三堂課：推論引擎單機篇 SGLang × vLLM（28 頁，問題 ①–④）
-│   ├── class4_sglang_multi_node.pptx   # 第四堂課：SGLang 多機篇（20 頁，問題 ⑤–⑧）
-│   ├── class5_china_models.pptx        # 第五堂課：中國開源模型的五個旋鈕（16 頁）
-│   └── class6_multi_rack_inference.pptx # 第六堂課（最終章）：一個字穿過一整排機櫃（20 頁，主角 SGLang 96×H100）
-├── interactive/       # 互動教具
-│   ├── gpu_map.html            # Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 互動下鑽地圖（合輯第 4 頁指引開啟）
-│   ├── transformer_map.html    # 玩具級 decoder-only Transformer（T=5、d=6、2 heads）7 層 decoder 全景→…→計算子 matmul(L2⟷HBM)→FlashAttention(線上 softmax)→硬體 × 三模式 × GPU/TPU/Groq（KV 串流、tensor core tiling；第 25 頁指引）
-│   ├── interconnect_map.html   # NVIDIA 互連與通訊協定 6 層下鑽（全景階梯→NVLink/NVSwitch/C2C→PCIe→InfiniBand/Spectrum-X→GPUDirect→CMX）；scale-up/out 視角切換、IB↔乙太分頁、資料流動畫（獨立教具）
-│   ├── parallelism_map.html    # 玩具 Transformer 攤到多卡：單卡 → 裝不下 → DP → TP → PP → 互連硬體（第二堂第 23 頁指引）
-│   ├── serving_map.html        # 推論服務地圖：Naive / Continuous batching / Paged KV / Radix 前綴共用 / PD 分離 五種模式的 GPU 時間軸、HBM 佔用與 roofline 位置（第三堂第 12 頁指引）
-│   └── rack_journey_map.html   # 機櫃群推論旅程地圖：全景（四種資料 × 四條路）/ KV 交接（SGLang 推 vs vLLM 拉 + 傳輸時間）/ Decode 一步（8 個專家落點、跨域比例、每卡 HBM）/ 時間帳；H100·B200·GB200 NVL72·MI355X 四種硬體切換（第六堂第 13 頁指引）
-├── demos/             # 可重現的 demo 程式與量測腳本
-│   ├── 01_roofline_mini/
-│   ├── 02_pinned_vs_pageable/
-│   ├── 03_decode_memory_bound/
-│   ├── 04_prefetch_overlap/
-│   └── 05_flops_vs_parallelism/
-└── notes/             # 各場深入筆記 / 講稿 / 推導
+├── index.html        # 網站首頁（GitHub Pages 單一入口）
+├── slides/           # 六份 HTML 投影片（產生物，不要手改）
+│   └── build/        # 投影片原始碼：generate_*.js + pptx-html.js 轉接層 + deck-template.html
+├── notes/            # 各堂講稿（Markdown）、術語表 glossary.md；view.html 是講稿閱讀器
+├── interactive/      # 六個互動教具（單檔 HTML）
+├── quiz/             # 複習測驗：index.html + questions.js 題庫
+├── demos/            # 五支可重現的 PyTorch demo
+├── references/       # 外部參考資料
+└── assets/site.css   # 首頁、講稿、測驗共用樣式
 ```
 
-- **目前輸出格式**：以 `.pptx` 與 Markdown（README / notes）為主；講稿可放 `notes/`。
-- 投影片走「一頁一概念、圖優先、數字標清楚單位」風格。
+## 修改投影片
 
-## 8. 參考主題（待補來源連結）
+投影片內容寫在 `slides/build/generate_*.js`（沿用 pptxgenjs 的 API：`addText`／`addShape`／`addTable`／`addChart`，座標單位是英吋）。`pptx-html.js` 把這些呼叫轉成等比縮放的 HTML，不需要安裝任何套件：
 
-> 📖 系列用到的所有縮寫（GEMM / HBM / KV cache / MMA / GQA…）的英文全稱 + 中文 + 一句話說明，見 [notes/glossary.md](notes/glossary.md)。
+```bash
+cd slides/build
+node generate_full.js      # → ../full_series.html（第一堂），其餘 generate_class2..6.js 同理
+```
 
-- Roofline model（Williams et al.）/ Arithmetic intensity
-- GPU memory hierarchy 與 CUDA best practices（pinned memory、stream、tiling）
-- LLM inference 的 memory-bound 本質、KV cache、prefill vs decode
-- ASR 架構對照：Whisper（attention decoder）vs wav2vec2/Conformer + CTC
-- GPUDirect Storage、CUDA Unified Memory、Apple 統一記憶體、Grace Hopper 架構
-- NVIDIA 互連與通訊協定：NVLink / NVSwitch / NVLink-C2C（scale-up）、PCIe、InfiniBand（Quantum）vs Spectrum-X 乙太網（RoCE）、GPUDirect RDMA、NCCL
-- NVIDIA CMX（Context Memory，2026）：KV cache 卸載到 G3.5 層（BlueField-4 DPU + Spectrum-X flash）、DOCA Memos / Dynamo / NIXL、長上下文與 agentic 推論
-- The Hardware Lottery（Sara Hooker）／Attention is All You Need 的平行化動機
-- FlashAttention（IO-aware exact attention）、MQA/GQA、Mamba/SSM 與混合架構（Jamba、Griffin、Conformer）
+版面是固定尺寸的文字框，改字時注意長度，改完在瀏覽器看一眼有沒有溢出。投影片頁按 `F` 進簡報模式，網址加 `#s12` 可直接跳頁。
 
-## 9. 里程碑與下一步
+講稿是 Markdown，直接改 `notes/*.md`；網站上由 `notes/view.html?doc=<檔名>` 在瀏覽器端渲染。本機預覽要起一個伺服器（`fetch` 不能讀 `file://`）：
 
-- [x] **M0**：系列主規劃（本檔）
-- [x] **M1**：S1 roofline demo + 講稿（投影片已整併入合輯，可由 `slides/build/generate_s1.js` 重建）
-  - Demo [demos/01_roofline_mini](demos/01_roofline_mini)（已 CPU smoke test）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 1–2；單場講稿已併入後刪除）
-- [x] **M2**：S2 pinned vs pageable demo + 講稿（投影片已整併，`generate_s2.js` 可重建）
-  - Demo [demos/02_pinned_vs_pageable](demos/02_pinned_vs_pageable)（需 GPU）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 1–2）
-- [x] **M3**：S3 decode/ASR demo + 講稿（核心場；投影片已整併，`generate_s3.js` 可重建）
-  - Demo [demos/03_decode_memory_bound](demos/03_decode_memory_bound)（batch sweep + ASR proxy，已 CPU smoke test）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 3）
-- [x] **M4**：S4 prefetch 壓軸 demo + 講稿（投影片已整併，`generate_s4.js` 可重建）
-  - Demo [demos/04_prefetch_overlap](demos/04_prefetch_overlap)（需 GPU）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 4）
-- [x] **M5**：S5 FLOPs vs 平行度 demo + 講稿（番外進階場；投影片已整併，`generate_s5.js` 可重建）
-  - Demo [demos/05_flops_vs_parallelism](demos/05_flops_vs_parallelism)（已在 Apple M2 / MPS 實測）｜講稿見合輯 [notes/full_series.md](notes/full_series.md)（Part 5）
-- [x] **M6**：S1–S5 合輯 + 互動地圖
-  - 合輯 [slides/full_series.pptx](slides/full_series.pptx)（34 頁，聚焦硬體×Transformer；次序對照 [notes/full_series.md](notes/full_series.md)）
-  - 互動地圖 [interactive/gpu_map.html](interactive/gpu_map.html)（Cluster → Node → GPU → SM → 運算單元(CUDA/Tensor) 下鑽，合輯第 4 頁指引開啟）
-- [x] **M7**：玩具級 Transformer 互動地圖 + TPU 專頁
-  - 互動地圖 [interactive/transformer_map.html](interactive/transformer_map.html)（T=5、d=6、2 heads，**decoder-only**；七層 decoder 全景（自回歸）→ Block（masked self-attn + FFN）→ Attention → Head → 計算子 matmul(L2⟷HBM 搬運) → **FlashAttention（線上 softmax 6 步驟：HBM/SRAM 大小 → safe softmax → 分塊找 max → 分塊找 Σ → 分塊算 o → 取代整個 S）** → 硬體；訓練/Prefill/Decode 三模式；GPU/TPU/Groq 切換含脈動陣列動畫）
-  - 報告 [notes/transformer_interactive.md](notes/transformer_interactive.md)；合輯第 25 頁（互動環節②）、第 27 頁（TPU）、第 28 頁（Groq）、第 8 頁（每 GB 價格）
-- [x] **M8**：NVIDIA 互連與通訊協定互動地圖（含 2026 CMX）
-  - 互動地圖 [interactive/interconnect_map.html](interactive/interconnect_map.html)（六層下鑽：全景階梯 → NVLink/NVSwitch/C2C（scale-up）→ PCIe → InfiniBand/Spectrum-X（scale-out）→ GPUDirect → CMX；scale-up/scale-out 視角切換、IB↔乙太分頁、資料流動畫）
-  - 把合輯為聚焦而移除的 NVLink/GPUDirect/網路等互連主題以獨立教具補回，並新增 NVIDIA 2026 的 **CMX（Context Memory）**：KV cache 卸載到 G3.5 層（BlueField-4 + Spectrum-X flash），呼應 Part 3 decode memory-bound 與 Part 4 prefetch。詞條見 [notes/glossary.md](notes/glossary.md) §12
+```bash
+python3 -m http.server 8000   # 在本資料夾執行，然後開 http://localhost:8000/
+```
 
-- [x] **M9**：第二堂課 — Transformer × GPU 框架（獨立投影片 + 新互動地圖）
-  - 投影片 [slides/class2_transformer_gpu.pptx](slides/class2_transformer_gpu.pptx)（24 頁）：**Part A** 玩具 Transformer（T=6、d=6、2 heads）逐 block 對應 GPU 單元（Embedding→QKV→多頭→Attention→Add&Norm→FFN，各自 tensor/CUDA core、compute/memory-bound；單卡跑得完）｜**Part B** 一張卡裝不下 → **資料平行的四個問題** → TP/PP/EP → NVIDIA 互連新技術（NVLink5/NVSwitch/NVL72、SHARP/NCCL、IB/Spectrum-X/GPUDirect、**Rubin/NVLink6**、**CMX 2026**）
-  - 講稿 [notes/class2_transformer_gpu.md](notes/class2_transformer_gpu.md)（頁面地圖、逐 block 速查、四種平行對照、互連數字與來源、關鍵推導、Q&A）
-  - 新互動地圖 [interactive/parallelism_map.html](interactive/parallelism_map.html)（第 23 頁指引）：同一個玩具 Transformer 攤到多卡，六層 單卡 → 裝不下 → DP → TP → PP → 互連硬體；TP/PP 兩層畫出「一層」的權重矩陣（Wq/Wk/Wv/Wo + W1/W2）怎麼被切
-- [x] **M10**：第三堂課 — SGLang 單機篇（獨立投影片 + 新互動地圖）
-  - 投影片 [slides/class3_engine_single_node.pptx](slides/class3_engine_single_node.pptx)（27 頁）：主幹是**問題導向，而且一個問題兩種寫法**。地基（batch=1 decode 只用 0.34% 算力 → AI ≈ B）｜**問題①** 程式難平行（SGLang 前端 DSL vs **vLLM 沒有對應物**——職責邊界的選擇）｜**問題②** 前綴重算（共同地基：分頁 KV、continuous batching；對比 a 索引層：radix tree vs 鏈式雜湊表；對比 b 排程：cache-aware 主動 vs 被動，含「RadixAttention vs PagedAttention 是假對立」澄清與選型判準）｜**問題③** 輸出不可控（共同地基：**兩家預設都是 XGrammar**；差異：jump-forward decoding 約 3× 吞吐；含與②的正交性紅線）｜**問題④** CPU 成瓶頸（zero-overhead scheduler vs 多進程+async）｜天花板：投機解碼·MTP、量化｜收尾：**四問題 × 兩種寫法總表**
-  - 講稿 [notes/class3_engine_single_node.md](notes/class3_engine_single_node.md)（八問題全景、兩家哲學差異、頁面地圖、關鍵推導、Q&A、資料來源）
-  - 新互動地圖 [interactive/serving_map.html](interactive/serving_map.html)（第 16 頁指引）：同一批請求在 Naive → Continuous batching → Paged KV → Radix 前綴共用 → PD 分離 五種模式下，GPU 時間軸、HBM 佔用、有效 batch、算術強度與 roofline 位置怎麼變（**第三堂用模式 1–4，模式 5 留給第四堂**）
-- [x] **M11**：第四堂課 — SGLang 多機篇
-  - 投影片 [slides/class4_sglang_multi_node.pptx](slides/class4_sglang_multi_node.pptx)（20 頁）：**Part A** 用經典分散式系統的八類共同問題當影子，逐格對照 GPU 推論叢集（規避／變形／放大）、共同的底層結構（三個物理事實）、關鍵轉折（推論服務比訓練更像分散式系統）｜**⑤** 大 MoE → 大規模 EP（all-to-all 代價、專家負載不均＝資料傾斜、EPLB、落地數字）｜**⑥** P/D 互擾 → PD 分離（含 KV 所有權轉移的影子）｜**⑦** 多機調度 → cache-aware router（**壓軸推導：該搬還是該重算**，串起第二/三/四堂）｜**⑧** 容錯（KV 是可重算的快取 + 四個開放問題）｜收尾：三個換了名字的老問題、四家架構取向橫向比較
-  - 講稿 [notes/class4_sglang_multi_node.md](notes/class4_sglang_multi_node.md)
-  - 待做：互動教具 `interactive/router_map.html`（Round Robin / 內容感知 / cache-aware+複製 三種路由下各機的命中率與負載）
-- [x] **M12**：第五堂課 — 中國開源模型的五個旋鈕
-  - 投影片 [slides/class5_china_models.pptx](slides/class5_china_models.pptx)（16 頁）：五個旋鈕（壓 KV／少算／少看／一次多產／降精度）× 五個實驗室（DeepSeek／Kimi／MiniMax／Qwen／GLM）。含 **MiniMax M1→M2→M3 反例兩頁**（No Free Lunch：評測會騙人、理論 FLOPs ≠ wall-clock、卡在 KV cache／prefix caching／投機解碼三個生產系統）與**「為什麼他們連 kernel 都開源」**（FlashMLA / DeepEP / DeepGEMM / EPLB 各自讓哪個旋鈕跑得動）
-  - 講稿 [notes/class5_china_models.md](notes/class5_china_models.md)
-- [x] **M13**：第六堂課（最終章）— 一個字，穿過一整排機櫃
-  - 投影片 [slides/class6_multi_rack_inference.pptx](slides/class6_multi_rack_inference.pptx)（20 頁）：鉤子與拆法（四種資料 × 四條路）｜跟著一個請求走（router → prefill → KV 交接 → decode 一步 → 通訊時間帳 → 為何便宜 → 代價）｜互動環節｜合回來：真瓶頸＝scale-up 域大小（B200 vs GB200 每卡 4.4×）｜NVIDIA vs AMD 三頁｜旅程 × 全系列
-  - 講稿 [notes/class6_multi_rack_inference.md](notes/class6_multi_rack_inference.md)（20 頁標題鏈、逐頁事實原子與強度、視覺決策、教具計算模型與 DeepEP 校準）
-  - 2026-09-14 骨架決定：主角＝SGLang 96×H100（DeepSeek 官方只當鉤子）、保留四種資料地圖、AMD 集中後段 3 頁、收尾只留全系列對照（1M context 移附錄）
-  - [x] 互動教具 [interactive/rack_journey_map.html](interactive/rack_journey_map.html)（第 13 頁指引；第 7、9 頁對應第 2、3 層）
-  - 主軸：拆散變便宜的前提是「最常搬的資料走最快的路」——四種資料（請求／KV／MoE 交換／權重）× 四條路（前端乙太／RDMA／NVLink 域／儲存）；合回來指出真瓶頸是 scale-up 域大小（B200 vs GB200 每卡 4.4×），再推論 NVIDIA vs AMD（MI355X 一台 2.3 TB vs 8 卡網狀、Helios 72 卡）
+## Demo
 
-> 🎉 全系列內容已整併為單份合輯 + 第二/三堂課獨立場 + 五張互動地圖。後續可選：把 demo 在 RunPod GPU 上實跑、補真實數據回填投影片的「示意」表格（demo 05 已有 M2/MPS 實測數據）；把 interconnect_map / CMX 接進合輯投影片（目前為獨立教具）；新增 demo 06「vLLM batch sweep + prefix caching 開關」實測，回填第三堂的示意值。
+需要 PyTorch。記憶體效應要在 CUDA GPU 上才明顯；計時一律 warmup → `torch.cuda.synchronize()` 圍住 → 取中位數。
+
+| Demo | 對應 | 怎麼跑 | 預期看到 |
+|---|---|---|---|
+| `01_roofline_mini` | 第一堂 roofline | `python run.py --peak-tflops 990 --peak-bw 3.35` | GEMV、瘦長矩陣的 AI ≈ 1–2，落在 memory-bound 斜線；方陣隨邊長逼近峰值 |
+| `02_pinned_vs_pageable` | 第一堂 資料進出 GPU | `python run.py`（需 CUDA） | pinned 比 pageable 快約 1.5–2×，大尺寸逼近 PCIe 上限 |
+| `03_decode_memory_bound` | 第一堂 decode | `python run.py --peak-bw 3.35`；`python asr_proxy.py` | batch 小時單步延遲幾乎不變、吞吐隨 batch 線性上升；同 FLOPs 下序列 decoder 比平行 encoder 慢數倍 |
+| `04_prefetch_overlap` | 第一堂 prefetch 壓軸 | `python run.py`（需 CUDA） | 兩條 stream 把搬運藏在運算後面，理想上限約 2× |
+| `05_flops_vs_parallelism` | 第一堂 共同演化 | `python run.py`（cuda > mps > cpu） | Apple M2 實測：Transformer FLOPs 多 1.75× 卻快 1.9×；depthwise FLOPs ÷8.7 但時間只 ÷3.7 |
+
+每支 `run.py` 都有 `--help`，參數說明寫在檔頭註解。
+
+## 待辦
+
+- CMX 的能效，第二堂寫約 4×、術語表寫約 5×，開講前以 NVIDIA 官方頁統一。
+- 第四堂的 `router_map.html`（三種路由策略下各機的命中率與負載）尚未製作。
+- demo 01–04 在 RunPod GPU 上實跑，把實測數字回填投影片的示意表格。
