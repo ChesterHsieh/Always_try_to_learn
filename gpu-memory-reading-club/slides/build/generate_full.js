@@ -97,7 +97,7 @@ const P1 = "Part 1 · 機器", P2 = "Part 2 · 一把尺", P3 = "Part 3 · 模�
   ], { x: MX, y: 2.35, w: 8.3, h: 2.0, fontFace: HEAD, fontSize: 46, bold: true, color: INK, lineSpacingMultiple: 1.06, margin: 0 });
   s.addText("從 roofline 與記憶體階層出發，看懂訓練/推論的瓶頸、資料搬遷的每道關卡，", { x: MX, y: 4.75, w: 11.5, h: 0.45, fontFace: BODY, fontSize: 17, color: MUTE, margin: 0 });
   s.addText("最後拉高視角：模型設計與計算機結構如何互相塑造（CNN → Transformer → 混合架構）。", { x: MX, y: 5.25, w: 11.5, h: 0.45, fontFace: BODY, fontSize: 17, color: MUTE, margin: 0 });
-  s.addText("聽眾：data science 背景 · 六堂系列第一堂（原 S1–S5 重編）", { x: MX, y: 6.05, w: 11.0, h: 0.4, fontFace: BODY, fontSize: 13, color: FOOTC, margin: 0 });
+  s.addText("聽眾：data science 背景 · 四堂系列第一堂（原 S1–S5 重編）", { x: MX, y: 6.05, w: 11.0, h: 0.4, fontFace: BODY, fontSize: 13, color: FOOTC, margin: 0 });
 })();
 
 // ============================================================ 2 兩個謎題

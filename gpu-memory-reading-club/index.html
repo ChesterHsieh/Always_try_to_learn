@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GPU 記憶體讀書會</title>
-<meta name="description" content="六堂課，從 roofline 與記憶體階層一路走到機櫃群推論：投影片、講稿、互動教具與複習測驗。">
+<meta name="description" content="四堂課，從 roofline 與記憶體階層一路走到機櫃群推論：投影片、講稿、互動教具與複習測驗。">
 <link rel="stylesheet" href="assets/site.css">
 <style>
   header.hero { padding: 40px 0 24px; }
@@ -51,7 +51,7 @@
 <body>
 <main class="wrap">
   <header class="hero">
-    <p class="eyebrow">GPU MEMORY READING CLUB · 六堂課</p>
+    <p class="eyebrow">GPU MEMORY READING CLUB · 四堂課</p>
     <h1>為什麼同一個模型，換個搬資料的方式就差十倍？</h1>
     <p class="lede">給會寫 PyTorch、但沒碰過 CUDA 與計算機組織的 data science／ML 工程師。從一張 GPU 的記憶體階層出發，一路走到上百張卡的推論叢集：每一堂都在回答「資料在哪、怎麼搬、誰在等誰」。</p>
     <div class="models">
@@ -61,8 +61,8 @@
   </header>
 
   <section aria-labelledby="classes-h">
-    <h2 id="classes-h">六堂課</h2>
-    <p class="h2-sub">同一個敵人（decode 是 memory-bound），六個高度：硬體的尺 → 單卡到多卡 → 單機引擎 → 多機服務 → 模型架構 → 裝回機櫃。照順序讀，每一堂都接住上一堂留下的問題。</p>
+    <h2 id="classes-h">四堂課</h2>
+    <p class="h2-sub">同一個敵人（decode 是 memory-bound），四個高度：硬體的尺 → 單卡到多卡 → 單機引擎 → 從模型架構到一整排機櫃。照順序讀，每一堂都接住上一堂留下的問題。</p>
     <div class="classes">
       <article class="class">
         <div class="no">1</div>
@@ -84,21 +84,9 @@
       </article>
       <article class="class">
         <div class="no">4</div>
-        <h3>SGLang 多機篇<span class="layer">多台機器的協調</span></h3>
-        <p>先用經典分散式系統的八類問題當影子，再走問題⑤–⑧：大 MoE 的大規模 EP、prefill／decode 分離、cache-aware router（KV 該搬還是該重算）、副本掛掉時的容錯。</p>
-        <div class="links"><a class="main" href="slides/class4_sglang_multi_node.html">投影片 · 20 頁</a><a href="notes/view.html?doc=class4_sglang_multi_node">講稿</a><a href="interactive/serving_map.html">推論服務地圖（模式 5）</a><a href="quiz/index.html?class=4">複習測驗</a></div>
-      </article>
-      <article class="class">
-        <div class="no">5</div>
-        <h3>中國開源模型的五個旋鈕<span class="layer">從模型內部改</span></h3>
-        <p>三、四堂是框架從外面調，這一堂是模型從裡面改：壓 KV、少算、少看、一次多產、降精度，對照 DeepSeek／Kimi／MiniMax／Qwen／GLM，以及 MiniMax 的反例與「為什麼連 kernel 都開源」。</p>
-        <div class="links"><a class="main" href="slides/class5_china_models.html">投影片 · 16 頁</a><a href="notes/view.html?doc=class5_china_models">講稿</a><a href="quiz/index.html?class=5">複習測驗</a></div>
-      </article>
-      <article class="class">
-        <div class="no">6</div>
-        <h3>最終章：一個字，穿過一整排機櫃<span class="layer">全部組裝起來</span></h3>
-        <p>跟著一個請求穿過 SGLang 96×H100 叢集：四種資料 × 四條路，拆散變便宜的前提是最常搬的資料走最快的路。真瓶頸是 scale-up 域的大小，由此推 NVIDIA 與 AMD 的條件式選型。</p>
-        <div class="links"><a class="main" href="slides/class6_multi_rack_inference.html">投影片 · 20 頁</a><a href="notes/view.html?doc=class6_multi_rack_inference">講稿</a><a href="interactive/rack_journey_map.html">機櫃旅程地圖</a><a href="quiz/index.html?class=6">複習測驗</a></div>
+        <h3>最終章：從模型到機櫃<span class="layer">模型內部 → 全部組裝起來</span></h3>
+        <p>前半先認識要搬上機櫃的模型：decode 怎麼一次吐一個字、MoE 怎麼挑專家，再用五個旋鈕（壓 KV、少算、少看、一次多產、降精度）過一遍 DeepSeek／Kimi／MiniMax／Qwen／GLM 的思路。後半跟著一個請求穿過 SGLang 96×H100 叢集：四種資料 × 四條路，真瓶頸是 scale-up 域的大小。</p>
+        <div class="links"><a class="main" href="slides/class4_models_to_racks.html">投影片 · 28 頁</a><a href="notes/view.html?doc=class4_models_to_racks">講稿</a><a href="interactive/rack_journey_map.html">機櫃旅程地圖</a><a href="interactive/serving_map.html">推論服務地圖（模式 5 PD 分離）</a><a href="quiz/index.html?class=4">複習測驗</a></div>
       </article>
     </div>
   </section>
@@ -112,7 +100,7 @@
       <a class="tile" href="interactive/parallelism_map.html"><b>平行切分地圖</b><span>同一個玩具模型攤到多卡：裝不下 → DP → TP → PP，看權重矩陣怎麼被切。</span><small>第二堂</small></a>
       <a class="tile" href="interactive/interconnect_map.html"><b>NVIDIA 互連地圖</b><span>NVLink／NVSwitch／C2C、PCIe、InfiniBand vs Spectrum-X、GPUDirect、CMX 六層下鑽。</span><small>第二堂延伸</small></a>
       <a class="tile" href="interactive/serving_map.html"><b>推論服務地圖</b><span>Naive → continuous batching → paged KV → radix 前綴共用 → PD 分離，看時間軸、HBM 與 roofline 位置。</span><small>第三、四堂</small></a>
-      <a class="tile" href="interactive/rack_journey_map.html"><b>機櫃旅程地圖</b><span>KV 交接、decode 一步的專家落點、通訊時間帳；H100／B200／GB200 NVL72／MI355X 切換。</span><small>第六堂</small></a>
+      <a class="tile" href="interactive/rack_journey_map.html"><b>機櫃旅程地圖</b><span>KV 交接、decode 一步的專家落點、通訊時間帳；H100／B200／GB200 NVL72 切換。</span><small>第四堂</small></a>
     </div>
   </section>
 

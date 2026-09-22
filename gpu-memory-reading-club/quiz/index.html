@@ -60,7 +60,7 @@
 <script src="questions.js"></script>
 <script>
 (() => {
-  const DECKS = ["full_series", "class2_transformer_gpu", "class3_engine_single_node", "class4_sglang_multi_node", "class5_china_models", "class6_multi_rack_inference"];
+  const DECKS = ["full_series", "class2_transformer_gpu", "class3_engine_single_node", "class4_models_to_racks"];
   const KEYS = "ABCD";
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const stage = document.getElementById("stage");

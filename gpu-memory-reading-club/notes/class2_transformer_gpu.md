@@ -86,9 +86,9 @@
 ### scale-up（NVLink / NVSwitch）— TP / EP 的家
 - **NVLink 4（Hopper, H100/H200）**：~900 GB/s / GPU（**雙向合計**；每方向 450 GB/s）。
 - **NVLink 5（Blackwell, GB200）**：**1.8 TB/s / GPU**（雙向合計；18 條 × 100 GB/s，≈ PCIe Gen5 雙向的 14×；每方向 900 GB/s）。
-- ⚠️ **單位約定**：NVIDIA 規格頁的 NVLink 數字都是**雙向合計**；IB / 乙太的 400G ≈ 50 GB/s 是**每方向**。本堂投影片照官方寫法（已標「雙向」），[第六堂](class6_multi_rack_inference.md)計算單向傳輸時間時一律換成每方向（NVLink 4 = 450、NVLink 5 = 900 GB/s）。
+- ⚠️ **單位約定**：NVIDIA 規格頁的 NVLink 數字都是**雙向合計**；IB / 乙太的 400G ≈ 50 GB/s 是**每方向**。本堂投影片照官方寫法（已標「雙向」），[第四堂](class4_models_to_racks.md)計算單向傳輸時間時一律換成每方向（NVLink 4 = 450、NVLink 5 = 900 GB/s）。
 - **NVSwitch（4 代）**：72 個 NVLink 5 埠 / 晶片；**GB200 NVL72＝72 顆一個 NVLink 域、130 TB/s 聚合**；fabric 可擴到 576 GPU / 1 PB/s。
-- **NVLink 6（Rubin, 2026 最新）**：**3.6 TB/s / GPU**（雙向；NVLink 5 的 2×）；**Vera Rubin NVL72＝260 TB/s 聚合**（CES 2026 前由舊名 NVL144 改回 NVL72，數的是 72 個封裝）。CES 2026（1/5）發表、GTC 2026（3/16）、H2 2026 出貨；第六堂引用 2026-05-31 宣布量產、秋季出貨。**Rubin CPX** 把 **prefill 拆出來**專做（即 PD 分離，第四堂問題⑥）。
+- **NVLink 6（Rubin, 2026 最新）**：**3.6 TB/s / GPU**（雙向；NVLink 5 的 2×）；**Vera Rubin NVL72＝260 TB/s 聚合**（CES 2026 前由舊名 NVL144 改回 NVL72，數的是 72 個封裝）。CES 2026（1/5）發表、GTC 2026（3/16）、H2 2026 出貨；第四堂引用 2026-05-31 宣布量產、秋季出貨。**Rubin CPX** 把 **prefill 拆出來**專做（即 PD 分離，第四堂問題⑥）。
 
 ### in-network（SHARP + NCCL）
 - **SHARP（Scalable Hierarchical Aggregation and Reduction Protocol）**：把 all-reduce / reduce / broadcast 的加總**直接在 NVSwitch / IB 交換器的 ASIC 裡算完** → 省 NVLink 頻寬、也把 GPU 的 SM 解放出來算模型。
