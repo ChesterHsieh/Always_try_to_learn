@@ -22,9 +22,7 @@ const DECKS = {
   full_series: [1, "full_series"],
   class2_transformer_gpu: [2, "class2_transformer_gpu"],
   class3_engine_single_node: [3, "class3_engine_single_node"],
-  class4_sglang_multi_node: [4, "class4_sglang_multi_node"],
-  class5_china_models: [5, "class5_china_models"],
-  class6_multi_rack_inference: [6, "class6_multi_rack_inference"],
+  class4_models_to_racks: [4, "class4_models_to_racks"],
 };
 
 // ---------- 單位換算 ----------

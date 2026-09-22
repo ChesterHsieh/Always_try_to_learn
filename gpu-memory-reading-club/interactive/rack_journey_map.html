@@ -207,7 +207,7 @@
 <div id="topbar">
   <div id="crumbs"></div>
   <div id="hwsw"></div>
-  <div id="hint"><kbd>1</kbd>–<kbd>4</kbd> 切層 · <kbd>H</kbd><kbd>B</kbd><kbd>G</kbd><kbd>A</kbd> 切硬體 · <kbd>空白鍵</kbd> 播放／暫停</div>
+  <div id="hint"><kbd>1</kbd>–<kbd>4</kbd> 切層 · <kbd>H</kbd><kbd>B</kbd><kbd>G</kbd> 切硬體 · <kbd>空白鍵</kbd> 播放／暫停</div>
 </div>
 
 <div id="stage">
@@ -225,8 +225,8 @@
 // ─────────────────────────────────────────────────────────────
 // 情境：DeepSeek-V3（61 層、58 層 MoE、256 routed 專家選 8、hidden 7168、MLA）
 // 主角：SGLang 96×H100 —— prefill 4 台（EP32）、decode 9 台（EP72）、每卡 256 序列
-// 對照：B200 8 卡機、GB200 NVL72、AMD MI355X 8 卡機
-// 所有頻寬一律「每方向」。計算模型見 notes/class6_multi_rack_inference.md §6
+// 對照：B200 8 卡機、GB200 NVL72
+// 所有頻寬一律「每方向」。計算模型見 notes/class4_models_to_racks.md §6
 // ─────────────────────────────────────────────────────────────
 
 const HW = {
@@ -254,16 +254,8 @@ const HW = {
     anchor: "<b>4,130 tok/s／GPU</b> @ 125 tok/s/user（decode EP16，其餘條件同 B200）· $0.149／1M",
     src: "SemiAnalysis InferenceX 2026-05-23（第三方）",
   },
-  mi355x: {
-    key: "a", name: "AMD MI355X 8 卡機", short: "MI355X 8 卡", tag: "8 卡全網狀 · 單卡 288 GB",
-    domain: 8, upDir: 537.6, upShort: "xGMI",
-    upLabel: "xGMI 全網狀（超頻 PCIe 5、無交換器）· 每對 76.8 GB/s × 7",
-    nic: 50, nicLabel: "Pensando Pollara 400 × 8", hbm: 288,
-    anchor: "<b>2,436 tok/s／GPU</b> @ 129 tok/s/user（R1-0528 MXFP4、24 張、SGLang + MoRI）· $0.169／1M",
-    src: "LMSYS × AMD 2026-05-28（廠商合寫）",
-  },
 };
-const HW_ORDER = ["h100", "b200", "gb200", "mi355x"];
+const HW_ORDER = ["h100", "b200", "gb200"];
 
 // ── 模型常數 ──
 const M = {
@@ -345,7 +337,7 @@ function dataInfo(i) {
     { name: "① 請求本身", color: "ink",
       size: "KB 級：token ids、串流回傳的文字", freq: "每請求進門一次；每產一個字回傳一次",
       road: "前端乙太（資料中心網路，延遲 ms 級）", verdict: "慢車道就夠", vc: "good",
-      teach: "<b>進門那一跳只搬幾 KB，卻決定了一半的 prefill 要不要算。</b>DeepSeek 線上 56.3% 的輸入 token 命中快取——router 把請求送到沒有快取的機器，這一半就得重算（第四堂⑦）。" },
+      teach: "<b>進門那一跳只搬幾 KB，卻決定了一半的 prefill 要不要算。</b>DeepSeek 線上 56.3% 的輸入 token 命中快取——router 把請求送到沒有快取的機器，這一半就得重算（cache-aware router）。" },
     { name: "② KV 交接", color: "mem",
       size: "≈ 351 MB（MLA BF16 × 平均 4,989 token）", freq: "每請求一次（prefill → decode）",
       road: big ? "跨機櫃走 RDMA；prefill／decode 同在一個 NVL72 內時可走 NVLink" : "跨機 RDMA（400G ≈ 50 GB/s）",
@@ -518,7 +510,7 @@ function panelOverview() {
     desc: "機櫃群就是<b>多了三層的記憶體階層</b>：scale-up 域 → 跨機 RDMA → 前端乙太。同一個請求會產生四種要搬的資料，一次多大、多常搬差了好幾個數量級，所以各自只走付得起的那段路。",
     facts: [["選中的資料", d.name], ["一次多大", d.size], ["多常搬", d.freq], ["走的路", d.road], ["判定", d.verdict]],
     teach: d.teach,
-    caveat: "拓樸依 LMSYS 96×H100 實驗：prefill 4 台（EP32）與 decode 9 台（EP72）在同一個 12 台叢集上分開量測；網卡配置原文未載明，以每卡一張 400G 估。其他三種硬體沿用同樣的切法，只換機器。MoE 交換的大小以每卡 256 序列、dispatch FP8、combine BF16 推算。",
+    caveat: "拓樸依 LMSYS 96×H100 實驗：prefill 4 台（EP32）與 decode 9 台（EP72）在同一個 12 台叢集上分開量測；網卡配置原文未載明，以每卡一張 400G 估。其他兩種硬體沿用同樣的切法，只換機器。MoE 交換的大小以每卡 256 序列、dispatch FP8、combine BF16 推算。",
   };
 }
 
@@ -713,7 +705,7 @@ function panelKV() {
       ["相當於 decode 幾步", `${(ms / MEASURED_STEP_MS).toFixed(ms < 92 ? 2 : 1)} 步`],
     ],
     teach: isMLA
-      ? `<b>MLA 在第五堂是為 decode 的 HBM 頻寬發明的，它順手付了另一張帳：讓 prefill 和 decode 可以放在不同機櫃。</b>同一個請求換成 MHA 要 ${fmtMs(mhaMs)}。兩家框架的差別在「誰先動」——SGLang 先預留再推，vLLM 先算完再拉；但搬的那一包大小一樣。`
+      ? `<b>MLA 是為 decode 的 HBM 頻寬發明的，它順手付了另一張帳：讓 prefill 和 decode 可以放在不同機櫃。</b>同一個請求換成 MHA 要 ${fmtMs(mhaMs)}。兩家框架的差別在「誰先動」——SGLang 先預留再推，vLLM 先算完再拉；但搬的那一包大小一樣。`
       : `<b>換成 ${A.label}，光交接就要 ${fmtMs(ms)}。</b>${ms > 100 ? "這已經比一整個 decode 步還長——prefill／decode 分到不同機櫃開始不划算。" : "還付得起，但比 MLA 大了一個數量級以上。"}切回 MLA 看看差多少。`,
     caveat: `傳輸時間＝KV 大小 ÷ 頻寬（${L.note}），未計握手、排程與協定開銷——公開文獻只有頻寬實測，沒有端到端毫秒數。平均 4,989 token 取自 DeepSeek 官方線上統計；TTFT 2–5 s 與 decode 一步 ≈ 92 ms 取自 LMSYS 96×H100。流程來源：${F.src}。`,
   };
@@ -964,7 +956,7 @@ function buildLedger() {
   const ins = el("div", "panelbox insight");
   const h = R.h100, b = R.b200, g = R.gb200;
   if (S.ep <= 8) {
-    ins.innerHTML = `<b>EP8 時交換全部留在同一台機器裡，四種硬體的通訊都只剩固定開銷。</b>但別高興太早——H100 在 EP8 連權重都放不下（第 3 層的 HBM 條）。把 EP 拉大，差距才會出現。`;
+    ins.innerHTML = `<b>EP8 時交換全部留在同一台機器裡，三種硬體的通訊都只剩固定開銷。</b>但別高興太早——H100 在 EP8 連權重都放不下（第 3 層的 HBM 條）。把 EP 拉大，差距才會出現。`;
   } else {
     ins.innerHTML =
       `<b>NVLink 快一倍（H100 → B200）：</b>每步通訊 <span class="hi">${fmtMs(h.stepMs)} → ${fmtMs(b.stepMs)}</span>。EP${S.ep} 時 ${pct(commModel("b200", S.ep, S.prec).crossFrac)} 的流量根本不在 NVLink 上。<br>` +
@@ -992,7 +984,7 @@ function panelLedger() {
   const base = stepModel("h100", S.ep, S.prec, S.tbo);
   return {
     title: "一步的時間帳：只換互連，哪一段變了",
-    desc: "四種硬體跑同一個 decode 步。<b>計算時間刻意固定</b>（74.5 ms，由 H100 實測反推），只改 scale-up 域大小與頻寬，看通訊那一段怎麼變。點任一列切換右側細節。",
+    desc: "三種硬體跑同一個 decode 步。<b>計算時間刻意固定</b>（74.5 ms，由 H100 實測反推），只改 scale-up 域大小與頻寬，看通訊那一段怎麼變。點任一列切換右側細節。",
     facts: [
       ["硬體", hw.name],
       ["scale-up 域", `${hw.domain} 張 · ${hw.upLabel}`],
@@ -1004,12 +996,10 @@ function panelLedger() {
     ],
     teach: hw.domain >= 72
       ? `<b>模型只換互連，GB200 一步快 ×${(base.total / r.total).toFixed(2)}；實測每卡產出卻是 B200 的 4.4×。</b>差的那一截來自第 3 層的機制：域夠大，EP 就能開大、每卡專家更少、HBM 留給 KV 更多、batch 更大——再加上 Blackwell 計算本身更快。`
-      : hw.domain === 8 && S.hw === "mi355x"
-      ? "<b>MI355X 的 xGMI 在一台機器內其實不慢（7 條合計 ≈ 538 GB/s），但它和 H100 一樣只有 8 卡一域。</b>EP 一超過 8，交換就得走 Pollara 400——MoRI-EP 實測 dispatch 從 345 GB/s 掉到 54 GB/s。AMD 的 72 卡域要等 Helios。"
       : S.ep <= 8
       ? `<b>EP8 整個留在一台${hw.name}裡，通訊帳只剩固定開銷。</b>把 EP 拉大，看網卡什麼時候變成主角。`
-      : `<b>${hw.name}的通訊帳幾乎全由網卡決定。</b>scale-up 頻寬再快，EP${S.ep} 的交換也只有一小部分走得到——這就是第 14 頁說的「真瓶頸是域大小」。`,
-    caveat: "計算時間 74.5 ms 與 TBO 藏住 65% 的通訊，都是由 LMSYS 96×H100 實測（一步 ≈ 92 ms、TBO +35%）反推的校準值；換硬體時刻意不變，以隔離互連這個變數。真實的 Blackwell／MI355X 計算更快、batch 也能開更大。計算模型見 notes/class6_multi_rack_inference.md §6。",
+      : `<b>${hw.name}的通訊帳幾乎全由網卡決定。</b>scale-up 頻寬再快，EP${S.ep} 的交換也只有一小部分走得到——這就是投影片第 25 頁說的「真瓶頸是域大小」。`,
+    caveat: "計算時間 74.5 ms 與 TBO 藏住 65% 的通訊，都是由 LMSYS 96×H100 實測（一步 ≈ 92 ms、TBO +35%）反推的校準值；換硬體時刻意不變，以隔離互連這個變數。真實的 Blackwell 計算更快、batch 也能開更大。計算模型見 notes/class4_models_to_racks.md §6。",
   };
 }
 

@@ -1,6 +1,6 @@
 # 術語與縮寫對照表（Glossary）
 
-整個讀書會系列（六堂投影片、demo、互動地圖、各堂講稿）用到的縮寫、英文全稱、中文與一句話說明。
+整個讀書會系列（四堂投影片、demo、互動地圖、各堂講稿）用到的縮寫、英文全稱、中文與一句話說明。
 > 用法:第一次出現某縮寫時可回查這張表;括號內的 Part 對應 [合輯](full_series.md) 的篇章。
 > 校準說明:系列已更迭到聚焦版合輯(硬體架構 × Transformer)。下表仍保留**全部**術語以利回查,但標 ⊘ 者其正文已從合輯移除(ASR 案例、NVLink/GPUDirect/UVM),只在 demo 或概念背景出現——詳見合輯「## 聚焦版移除的內容」。
 
@@ -240,9 +240,9 @@
 | jump-forward | jump-forward decoding | 跳躍解碼 | 語法唯一確定時直接吐多個 token、不跑模型(SGLang) |
 | CUDA Graph | CUDA Graph | (kernel 錄放) | 把一整串 kernel launch 錄成圖、之後 replay,省 CPU 開銷 |
 | 投機解碼 | speculative decoding | 投機解碼 | 小模型/草稿先猜 k 個、大模型一次驗;權重讀 1 次換 k 倍 FLOPs(AI 從 1 變 k) |
-| MTP | Multi-Token Prediction | 多 token 預測 | 訓練時多預測幾步;推論時那些 head 當投機解碼的 draft(第五堂旋鈕④) |
+| MTP | Multi-Token Prediction | 多 token 預測 | 訓練時多預測幾步;推論時那些 head 當投機解碼的 draft(第四堂旋鈕④) |
 
-## 14. 多機推論服務(第四、六堂)
+## 14. 多機推論服務(第四堂後半)
 
 | 縮寫 / 術語 | 英文全稱 | 中文 | 一句話說明 |
 |---|---|---|---|
@@ -258,12 +258,9 @@
 | Mooncake | Mooncake | (Kimi 的 KV 中心架構) | Moonshot 以 KVCache 為中心的分離式服務架構;SGLang 的 KV 傳輸後端之一 |
 | straggler | straggler | 拖後腿節點 | 同步集合通訊下最慢那張卡決定整體速度;「慢了」與「掛了」難分 |
 | NVSHMEM / IBGDA | NVSHMEM / InfiniBand GPUDirect Async | (GPU 發起的 RDMA) | GPU 直接敲網卡門鈴、不經 CPU;DeepEP low-latency 模式的基礎 |
-| scale-up 域 | scale-up domain | 高速互連域 | 一組用 NVLink/xGMI 直連的卡(H100/B200 機 = 8、NVL72 = 72);第六堂的真瓶頸 |
-| xGMI | (AMD) Infinity Fabric link | (AMD 卡間互連) | MI355X 8 卡全網狀、無交換器;對任一卡每方向 ~77 GB/s |
-| RCCL / MoRI | ROCm Collective Comm. Library / MoRI | (AMD 通訊庫) | AMD 對應 NCCL / DeepEP+NIXL 的零件 |
-| UALink | Ultra Accelerator Link | (開放 scale-up 標準) | AMD Helios 先以乙太隧道(UALoE)實作 72 卡域 |
+| scale-up 域 | scale-up domain | 高速互連域 | 一組用 NVLink 直連的卡(H100/B200 機 = 8、NVL72 = 72);第四堂的真瓶頸 |
 
-## 15. 模型端的效率旋鈕(第五堂)
+## 15. 模型端的效率旋鈕(第四堂前半)
 
 | 縮寫 / 術語 | 英文全稱 | 中文 | 一句話說明 |
 |---|---|---|---|

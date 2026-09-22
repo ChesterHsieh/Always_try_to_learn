@@ -601,7 +601,7 @@ const P5 = "單機的天花板";
   s.addText("⚠️ 紅線：即使兩個請求共享同一段前綴快取，它們各自的 FSM 狀態仍必須獨立推進，不能互相干擾。",
     { x: MX + 0.28, y: 3.95, w: 11.3, h: 1.05, valign: "middle", fontFace: HEAD, fontSize: 15, bold: true, color: WARN, margin: 0 });
   card(s, MX, 5.15, 11.9, 0.8, BG2, GOOD);
-  s.addText("這條紅線給了一個通用判準：可以快取的是「計算結果」，不可以快取的是「請求狀態」。第四堂的跨機 KV 複製也要問同一個問題。",
+  s.addText("這條紅線給了一個通用判準：可以快取的是「計算結果」，不可以快取的是「請求狀態」。跨機複製 KV 時也要問同一個問題。",
     { x: MX + 0.28, y: 5.15, w: 11.3, h: 0.8, valign: "middle", fontFace: BODY, fontSize: 13, color: GOOD, margin: 0 });
   footer(s, P3);
 })();
@@ -702,7 +702,7 @@ const P5 = "單機的天花板";
       s.addText(r, { x: MX + 6.6, y, w: 5.1, h: 0.92, valign: "middle", fontFace: BODY, fontSize: 11.5, color: MUTE, margin: 0 });
     });
   card(s, MX, 5.05, 11.9, 0.85, BG2, GOOD);
-  s.addText("硬體對齊：Hopper 有 FP8 tensor core、Blackwell 有 FP4。精度格式是硬體規格表上的一行，直接決定模型能跑多快——第五堂會看到模型端已經開始「出廠就是 4-bit」。",
+  s.addText("硬體對齊：Hopper 有 FP8 tensor core、Blackwell 有 FP4。精度格式是硬體規格表上的一行，直接決定模型能跑多快——第四堂會看到模型端已經開始「出廠就是 4-bit」。",
     { x: MX + 0.28, y: 5.05, w: 11.3, h: 0.85, valign: "middle", fontFace: BODY, fontSize: 12.5, color: MUTE, lineSpacingMultiple: 1.3, margin: 0 });
   footer(s, P5);
 })();

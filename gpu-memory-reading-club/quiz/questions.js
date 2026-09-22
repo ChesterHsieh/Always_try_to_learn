@@ -1,4 +1,4 @@
-// 讀書會複習題庫：六堂 × 8 題（辨識／邊界／遷移／取捨 各 2 題）。規格見 concept-check。
+// 讀書會複習題庫：四堂 × 8 題（辨識／邊界／遷移／取捨 各 2 題）。規格見 concept-check。
 window.QUIZ = [
   // ───────────────────────────── 第一堂 ─────────────────────────────
   {
@@ -276,7 +276,7 @@ window.QUIZ = [
         ],
         answer: 0,
         explain: "前綴複用省的是算力（可共享的計算結果）；約束生成裁剪的是候選空間，FSM 狀態屬於請求本身，每個請求依自己吐出的 token 各自推進。紅線：就算共享前綴快取，FSM 狀態仍必須獨立。通用判準是「可以快取計算結果，不可以快取請求狀態」。出處：第三堂第 20 頁。",
-        dig: "第四堂做跨機 KV 複製時，這條判準怎麼用？哪些東西可以跟著 KV 複製過去，哪些不行？"
+        dig: "如果要跨機複製 KV（例如讓多台機器共用熱門前綴），這條判準怎麼用？哪些東西可以跟著 KV 複製過去，哪些不行？"
       },
       {
         level: "遷移", type: "scenario", concept: "選型看流量長相",
@@ -335,118 +335,7 @@ window.QUIZ = [
 
   // ───────────────────────────── 第四堂 ─────────────────────────────
   {
-    id: 4, title: "第四堂 · SGLang 多機篇", concept: "分散式推論的四個問題（⑤–⑧）",
-    questions: [
-      {
-        level: "辨識", type: "concept", concept: "八類經典問題：規避、變形、放大",
-        q: "把經典分散式系統的八類問題對照到 GPU 推論叢集，哪一類不但沒有被規避，反而被放大成核心工程難題？",
-        options: [
-          { label: "可擴展性與負載均衡", desc: "通訊量隨規模成長、局部性和均衡此消彼長、熱點難避免。", hint: null },
-          { label: "共識（Paxos／Raft）", desc: "多個節點要對同一件事達成一致，才能繼續往下算。", hint: "在一般分散式資料庫裡，共識確實是核心難題。但 GPU 叢集的集合通訊是 SPMD 事先規劃好的，不需要執行期協商誰對。再想一次？" },
-          { label: "拜占庭容錯", desc: "有節點可能送出錯誤或惡意的訊息，要能辨識出來。", hint: "在互不信任的開放網路裡，拜占庭容錯確實不可少。但 GPU 叢集是封閉、受信任、同構的環境，只會 fail-stop。再想一次？" },
-          { label: "訊息丟失、重複與亂序", desc: "網路不可靠，應用層要自己處理重送與排序。", hint: "在一般網路程式裡這確實是大問題。但 RDMA／NCCL 在底層就保證了可靠性，這一類問題是換了軸，變成頻寬和拓撲。再想一次？" }
-        ],
-        answer: 0,
-        explain: "GPU 叢集用放棄互不信任、放棄執行期協商、（訓練時）放棄持續可用，換到不必做拜占庭、共識與 CAP 取捨；代價是把全部複雜度壓到效率這一根軸上。可擴展性被放大：all-to-all 隨 EP 規模成長、快取局部性 vs 負載均衡、專家負載不均（資料傾斜）。出處：第四堂第 3–5 頁、講稿 §1.1–1.2。",
-        dig: "推論服務比訓練更像傳統分散式系統。第三個放棄（持續可用）收不回來之後，哪幾類經典問題又回來了？"
-      },
-      {
-        level: "辨識", type: "concept", concept: "KV 複製的動機",
-        q: "在多副本推論叢集裡，router 有時會把某台機器上的熱門前綴 KV 複製到另一台。這麼做的主要動機是什麼？",
-        options: [
-          { label: "保證 KV 不會在故障時遺失", desc: "多存一份備份，副本掛掉時可以直接從另一台接手。", hint: "在一般的資料庫裡，複製確實主要為了可靠性。但 KV cache 完全由 prompt 決定，掉了可以重算，只是慢、不會錯。再想一次？" },
-          { label: "維持各副本快取的一致性", desc: "讓每台機器看到的快取內容相同，避免讀到過時資料。", hint: "多副本一致性在經典分散式系統裡確實是大題目。但 KV 是由 token 序列決定的計算結果，不會被改寫，也不存在「過時版本」。再想一次？" },
-          { label: "分流熱點，免去重算", desc: "新請求可分到空閒機器，又不必重新 prefill。", hint: null },
-          { label: "滿足 CAP 裡的可用性需求", desc: "在網路分區時讓服務仍然能回應請求。", hint: "推論服務確實比訓練更在意可用性。但 KV 複製發生在正常負載調度時，不是為了應付網路分區。再想一次？" }
-        ],
-        answer: 2,
-        explain: "KV cache 是「可重算的快取」，不是「不可回復的狀態」。所以 KV 複製的動機不是可靠性，而是省算力：在熱門機器負載過高時，把高價值快取複製到空閒機器，讓請求可以分流又不必重新 prefill。問題⑦與⑧用同一套機制，但動機完全不同。出處：第四堂第 13 頁、第 15 頁，講稿 §5.2、§6.1。",
-        dig: "router 對各機快取內容只有近似且過時的視圖。這會讓複製決策出錯在哪個方向？是複製太多還是太少？"
-      },
-      {
-        level: "邊界", type: "debug", concept: "MoE 在單卡上不省容量",
-        q: "有人主張：「DeepSeek-V3 每個 token 只啟用 37B / 671B ≈ 5.5% 的參數，所以用一台 8 卡機的 HBM 就放得下。」這個推論錯在哪？",
-        options: [
-          { label: "活躍比例其實遠高於 5.5%", desc: "加上共享專家和 attention，實際啟用接近一半。", hint: "共享專家和 attention 確實每個 token 都會用到。但 37B 已經把它們算進去了，比例本身沒有算錯。再想一次？" },
-          { label: "全部專家仍要常駐 HBM", desc: "每個 token 選的專家都不一樣，隨時可能用到任何一個。", hint: null },
-          { label: "KV cache 比權重還大", desc: "長序列下 KV 會超過權重，擠掉專家的空間。", hint: "KV 確實會和權重搶 HBM。但就算完全不放 KV，這個推論在權重這一關就已經不成立了。再想一次？" },
-          { label: "all-to-all 需要額外緩衝區", desc: "專家路由時要預留大量通訊 buffer 才能運作。", hint: "EP 的通訊 buffer 確實會佔用一些 HBM。但單機不一定要做 all-to-all，問題出在更基本的容量計算。再想一次？" }
-        ],
-        answer: 1,
-        explain: "MoE 的「每 token 只活躍一小部分」省的是每 token 的 FLOPs 與權重讀取，不省容量：所有專家都得在 HBM 裡待命。要連容量也省，得用 EP 把 256 個專家散到幾十上百張卡，每張只放幾個，代價是每層兩次 all-to-all。出處：第四堂第 7 頁、講稿 §3。",
-        dig: "DeepSeek-V3 的 FP8 權重約 688.6 GB。一台 8×80 GB 的 H100 放不下；最少要幾台才能放下權重並留一半 HBM 給 KV？"
-      },
-      {
-        level: "邊界", type: "debug", concept: "局部性 vs 負載均衡",
-        q: "團隊把 router 從 cache-aware 改成 Round Robin。各機負載變得很均勻，但平均 TTFT 反而明顯變差。最可能的原因？",
-        options: [
-          { label: "Round Robin 會造成熱點", desc: "輪詢讓少數機器接到太多長請求，排隊變長。", hint: "把同類請求固定送同一台的內容感知路由，確實會造成熱點。但題目說改成輪詢後各機負載很均勻，熱點不是這裡的問題。再想一次？" },
-          { label: "router 的視圖太舊，送錯機器", desc: "router 不知道各機最新狀態，把請求送到忙的機器。", hint: "router 視圖過時確實是 cache-aware 路由要面對的問題。但 Round Robin 根本不看任何狀態，視圖新舊對它沒有影響。再想一次？" },
-          { label: "各機的 FSM 狀態被打亂", desc: "同一個 schema 的請求分散後，語法狀態要重建。", hint: "結構化輸出確實有狀態。但 FSM 狀態本來就屬於每個請求自己，不會因為換機器而變差。再想一次？" },
-          { label: "共享前綴被打散到各台", desc: "每台都只看到一部分同前綴請求，快取難以命中。", hint: null }
-        ],
-        answer: 3,
-        explain: "多台機器各自維護獨立的 radix tree、彼此不共享 KV。Round Robin 完全不看內容，本該集中在同一台的共享前綴請求被打散，命中率崩潰，每台都得重新 prefill。反過來，內容感知路由會製造熱點。這就是快取局部性與負載均衡此消彼長。出處：第四堂第 12 頁、講稿 §5.1。",
-        dig: "這個矛盾跟 CDN 邊緣快取、一致性雜湊是同一個結構。一致性雜湊加上「熱點複製」的做法，對應到 SGLang router 的哪個機制？"
-      },
-      {
-        level: "遷移", type: "scenario", concept: "該搬還是該重算",
-        q: "兩台推論機只靠 InfiniBand（約 50 GB/s）相連。某個熱門前綴有 32,000 token，用 Llama-3-8B（每 token KV 128 KB）計算。要讓空閒那台也能服務這個前綴，該複製 KV 還是讓它自己重算？",
-        options: [
-          { label: "重算：跨機頻寬太慢了", desc: "IB 比 NVLink 慢一個數量級，跨機搬 GB 級資料不划算。", hint: "如果是很短的前綴，重算確實可能比建立傳輸還划算。但題目是 32K token 的長前綴，要先算清楚兩邊各要多久。再想一次？" },
-          { label: "重算：KV 屬於請求狀態", desc: "KV 綁定原本的請求，不能交給另一台機器使用。", hint: "請求狀態（例如 FSM、取樣種子）確實不能跨機共享。但 KV 完全由 token 序列決定，是計算結果，可以複製。再想一次？" },
-          { label: "搬：約 80 ms 就到", desc: "4 GB ÷ 50 GB/s，比重跑 prefill 快。", hint: null },
-          { label: "都不必，改用 Round Robin", desc: "把請求平均分出去，就不必處理快取放在哪裡。", hint: "Round Robin 確實能讓負載均勻。但它會把共享前綴打散，每台都得自己重算，等於選了最貴的那條路。再想一次？" }
-        ],
-        answer: 2,
-        explain: "32,000 × 128 KB ≈ 4 GB，走 IB（50 GB/s）約 80 ms；重新 prefill 32K token 要數百 ms 到秒級。重算是 O(n²)、搬是 O(n)，所以前綴越長越該搬；在 NVLink 域內幾乎永遠該搬，跨節點走乙太才要仔細算。出處：第四堂第 14 頁（壓軸推導）、講稿 §5.3。",
-        dig: "如果把模型換成 MLA 的 DeepSeek-V3（每 token 約 70 KB），這筆帳會怎麼變？在多短的前綴時「重算」才會開始划算？"
-      },
-      {
-        level: "遷移", type: "scenario", concept: "PD 分離的好處",
-        q: "某服務的流量從「短問題、長回答」的聊天，轉成「長文件、短摘要」的工作。在 PD 分離架構下，這個轉變最能被哪個特性吸收？",
-        options: [
-          { label: "chunked prefill 自動調整預算", desc: "每步的 token 預算會依 prompt 長度自動重新分配。", hint: "chunked prefill 確實能緩解 prefill 打斷 decode。但它是單機內的混合批次技巧，而題目問的是 PD 分離架構本身的特性。再想一次？" },
-          { label: "兩個池子能分開擴縮容", desc: "prefill 和 decode 各自加減機器，比例跟著流量走。", hint: null },
-          { label: "KV 走 NVLink，傳輸成本很低", desc: "prefill 算完的 KV 很快送到 decode，不會成為瓶頸。", hint: "KV 傳輸快確實是 PD 分離能成立的前提。但它不會因為流量型態改變而變成解方，題目問的是如何吸收負載比例的變化。再想一次？" },
-          { label: "decode 端改開大 TP、追 FLOPs", desc: "長文件讓 decode 變成 compute-bound，要多給算力。", hint: "大 TP、追 FLOPs 確實是某一個池子的最佳配置。但那是 prefill 池的配置，而且流量轉成短摘要時，decode 並不會變得吃算力。再想一次？" }
-        ],
-        answer: 1,
-        explain: "PD 分離讓 prefill 群（大 TP、小批、追 FLOPs 與 TTFT）與 decode 群（大 EP、大批、追頻寬與 KV 容量）各自開到最佳點，而且可以分開擴縮容；prefill 與 decode 的負載比例會隨流量型態變動，這點很重要。代價是多一次 KV 傳輸和多一層調度。出處：第四堂第 10–11 頁、講稿 §4。",
-        dig: "流量轉成長文件摘要後，prefill 池和 decode 池的機器比例大概往哪個方向調？這時 router 的 cache-aware 還重要嗎？"
-      },
-      {
-        level: "取捨", type: "tradeoff", concept: "大規模 EP 的代價",
-        q: "把 DeepSeek 的 256 個專家從 8 張卡攤到 72 張卡上（EP 變大），每張卡的權重變小、decode 變快。付出的代價主要是什麼？",
-        options: [
-          { label: "每張卡的 KV 容量變小", desc: "專家變多占掉 HBM，留給 KV 的空間減少。", hint: "如果每張卡放的專家變多，KV 空間確實會被擠壓。但 EP 變大時每張卡放的專家是變少，省下的 HBM 反而能給 KV。再想一次？" },
-          { label: "attention 要改成 TP 才算得動", desc: "專家散開後 attention 無法再各算各的。", hint: "attention 的切法確實要跟著調整。但講稿的配置是 attention 走資料平行、各卡算自己那批請求，不需要改成 TP。再想一次？" },
-          { label: "單請求要讀的權重變多", desc: "專家分散後，每個 token 要去多張卡讀權重。", hint: "token 確實會被送到多張卡上的專家。但每張卡讀的是自己那幾個專家，整體每 token 讀的權重量沒有變多。再想一次？" },
-          { label: "all-to-all 與專家熱點", desc: "每層兩次全員交換，熱門專家那張卡會被塞爆。", hint: null }
-        ],
-        answer: 3,
-        explain: "EP 的代價：每層兩次 all-to-all（token 送去專家、算完送回），通訊成為主角；專家負載不均等於資料傾斜，熱門專家的卡塞爆、其他卡閒著，推論期靠 EPLB 做副本與重排。配套 kernel 是 DeepEP（all-to-all）、DeepGEMM、FlashMLA。出處：第四堂第 7–8 頁、講稿 §3。",
-        dig: "SGLang 在 96×H100 上用大規模 EP 相對純 TP 輸出吞吐最高 5 倍。既然 all-to-all 這麼貴，這 5 倍是從哪裡賺回來的？"
-      },
-      {
-        level: "取捨", type: "tradeoff", concept: "最貴的失敗模式",
-        q: "在 PD 分離的架構下，下面哪一種失敗最「貴」（浪費最多已花掉的資源）？",
-        options: [
-          { label: "KV 送達後 decode 機才掛", desc: "prefill 的算力和 KV 傳輸都已花掉，卻沒人接手生成。", hint: null },
-          { label: "請求剛進 router 就被丟棄", desc: "還沒開始排隊，使用者必須重新送出請求。", hint: "使用者體驗上這確實很糟。但這時系統還沒花任何算力或頻寬，要重來的成本很低。再想一次？" },
-          { label: "prefill 算到一半時 prefill 機掛", desc: "算到一半的 forward 全部作廢，需要換一台重算。", hint: "算到一半確實浪費了一部分算力。但和其他選項比，這裡還沒付出 KV 傳輸，損失的只是半段 prefill。再想一次？" },
-          { label: "某台機器的 radix tree 被清空", desc: "快取內容全部消失，之後的請求命中率掉到 0。", hint: "快取清空確實會讓之後的請求變慢。但 KV 是可重算的快取，丟掉只是慢、不會錯，也不影響正在跑的請求。再想一次？" }
-        ],
-        answer: 0,
-        explain: "PD 分離下 prefill 完成、KV 也已傳過去，decode 機卻掛了：算力已花、頻寬已花、所有權也還在交接中，是最貴的失敗模式。這是「KV 所有權轉移」這個舊問題的影子：中途誰負責釋放、接手前掛了怎麼辦。出處：第四堂第 11 頁、第 16 頁，講稿 §4 與 §6.2。",
-        dig: "SGLang「先預留再推」和 vLLM「先算完再拉」這兩種交接寫法，哪一種在 decode 機掛掉時比較容易回收 prefill 端的資源？"
-      }
-    ]
-  },
-
-  // ───────────────────────────── 第五堂 ─────────────────────────────
-  {
-    id: 5, title: "第五堂 · 中國開源模型的五個旋鈕", concept: "把推論成本寫進模型架構的五個旋鈕",
+    id: 4, title: "第四堂 · 從模型到機櫃", concept: "模型的五個旋鈕與機櫃群推論的四種資料",
     questions: [
       {
         level: "辨識", type: "concept", concept: "MoE 稀疏省的是什麼",
@@ -458,21 +347,21 @@ window.QUIZ = [
           { label: "卡與卡之間的通訊量", desc: "每個 token 用到的專家少，要交換的資料自然少。", hint: "直覺上用得少、傳得也少。但在多卡上 MoE 反而多了 all-to-all 路由，單卡上則根本沒有這段通訊可省。再想一次？" }
         ],
         answer: 2,
-        explain: "決定 decode 速度的是活躍參數 + KV，不是總參數；MoE 讓每 token 只讀、只算少數專家，所以省權重讀取與 FLOPs。但它在單卡上不省容量（專家都要在 HBM），要省容量得靠第四堂的大規模 EP。出處：第五堂第 6 頁。",
+        explain: "決定 decode 速度的是活躍參數 + KV，不是總參數；MoE 讓每 token 只讀、只算少數專家，所以省權重讀取與 FLOPs。但它在單卡上不省容量（專家都要在 HBM），要省容量得靠大規模 EP。出處：第四堂第 5–6 頁。",
         dig: "Kimi K3 是 2.8T 總參數、104B 活躍。在本機跑它時，哪個數字決定「裝不裝得下」，哪個決定「跑多快」？"
       },
       {
-        level: "辨識", type: "concept", concept: "MTP 在推論時的角色",
-        q: "DeepSeek-V3 和 Qwen3-Next 都在訓練時加了 MTP（Multi-Token Prediction）head。到了推論時，這些 head 主要被拿來做什麼？",
+        level: "辨識", type: "concept", concept: "四種資料 × 四條路",
+        q: "一個請求穿過 DeepSeek 推論叢集時，會搬四種資料。依「多常搬 × 一次多大」來看，哪一種付不起跨機的慢車道？",
         options: [
-          { label: "取代部分 KV cache", desc: "多預測的 token 先存起來，後面的層就不用再存 K、V。", hint: "減少 KV 確實是這堂課的一大主題。但那是旋鈕①的事；MTP 屬於另一個旋鈕，處理的是單請求延遲。再想一次？" },
-          { label: "降低訓練與推論的精度", desc: "多預測幾步可以抵銷低精度帶來的誤差。", hint: "精度確實是五個旋鈕之一。但 MTP 在訓練時的作用是提供更密的監督訊號，和數值精度無關。再想一次？" },
-          { label: "引導 router 平衡專家負載", desc: "提前知道後面幾個 token，可以先把專家分配好。", hint: "專家負載均衡確實是 MoE 的重要問題。但 DeepSeek 用的是無輔助損失的路由 bias 調整，不是靠 MTP。再想一次？" },
-          { label: "當投機解碼的 draft", desc: "由模型自己提出幾個候選 token，再一次驗證。", hint: null }
+          { label: "prefill → decode 的 KV 交接", desc: "每個請求一次，MLA BF16 約 351 MB。", hint: "351 MB 看起來很大，跨機確實要花時間。但它每個請求只搬一次，走 400G 網卡約 7 ms，放在 2–5 秒的 TTFT 裡是雜訊。再想一次？" },
+          { label: "MoE 的 dispatch／combine", desc: "每層每步、全體卡同步，每產一個字要 116 次。", hint: null },
+          { label: "整份模型權重", desc: "全部約 688.6 GB，是四種裡最大的一包。", hint: "權重確實是最大的一包。但它幾乎不搬，只在啟動和 EPLB 重排時動一下，頻率極低。再想一次？" },
+          { label: "token ids 與串流回傳", desc: "每請求一次、每字一次，每次只有幾 KB。", hint: "這種資料確實搬得很頻繁。但每次只有幾 KB，走 ms 級的前端乙太就夠了。再想一次？" }
         ],
-        answer: 3,
-        explain: "MTP 訓練時多預測幾步當額外監督，推論時那些 head 直接當投機解碼的 draft：權重讀一次、驗 k 個 token，AI 從 1 變 k。這是模型端主動配合投機解碼，把 draft 模型長在自己身上；DeepSeek-V3 第二 token 接受率約 85–90%。出處：第五堂第 10 頁（旋鈕④）。",
-        dig: "為什麼把 draft 長在模型自己身上，比另外找一個小模型當 draft 的接受率更高？部署上又省了什麼？"
+        answer: 1,
+        explain: "MoE hidden states 是每層 × 每步 × 72 張卡同步交換，DeepSeek-V3 有 58 層 MoE、每層 dispatch + combine 各一次，所以每個字 116 次，只有 scale-up 域或特化 RDMA 付得起。請求本身走前端乙太、KV 走跨機 RDMA（MLA 讓它只要 7 ms）、權重幾乎不搬。出處：第四堂第 15 頁、第 25 頁。",
+        dig: "116 次是怎麼算出來的？如果模型改成每 2 層才放一個 MoE 層，這個數字和對 scale-up 域的依賴會怎麼變？"
       },
       {
         level: "邊界", type: "debug", concept: "線性注意力打壞 prefix caching",
@@ -484,106 +373,8 @@ window.QUIZ = [
           { label: "排程器不再把同前綴排在一起", desc: "cache-aware 排程只認得 full attention 的請求。", hint: "cache-aware 排程確實影響命中率。但排程只是決定順序；就算排在一起，這種模型也拿不出可以複用的東西。再想一次？" }
         ],
         answer: 0,
-        explain: "稀疏注意力保留完整 KV、只是每個 query 看 top-k；線性注意力不存 KV，改成固定大小的遞迴狀態。這種狀態不像 KV 能直接切片複用，所以 RadixAttention 的整套價值歸零；同時線性狀態對精度敏感（旋鈕⑤失效），投機解碼在線性骨幹上也仍是未解問題。出處：第五堂第 7 頁、第 9 頁。",
+        explain: "稀疏注意力保留完整 KV、只是每個 query 看 top-k；線性注意力不存 KV，改成固定大小的遞迴狀態。這種狀態不像 KV 能直接切片複用，所以 RadixAttention 的整套價值歸零；同時線性狀態對精度敏感（旋鈕⑤失效），投機解碼在線性骨幹上也仍是未解問題。出處：第四堂第 7–8 頁。",
         dig: "Qwen 和 Kimi K3 都用約 3:1 的混合比例保留了一部分 full attention 層。這些 full 層對 prefix caching 能救回多少？"
-      },
-      {
-        level: "邊界", type: "debug", concept: "理論 FLOPs ≠ wall-clock",
-        q: "MiniMax M1 的線性注意力在紙上把長生成的 FLOPs 大幅壓低，但實測速度沒有等比例提升，甚至訓練時也吃不滿算力。第一個該懷疑的是什麼？",
-        options: [
-          { label: "評測分數在多跳推理上退化", desc: "放大後才發現，長文中串線索的能力壞掉了。", hint: "多跳推理退化確實是 MiniMax 的另一個教訓。但那是品質問題，題目問的是為什麼「速度」沒有跟上 FLOPs 的減少。再想一次？" },
-          { label: "實作受頻寬限制", desc: "每搬一個 byte 只做很少運算。", hint: null },
-          { label: "MTP 的接受率太低", desc: "投機解碼一直被拒絕，一次只能產生一個 token。", hint: "投機解碼在線性骨幹上確實有困難。但題目說連訓練時都吃不滿算力，訓練並不經過投機解碼。再想一次？" },
-          { label: "MoE 專家負載嚴重不均", desc: "熱門專家所在的卡拖慢了整體速度。", hint: "專家熱點確實會拖慢 MoE。但題目描述的現象出在注意力那一段，而且單卡訓練時也會出現。再想一次？" }
-        ],
-        answer: 1,
-        explain: "線性注意力的實作本身就是 memory-bound，即使訓練時也吃不滿算力；省下的是紙上的 FLOPs，不是牆上的時間。這完全是第一堂 roofline 的教訓：「理論複雜度更低」離「生產環境更快」隔著 kernel 效率、評測有效性、生態相容性三層。出處：第五堂第 8 頁（No Free Lunch 第 2 個理由）。",
-        dig: "用 roofline 的語言說：線性注意力的 AI 大約落在哪裡？要怎麼改寫 kernel 才可能把它推向平頂？"
-      },
-      {
-        level: "遷移", type: "scenario", concept: "總參數 vs 活躍參數",
-        q: "你有一台 128 GB 統一記憶體的 Mac（容量大、頻寬比 GPU 低），想在本機跑一個「裝得下、又不會太慢」的開源模型。哪一類設計最適合？",
-        options: [
-          { label: "同樣大小的 dense 模型", desc: "沒有路由開銷，每一層都完整使用，品質最穩定。", hint: "dense 模型確實沒有路由問題。但 dense 每 token 要讀全部權重，在頻寬低的機器上，每一步都會很慢。再想一次？" },
-          { label: "大總參數、小活躍的 MoE", desc: "總量放得下，每 token 只讀一小部分。", hint: null },
-          { label: "2.8T 參數的 MXFP4 模型", desc: "4-bit 讓權重縮到 1/4，大模型也能塞進本機。", hint: "MXFP4 確實讓權重大幅縮小。但 2.8T 就算是 4-bit 也要約 1.4 TB，遠超過 128 GB。再想一次？" },
-          { label: "純線性注意力的小模型", desc: "不存 KV，長對話也不會吃掉記憶體。", hint: "不存 KV 確實省記憶體。但 MiniMax 的教訓是純線性骨幹在多跳推理與生態相容上都有實證問題，也不是講稿推薦給本機的答案。再想一次？" }
-        ],
-        answer: 1,
-        explain: "總參數是容量門檻、活躍參數是速度門檻。Qwen3-Next 80B-A3B 這種大總參數、小活躍的設計，放得進大容量統一記憶體，每 token 只讀約 3B 權重，在低頻寬機器上仍可接受，呼應第一堂「容量夠、頻寬低 → 慢但跑得動」。出處：第五堂 Q&A「這些模型我在本機跑得動嗎？」。",
-        dig: "80B-A3B 用 4-bit 量化後大約佔多少 GB？如果這台 Mac 的頻寬是 400 GB/s，batch=1 decode 的速度下限大約多少 tok/s？"
-      },
-      {
-        level: "遷移", type: "scenario", concept: "稀疏 vs 線性的生態代價",
-        q: "一家新實驗室想降低 1M context 的推論成本，但他們的服務重度依賴 prefix caching 與投機解碼，不想重做這些系統。旋鈕③該往哪個方向轉？",
-        options: [
-          { label: "稀疏注意力", desc: "保留完整的 KV，每個 query 只挑 top-k 個位置來看。", hint: null },
-          { label: "線性注意力為主的混合", desc: "大部分層改成固定大小的遞迴狀態，只留少數 full 層。", hint: "混合線性確實能大幅降低長 context 的成本，Qwen 和 Kimi 都這樣做。但線性層不存 KV，題目要保住的那兩個系統在這些層上會失效。再想一次？" },
-          { label: "滑動窗口混合", desc: "每層只看最近一段固定長度的 token。", hint: "滑動窗口確實能控制成本。但 MiniMax 試過各種比例與設定，在 agent 任務與複雜長文評測上一致地很差。再想一次？" },
-          { label: "改用 GQA 壓縮 KV head", desc: "多個 query head 共用一組 K、V。", hint: "GQA 確實能減少 KV，但它屬於旋鈕①（壓 KV），不會改變每個 query 要看的範圍，長 context 的 O(n²) 還在。再想一次？" }
-        ],
-        answer: 0,
-        explain: "稀疏注意力保留完整 KV、每個 query 只看 top-k，所以「KV 還在」，prefix caching 與投機解碼都還能用；線性注意力不存 KV，三個生產系統都得重做。這就是 2026 的共識是「混合 + 稀疏」而不是線性取代 full attention 的原因。例：DeepSeek V4 在 1M ctx 下 FLOPs 只需 V3.2 的 27%、KV 只需 10%。出處：第五堂第 7 頁、第 11 頁。",
-        dig: "稀疏注意力雖然保留了 KV，但每個 query 只看 top-k。這對 KV 的容量有沒有幫助？還是只省頻寬和運算？"
-      },
-      {
-        level: "取捨", type: "numeric", concept: "MLA 的 KV 量級",
-        q: "DeepSeek-V3 用 MLA 把 K/V 投影成 576 維的 latent（61 層、BF16）。每個 token 的 KV 大約多大？",
-        options: [
-          { label: "約 512 KB", desc: "和 Llama 式 32 頭 MHA 同一個量級。", hint: "512 KB 是 Llama 式 32 頭 MHA 的數字。但 MLA 每層只存一個 576 維的向量，不是每個 head 各存一份 K、V。再想一次？" },
-          { label: "約 128 KB", desc: "和 Llama-3-8B 的 GQA 同一個量級。", hint: "128 KB 是 Llama-3-8B 用 GQA（8 個 KV head）的數字。MLA 每層只存 576 個值，用 576 × 61 × 2 bytes 算算看。再想一次？" },
-          { label: "約 3.8 MB（同規模 MHA）", desc: "DeepSeek-V3 骨架若用 MHA，每 token 就要這麼多。", hint: "3.8 MB 是同規模 MHA 推算出來的對照值。題目問的是用了 MLA 之後，只存 576 維 latent 的情況。再想一次？" },
-          { label: "約 70 KB", desc: "576 個值 × 61 層 × 2 bytes。", hint: null }
-        ],
-        answer: 3,
-        explain: "576 × 61 × 2 B ≈ 70 KB／token；同規模 MHA 推算約 3.8 MB，Llama-3-8B 的 GQA 是 128 KB、32 頭 MHA 是 512 KB。DeepSeek-V2 論文自陳 MLA 讓 KV 比 MHA 減少 93.3%。MLA 是為了 decode 的 HBM 頻寬而發明的，架構決策就是硬體帳單。出處：第五堂第 5 頁（旋鈕① 壓 KV）。",
-        dig: "同樣 5,000 token 的請求，MLA 和 MHA 的 KV 各有多大？第六堂為什麼說 MLA「順手付了另一張帳」？"
-      },
-      {
-        level: "取捨", type: "tradeoff", concept: "效率研究的結構性障礙",
-        q: "MiniMax 從 M1 的線性混合退回 M2 的 full attention。講稿認為，這個故事揭露的效率研究最大的結構性障礙是什麼？",
-        options: [
-          { label: "線性注意力的論文太少", desc: "缺乏公開的研究基礎，各家只能自己摸索。", hint: "如果研究真的很少，摸索確實會比較慢。但 Lightning、GDN、KDA 等線性注意力已經有多家在做，問題不在數量。再想一次？" },
-          { label: "出口管制讓算力不夠", desc: "沒有足夠的 GPU，連訓練都跑不完。", hint: "算力受限確實是這批實驗室追求效率的背景。但題目問的是「效率研究本身」的結構性障礙，就算算力無限，這個障礙依然存在。再想一次？" },
-          { label: "驗證本身就極耗算力", desc: "問題放大後才會浮現，要得到顯著訊號得先花大錢。", hint: null },
-          { label: "開源社群不願意支援新架構", desc: "vLLM 和 SGLang 拒絕合併非標準的注意力 kernel。", hint: "新架構要被框架支援確實是一道門檻。但講稿的說法是實驗室自己開源 kernel 讓框架接得住，而不是框架拒絕。再想一次？" }
-        ],
-        answer: 2,
-        explain: "混合注意力在 MMLU、BBH、LongBench 上看起來沒問題，放大後才發現多跳推理明顯退化；要在困難任務上得到統計顯著訊號，所需算力是天文數字。弔詭的是：「省算力的方法」需要巨量算力才驗證得了。出處：第五堂第 8 頁與第 16 頁帶走三句話。",
-        dig: "如果你只有有限算力、又想評估一個新的高效注意力，該設計哪種評測才能盡早抓到多跳推理的退化？"
-      }
-    ]
-  },
-
-  // ───────────────────────────── 第六堂 ─────────────────────────────
-  {
-    id: 6, title: "第六堂 · 一個字穿過一整排機櫃", concept: "機櫃群推論的四種資料與 scale-up 域",
-    questions: [
-      {
-        level: "辨識", type: "concept", concept: "四種資料 × 四條路",
-        q: "一個請求穿過 DeepSeek 推論叢集時，會搬四種資料。依「多常搬 × 一次多大」來看，哪一種付不起跨機的慢車道？",
-        options: [
-          { label: "prefill → decode 的 KV 交接", desc: "每個請求一次，MLA BF16 約 351 MB。", hint: "351 MB 看起來很大，跨機確實要花時間。但它每個請求只搬一次，走 400G 網卡約 7 ms，放在 2–5 秒的 TTFT 裡是雜訊。再想一次？" },
-          { label: "MoE 的 dispatch／combine", desc: "每層每步、全體卡同步，每產一個字要 116 次。", hint: null },
-          { label: "整份模型權重", desc: "全部約 688.6 GB，是四種裡最大的一包。", hint: "權重確實是最大的一包。但它幾乎不搬，只在啟動和 EPLB 重排時動一下，頻率極低。再想一次？" },
-          { label: "token ids 與串流回傳", desc: "每請求一次、每字一次，每次只有幾 KB。", hint: "這種資料確實搬得很頻繁。但每次只有幾 KB，走 ms 級的前端乙太就夠了。再想一次？" }
-        ],
-        answer: 1,
-        explain: "MoE hidden states 是每層 × 每步 × 72 張卡同步交換，DeepSeek-V3 有 58 層 MoE、每層 dispatch + combine 各一次，所以每個字 116 次，只有 scale-up 域或特化 RDMA 付得起。請求本身走前端乙太、KV 走跨機 RDMA（MLA 讓它只要 7 ms）、權重幾乎不搬。出處：第六堂第 4 頁、第 14 頁。",
-        dig: "116 次是怎麼算出來的？如果模型改成每 2 層才放一個 MoE 層，這個數字和對 scale-up 域的依賴會怎麼變？"
-      },
-      {
-        level: "辨識", type: "concept", concept: "兩家 KV 交接流程",
-        q: "PD 分離時，prefill 算完的 KV 要交給 decode。下面哪一個描述的是 vLLM + NIXL 的寫法？",
-        options: [
-          { label: "decode 用 RDMA 拉走 KV", desc: "prefill 留著 KV、回傳位址，decode 自己讀。", hint: null },
-          { label: "decode 先預留槽位，再收推送", desc: "router 同時送給兩邊，decode 握手後先配好 KV 空間。", hint: "「先預留、再推」確實是一種真實的交接流程。但它是另一家引擎的寫法，差別在由誰主動、以及請求是同時送還是串行送。再想一次？" },
-          { label: "prefill 經 CPU 記憶體轉交 decode", desc: "KV 先落到主機記憶體當中繼，再搬到另一台機器。", hint: "經 CPU 中轉確實是比較傳統的做法。但這兩家的交接都走 GPU 對 GPU 的 RDMA，刻意避開 CPU 這一跳。再想一次？" },
-          { label: "router 先暫存 KV 再轉發", desc: "router 收下整包 KV，選好 decode 機後再送出去。", hint: "router 確實站在兩個池子中間。但它只搬幾 KB 的請求與 metadata，不會經手幾百 MB 的 KV。再想一次？" }
-        ],
-        answer: 0,
-        explain: "vLLM + NIXL 是「串行送、先算完、再拉」：proxy 先送 prefill，prefill 把 KV 留在自己 GPU 上並回傳位址，decode 用單邊 RDMA read 拉走，之後 prefill 才釋放 block。SGLang 是「並行送、先預留、再推」：router 同時送兩邊，decode 先預留 KV 槽位，prefill 算完用 RDMA 推過去。出處：第六堂第 7 頁。",
-        dig: "在「拉」的寫法裡，prefill 端的 KV block 要等 decode 讀走才釋放。如果 decode 遲遲不來讀，會壓到 prefill 池的什麼資源？"
       },
       {
         level: "邊界", type: "debug", concept: "頻寬 vs 域大小",
@@ -595,34 +386,21 @@ window.QUIZ = [
           { label: "約九成的流量走跨機網卡", desc: "72 張卡裡只有 7 張跟自己同機，大部分交換要出機器。", hint: null }
         ],
         answer: 3,
-        explain: "一個 token 送往的卡裡，落在同一個 scale-up 域的比例 ≈ (8−1)/(72−1) ≈ 10%，約 90% 的流量走 400G 網卡（約 50 GB/s）。瓶頸在網卡，NVLink 快一倍只加速那一成。換成 GB200 NVL72（域 = 72），跨機比例變 0%，每步通訊約 9 ms。出處：第六堂第 13–14 頁。",
+        explain: "一個 token 送往的卡裡，落在同一個 scale-up 域的比例 ≈ (8−1)/(72−1) ≈ 10%，約 90% 的流量走 400G 網卡（約 50 GB/s）。瓶頸在網卡，NVLink 快一倍只加速那一成。換成 GB200 NVL72（域 = 72），跨機比例變 0%，每步通訊約 9 ms。出處：第四堂第 24–25 頁。",
         dig: "如果改成 EP16（兩台 8 卡機），跨機流量比例會變成多少？這時 NVLink 變快一倍的效果會比 EP72 時明顯嗎？"
       },
       {
-        level: "邊界", type: "debug", concept: "MLA 讓 KV 可以跨機",
-        q: "假設 DeepSeek-V3 的骨架改用 MHA（128 頭 × 128 維），其他不變。平均 4,989 token 的 KV 經 400G 網卡從 prefill 交給 decode，會發生什麼？",
+        level: "遷移", type: "scenario", concept: "總參數 vs 活躍參數",
+        q: "你有一台 128 GB 統一記憶體的 Mac（容量大、頻寬比 GPU 低），想在本機跑一個「裝得下、又不會太慢」的開源模型。哪一類設計最適合？",
         options: [
-          { label: "約 7 ms，依然只是雜訊", desc: "交接時間和 MLA 差不多，TTFT 幾乎不受影響。", hint: "7 ms 是用 MLA（每 token 70 KB）算出來的數字。換成 MHA 後每 token 的 KV 大很多，要重新代數字。再想一次？" },
-          { label: "約 33 ms，開始有點明顯", desc: "和 Llama-3-70B 的 GQA 同一個量級。", hint: "33 ms 是 GQA（每 token 320 KB）的數字。題目是每層 128 個 head 各存 K、V 的 MHA，每 token 比 GQA 大一個量級。再想一次？" },
-          { label: "約 400 ms，變成負擔", desc: "每 token 約 4 MB、共約 20 GB。", hint: null },
-          { label: "約 4 秒，完全無法跨機", desc: "KV 大到要切好幾批，每批都要重新握手。", hint: "KV 變大確實會讓交接變慢。但用每 token 約 4 MB × 4,989 token ÷ 49.5 GB/s 算一次，量級沒有到秒。再想一次？" }
+          { label: "同樣大小的 dense 模型", desc: "沒有路由開銷，每一層都完整使用，品質最穩定。", hint: "dense 模型確實沒有路由問題。但 dense 每 token 要讀全部權重，在頻寬低的機器上，每一步都會很慢。再想一次？" },
+          { label: "大總參數、小活躍的 MoE", desc: "總量放得下，每 token 只讀一小部分。", hint: null },
+          { label: "2.8T 參數的 MXFP4 模型", desc: "4-bit 讓權重縮到 1/4，大模型也能塞進本機。", hint: "MXFP4 確實讓權重大幅縮小。但 2.8T 就算是 4-bit 也要約 1.4 TB，遠超過 128 GB。再想一次？" },
+          { label: "純線性注意力的小模型", desc: "不存 KV，長對話也不會吃掉記憶體。", hint: "不存 KV 確實省記憶體。但 MiniMax 的教訓是純線性骨幹在多跳推理與生態相容上都有實證問題，也不是講稿推薦給本機的答案。再想一次？" }
         ],
-        answer: 2,
-        explain: "MHA 每 token 約 4.0 MB，一個請求約 20 GB，÷ 49.5 GB/s ≈ 400 ms；MLA BF16 每 token 70 KB、一個請求 351 MB，只要約 7 ms。MLA 在第五堂是為了 decode 的 HBM 頻寬而發明，還順手讓 prefill 和 decode 可以放在不同機櫃。出處：第六堂第 8 頁。",
-        dig: "附錄提到 1M context 時 V4 每條序列 KV 9.62 GiB。跨機交接要多久？這時第 4 頁 KV 那一列還「搬得起」嗎？"
-      },
-      {
-        level: "遷移", type: "scenario", concept: "最小單位是一台",
-        q: "一家中型公司想用「一台 8 卡機」部署 DeepSeek-V3 FP8（權重 688.6 GB），QPS 不高，想避開跨機複雜度，並把剩下最多的 HBM 留給 KV。哪一台最適合？",
-        options: [
-          { label: "AMD MI355X 8 卡機", desc: "每卡 288 GB，一台約 2.3 TB。", hint: null },
-          { label: "NVIDIA H100 8 卡機", desc: "生態最成熟，SGLang 主角就是用它。", hint: "H100 叢集確實是第六堂的主角。但一台 H100 只有 8×80 GB = 640 GB，連 688.6 GB 的權重都放不下。再想一次？" },
-          { label: "NVIDIA HGX B200 8 卡機", desc: "每卡 180 GB，NVLink 5、NVSwitch 交換。", hint: "B200 一台 1.44 TB，確實放得下權重。但題目要剩下最多的 HBM 給 KV，比一比各台放完權重之後還剩多少。再想一次？" },
-          { label: "GB200 NVL72 機櫃", desc: "72 卡同一個 NVLink 域，總 HBM 13.4 TB。", hint: "NVL72 在大規模 EP 上確實領先。但它是一整個機櫃，不是題目要的「一台 8 卡機」這個最小單位。再想一次？" }
-        ],
-        answer: 0,
-        explain: "單位是一台時，決定性數字是單台總 HBM：MI355X 約 2.3 TB，放完 688.6 GB 權重還剩約 1.6 TB 給 KV；B200 1.44 TB 剩約 0.75 TB；H100 640 GB 連權重都放不下。這一格 AMD 有結構優勢；單位換成機櫃時，就要看 scale-up 域大小。出處：第六堂第 17–18 頁。",
-        dig: "如果這家公司一年後 QPS 成長十倍、要上大規模 EP，MI355X 的哪個特性會變成弱點？Helios 能補上嗎？"
+        answer: 1,
+        explain: "總參數是容量門檻、活躍參數是速度門檻。Qwen3-Next 80B-A3B 這種大總參數、小活躍的設計，放得進大容量統一記憶體，每 token 只讀約 3B 權重，在低頻寬機器上仍可接受，呼應第一堂「容量夠、頻寬低 → 慢但跑得動」。出處：第四堂講稿 Q&A「這些模型我在本機跑得動嗎？」。",
+        dig: "80B-A3B 用 4-bit 量化後大約佔多少 GB？如果這台 Mac 的頻寬是 400 GB/s，batch=1 decode 的速度下限大約多少 tok/s？"
       },
       {
         level: "遷移", type: "scenario", concept: "節拍器與 straggler",
@@ -634,21 +412,21 @@ window.QUIZ = [
           { label: "整個單元的 ITL 被拖慢", desc: "每層都要全員同步，最慢那張卡決定整體節奏。", hint: null }
         ],
         answer: 3,
-        explain: "DP-attention + EP 下，同一個 decode 單元的所有 rank 必須同步進入每一層的 all-to-all，沒請求的卡也得跑空批次陪跑。所以最慢那張卡決定整體 ITL（barrier／straggler），掉一張卡整個 72 卡單元停擺；拆散換到大 batch，代價就是被這個節拍器綁住。出處：第六堂第 12 頁。",
-        dig: "EP 越大、爆炸半徑越大。在第四堂的「掛了 vs 慢了分不清」這個問題上，72 卡單元要怎麼判斷該等它還是把它踢掉？"
+        explain: "DP-attention + EP 下，同一個 decode 單元的所有 rank 必須同步進入每一層的 all-to-all，沒請求的卡也得跑空批次陪跑。所以最慢那張卡決定整體 ITL（barrier／straggler），掉一張卡整個 72 卡單元停擺；拆散換到大 batch，代價就是被這個節拍器綁住。出處：第四堂第 23 頁。",
+        dig: "EP 越大、爆炸半徑越大。一張卡變慢時，你常分不清它是掛了還是只是慢——72 卡單元要怎麼判斷該等它，還是把它踢掉？"
       },
       {
-        level: "取捨", type: "numeric", concept: "scale-up 域大小的效益",
-        q: "SemiAnalysis 比較同一顆 Blackwell、同樣每卡 NVLink 頻寬的 B200 8 卡機（域 = 8）與 GB200 NVL72（域 = 72），在 125 tok/s/user 條件下跑 DeepSeek-R1。每張 GPU 的吞吐差大約幾倍？",
+        level: "取捨", type: "numeric", concept: "MLA 的 KV 量級",
+        q: "DeepSeek-V3 用 MLA 把 K/V 投影成 576 維的 latent（61 層、BF16）。每個 token 的 KV 大約多大？",
         options: [
-          { label: "約 1.2 倍而已", desc: "只有通訊那一段變快，計算時間不變。", hint: "只看通訊那一段，教具模型算出的差確實只有 1.2–1.5 倍。但實測數字還包含了域變大之後 EP 開更大、每卡權重更少、batch 更大的效果。再想一次？" },
-          { label: "約 18 倍", desc: "NVLink 5 每方向頻寬是 400G 網卡的 18 倍。", hint: "18 倍是兩條線的頻寬比。但每卡吞吐還受計算、batch 等其他因素限制，不會直接等於頻寬比。再想一次？" },
-          { label: "約 4.4 倍", desc: "941 對 4,130 tok/s/GPU。", hint: null },
-          { label: "約 2 倍", desc: "域變大後，跨機流量少了一半左右。", hint: "跨機流量減少是對的方向。但從域 8 到域 72，跨機比例是從約九成降到零，不只是少一半；而且吞吐的差距還包含其他效果。再想一次？" }
+          { label: "約 512 KB", desc: "和 Llama 式 32 頭 MHA 同一個量級。", hint: "512 KB 是 Llama 式 32 頭 MHA 的數字。但 MLA 每層只存一個 576 維的向量，不是每個 head 各存一份 K、V。再想一次？" },
+          { label: "約 128 KB", desc: "和 Llama-3-8B 的 GQA 同一個量級。", hint: "128 KB 是 Llama-3-8B 用 GQA（8 個 KV head）的數字。MLA 每層只存 576 個值，用 576 × 61 × 2 bytes 算算看。再想一次？" },
+          { label: "約 3.8 MB（同規模 MHA）", desc: "DeepSeek-V3 骨架若用 MHA，每 token 就要這麼多。", hint: "3.8 MB 是同規模 MHA 推算出來的對照值。題目問的是用了 MLA 之後，只存 576 維 latent 的情況。再想一次？" },
+          { label: "約 70 KB", desc: "576 個值 × 61 層 × 2 bytes。", hint: null }
         ],
-        answer: 2,
-        explain: "B200 941 vs GB200 NVL72 4,130 tok/s/GPU，約 4.4 倍、每 1M token 成本 $0.576 → $0.149（÷3.9）。晶片一樣、每卡頻寬一樣，差別幾乎只剩域的大小。教具模型只解釋了通訊那段的 1.2–1.5 倍，其餘來自 EP 開更大、每卡權重更少、batch 更大。出處：第六堂第 15 頁。",
-        dig: "4.4 倍裡，大約多少可以歸給「通訊變快」、多少歸給「batch 變大」？用第 10–11 頁的時間帳和 HBM 帳拆一次。"
+        answer: 3,
+        explain: "576 × 61 × 2 B ≈ 70 KB／token；同規模 MHA 推算約 3.8 MB，Llama-3-8B 的 GQA 是 128 KB、32 頭 MHA 是 512 KB。DeepSeek-V2 論文自陳 MLA 讓 KV 比 MHA 減少 93.3%。MLA 是為了 decode 的 HBM 頻寬而發明的，架構決策就是硬體帳單。出處：第四堂第 4 頁（旋鈕① 壓 KV）。",
+        dig: "同樣 5,000 token 的請求，MLA 和 MHA 的 KV 各有多大？本堂為什麼說 MLA「順手付了另一張帳」？"
       },
       {
         level: "取捨", type: "tradeoff", concept: "拆散為何反而便宜",
@@ -660,9 +438,9 @@ window.QUIZ = [
           { label: "KV 在各卡重複存，命中率提高", desc: "每張卡都有一份完整的 KV，任何請求都能命中。", hint: "重複存一份 KV 在某些場景確實能提高命中。但這正是 TP16 的缺點：MLA latent 不能按 head 切，16 張卡各存同一份，浪費了空間。再想一次？" }
         ],
         answer: 1,
-        explain: "EP72 每卡只放 4 個 routed + 1 個 shared 專家，權重約 29 GB，剩約 51 GB 只存自己那批請求的 KV；TP16 每卡約 43 GB 權重，而且 MLA latent 在 16 張卡上各存一份。省下的 HBM 讓每張卡跑 256 條序列，AI ≈ B 被推到幾百。代價則是 72 張卡綁成一個節拍器。出處：第六堂第 11–12 頁。",
+        explain: "EP72 每卡只放 4 個 routed + 1 個 shared 專家，權重約 29 GB，剩約 51 GB 只存自己那批請求的 KV；TP16 每卡約 43 GB 權重，而且 MLA latent 在 16 張卡上各存一份。省下的 HBM 讓每張卡跑 256 條序列，AI ≈ B 被推到幾百。代價則是 72 張卡綁成一個節拍器。出處：第四堂第 22–23 頁。",
         dig: "72 張卡能放的「不重複」KV，EP72 約 3.6 TB、TP16 約 170 GB。這 20 倍的差距裡，有多少來自「權重變少」、多少來自「KV 不重複」？"
-      }
-    ]
-  }
+      },
+    ],
+  },
 ];

@@ -5,7 +5,7 @@
 
 合輯不是五場串接，而是**重編去重 + 聚焦**。最新版**聚焦「硬體架構 × Transformer」**：已移除 ASR 案例、NVLink/GPUDirect、Unified Memory 三種，並把「心法」折進記憶體階層頁；另把靜態的「CPU vs GPU」「GPU 解剖」兩頁拿掉，GPU 結構改由互動地圖（已含 SM → CUDA/Tensor core 下鑽）承擔。本檔同時是次序地圖與第一堂的主講稿（原 s1–s5 單場講稿與單場版投影片皆已併入後刪除）。
 
-> **在六堂系列中的位置**：本堂是地基——給出整個系列都會用到的「一把尺」（算術強度 / roofline）與「一張表」（記憶體階層），並用開場謎題「batch=1 decode 算力利用率 <5%」埋下全系列的主敵人：**decode 是 memory-bound**。後五堂都在從不同高度打這個敵人。
+> **在四堂系列中的位置**：本堂是地基——給出整個系列都會用到的「一把尺」（算術強度 / roofline）與「一張表」（記憶體階層），並用開場謎題「batch=1 decode 算力利用率 <5%」埋下全系列的主敵人：**decode 是 memory-bound**。後三堂都在從不同高度打這個敵人。
 
 ## 新次序（五個篇章）
 
@@ -100,7 +100,7 @@
 
 ### 資料搬遷 / overlap 上限（Part 4）
 
-- 頻寬階梯：HBM ~TB/s ≫ NVLink ~900 GB/s（NVLink 4 雙向合計；每方向 450 GB/s，第六堂一律用每方向）≫ PCIe ~32–64 GB/s ≫ DRAM ~100 GB/s ≫ SSD ~7 GB/s。瓶頸 = 必經的最慢那段。
+- 頻寬階梯：HBM ~TB/s ≫ NVLink ~900 GB/s（NVLink 4 雙向合計；每方向 450 GB/s，第四堂一律用每方向）≫ PCIe ~32–64 GB/s ≫ DRAM ~100 GB/s ≫ SSD ~7 GB/s。瓶頸 = 必經的最慢那段。
 - pinned vs pageable：pageable 要先 staging 到 pinned bounce buffer（多一跳、不能 async）；pinned DMA 直達且可 `non_blocking` overlap，差約 2×。
 - overlap 理想上限：搬一批 C、算一批 K。naive ≈ `N·(C+K)`，完美 overlap ≈ `C + N·max(C,K)`；`C≈K` 時加速 ≈ **2×**。`C≪K` 幫助小，`C≫K` 上限受 C 決定。
 
@@ -109,7 +109,7 @@
 - Amdahl：`S(N)=1/((1−p)+p/N)`。p=0.95、N=16896 → ≈ **20×** ≈ N=∞——N 夠大後瓶頸只剩 (1−p)。模型裡的「序列相依」就是 (1−p)：RNN 訓練的 T 步遞迴、transformer decode 的逐 token。
 - RNN vs attention：同樣總 FLOPs，依賴圖一個是深度 T 的鏈（LSTM，T 步序列 + T 次 kernel launch），一個是深度 1 的寬層（attention，(B·T)×H 一次 GEMM）。
 - FlashAttention：數學不變，tiling + 線上 softmax + 反向重算讓 T×T 矩陣**不落地 HBM** → bytes 大減、記憶體 O(T²)→O(T)、快 2–4×。T=8192/fp16 時單 head 的 S ≈ 134 MB 反覆進出 HBM。
-- MQA/GQA：KV head 從「每 Q 一組」→「共用」。Llama2-70B GQA-8 把 KV bytes ÷8；T=4096/fp16、單條序列時 KV cache ~10.7 GB → ~1.3 GB（每 token 2.5 MB → 320 KB；省頻寬也省容量）。〔舊版寫 ~21 GB → ~2.6 GB，多算了 2×；320 KB/token 與第六堂第 8 頁的 Llama-3-70B 一致〕
+- MQA/GQA：KV head 從「每 Q 一組」→「共用」。Llama2-70B GQA-8 把 KV bytes ÷8；T=4096/fp16、單條序列時 KV cache ~10.7 GB → ~1.3 GB（每 token 2.5 MB → 320 KB；省頻寬也省容量）。〔舊版寫 ~21 GB → ~2.6 GB，多算了 2×；320 KB/token 與第四堂第 19 頁的 Llama-3-70B 一致〕
 - depthwise separable conv：FLOPs ≈ 標準的 1/8–1/9（C=256），但 depthwise 段 AI 個位數 → memory-bound，GPU 上 wall-clock 常只快 1.5–3×。「FLOPs ÷9 ≠ 速度 ÷9」。
 - Mamba：遞迴 `h_t = Ā h_{t−1} + B̄ x_t`，但線性遞迴可寫成關聯運算 → **parallel scan** 在 O(log T) 深度算完 → 訓練平行；推論退回遞迴、每步 O(1) 狀態、無 KV cache 成長。
 
