@@ -14,7 +14,7 @@ const MEM = "38BDF8", COMP = "F59E0B", WARN = "FB7185", GOOD = "34D399", PURP = 
 const MEMTINT = "10455F", COMPTINT = "4A3410", WARNTINT = "4A2433", GOODTINT = "123D31", PURPTINT = "2A2150";
 const HEAD = "PingFang TC", BODY = "PingFang TC", MONO = "Menlo";
 
-const W = 13.33, H = 7.5, MX = 0.7, TITLE_Y = 0.62, FOOT_Y = 7.05, TOTAL = 28;
+const W = 13.33, H = 7.5, MX = 0.7, TITLE_Y = 0.62, FOOT_Y = 7.05, TOTAL = 27;
 const shadow = () => ({ type: "outer", color: "000000", blur: 8, offset: 3, angle: 135, opacity: 0.3 });
 
 const pres = new pptxgen();
@@ -92,7 +92,7 @@ function stackBar(s, x, y, w, h, segs, max, tot) {
   });
   if (tot) s.addText(tot, { x: cx + 0.12, y, w: 1.3, h, valign: "middle", fontFace: MONO, fontSize: 12, bold: true, color: INK, margin: 0 });
 }
-// 旅程進度條（第 16–23 頁）
+// 旅程進度條（第 15–22 頁）
 const STATIONS = ["① router", "② prefill", "③ KV 交接", "④ decode 一步"];
 function stationStepper(s, active, y) {
   const yy = y || 1.3, w = 2.87, gap = 0.14, h = 0.44;
@@ -125,7 +125,6 @@ const PA = "後半 · 拆法";
 const PB = "後半 · 跟著一個請求走";
 const PC = "後半 · 合回來：真瓶頸";
 const PE = "收尾";
-
 // ============================================================ 1 封面＋鉤子
 (() => {
   const s = pres.addSlide(); base(s);
@@ -230,7 +229,7 @@ const PE = "收尾";
   card(s, MX, 4.95, 11.9, 0.9, BG2, MEM);
   s.addText("DeepSeek-V2 論文自陳：MLA 讓 KV cache 相對 MHA 減少 93.3%。Kimi K3 進一步用 Gated MLA，GLM-5 也採用 MLA——這個旋鈕已經是共識。",
     { x: MX + 0.28, y: 4.95, w: 11.3, h: 0.9, valign: "middle", fontFace: BODY, fontSize: 12.5, color: MUTE, margin: 0 });
-  takeaway(s, "MLA 是為了 decode 的 HBM 頻寬而發明的——後半段第 19 頁會看到它順手買到的另一件事。", MEM);
+  takeaway(s, "MLA 是為了 decode 的 HBM 頻寬而發明的——後半段第 18 頁會看到它順手買到的另一件事。", MEM);
   footer(s, P1);
 })();
 
@@ -294,7 +293,7 @@ const PE = "收尾";
   s.addText("細粒度專家：切更小、選更多 → 組合數變多，表達力上升", { x: MX + 0.25, y: 5.0, w: 5.3, h: 0.95, valign: "middle", fontFace: BODY, fontSize: 12, color: MUTE, margin: 0 });
   card(s, 7.0, 5.0, 5.6, 0.95, BG2, PURP);
   s.addText("共享專家：每 token 必經，承接共通知識 → 讓 routed 專家專心學差異", { x: 7.25, y: 5.0, w: 5.1, h: 0.95, valign: "middle", fontFace: BODY, fontSize: 12, color: MUTE, margin: 0 });
-  takeaway(s, "⚠️ 但 MoE 在單卡上不省容量（專家都得在 HBM）——要連容量也省，得靠後半段的大規模 EP（第 22 頁）。", COMP);
+  takeaway(s, "⚠️ 但 MoE 在單卡上不省容量（專家都得在 HBM）——要連容量也省，得靠後半段的大規模 EP（第 21 頁）。", COMP);
   footer(s, P1);
 })();
 
@@ -319,42 +318,14 @@ const PE = "收尾";
     s.addText("· " + t, { x: 7.28, y: 3.5 + i * 0.34, w: 5.0, h: 0.32, valign: "middle", fontFace: BODY, fontSize: 11.5, color: MUTE, margin: 0 }));
   pill(s, 7.28, 4.62, 5.05, 0.55, "KV 沒了 → 第三堂建好的三個系統全要重做", WARN, WARNTINT, WARN, 11.5);
 
-  takeaway(s, "2026 的共識不是「線性取代 full attention」，而是「混合 + 稀疏」——下一頁看 MiniMax 為什麼這樣說。", GOOD);
+  takeaway(s, "2026 的共識不是「線性取代 full attention」，而是「混合 + 稀疏」——因為稀疏保留了「KV 還在」這個前提。", GOOD);
   footer(s, P1);
 })();
 
-// ============================================================ 8 MiniMax 反例
+// ============================================================ 8 旋鈕④⑤
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "07", "最有價值的反例：MiniMax M1 → M2 → M3", WARN);
-  [["M1 · 2025-06", "Lightning Attention 混合（線性為主）+ CISPO RL", MEM],
-  ["M2 · 2025-10", "退回 full attention，並公開說明為什麼", WARN],
-  ["M3 · 2026", "改走 MSA 稀疏注意力：宣稱 1M ctx 下 prefill 9×、decode 15× 快於 M2", GOOD]]
-    .forEach(([t, d, c], i) => {
-      const x = MX + i * 4.03;
-      card(s, x, 1.45, 3.85, 1.3, BG2, c);
-      s.addText(t, { x: x + 0.18, y: 1.55, w: 3.5, h: 0.32, fontFace: MONO, fontSize: 12, bold: true, color: c, margin: 0 });
-      s.addText(d, { x: x + 0.18, y: 1.9, w: 3.5, h: 0.75, valign: "top", fontFace: BODY, fontSize: 10.8, color: MUTE, lineSpacingMultiple: 1.25, margin: 0 });
-      if (i < 2) s.addText("▶", { x: x + 3.87, y: 1.95, w: 0.16, h: 0.3, fontFace: BODY, fontSize: 13, color: FOOTC, margin: 0 });
-    });
-  s.addText("M2 為什麼退回？三個理由（LMSYS 部落格 + MiniMax 官方文件）", { x: MX, y: 2.92, w: 11.9, h: 0.38, fontFace: HEAD, fontSize: 15, bold: true, color: WARN, margin: 0 });
-  [["① 評測會騙人", "混合注意力在 MMLU / LongBench 上看起來沒問題，放大後才發現多跳推理明顯退化；要在困難任務上得到顯著訊號，所需算力是天文數字。", WARN],
-  ["② 理論 FLOPs ≠ 牆上時間", "線性注意力的實作本身就是 memory-bound，連訓練都吃不滿算力——第一堂 roofline 的教訓：省下的是紙上的 FLOPs。", COMP],
-  ["③ 打壞第三堂的三個系統", "線性狀態對精度敏感、不能像 KV 切片複用 → KV 量化、prefix caching、投機解碼全部要重做。", PURP]]
-    .forEach(([t, d, c], i) => {
-      const y = 3.4 + i * 0.85;
-      card(s, MX, y, 11.9, 0.75, BG2, c);
-      s.addText(t, { x: MX + 0.22, y, w: 3.0, h: 0.75, valign: "middle", fontFace: HEAD, fontSize: 13.5, bold: true, color: c, margin: 0 });
-      s.addText(d, { x: MX + 3.25, y, w: 8.45, h: 0.75, valign: "middle", fontFace: BODY, fontSize: 11, color: MUTE, lineSpacingMultiple: 1.2, margin: 0 });
-    });
-  takeaway(s, "「理論複雜度更低」離「生產環境更快」隔著三層：kernel 效率、評測有效性、生態相容性。", WARN);
-  footer(s, P1);
-})();
-
-// ============================================================ 9 旋鈕④⑤
-(() => {
-  const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "08", "旋鈕④ 一次多產、旋鈕⑤ 降精度", COMP);
+  header(s, "07", "旋鈕④ 一次多產、旋鈕⑤ 降精度", COMP);
   card(s, MX, 1.45, 11.9, 2.0, BG2, COMP);
   s.addText("④ MTP（Multi-Token Prediction）", { x: MX + 0.28, y: 1.58, w: 6, h: 0.4, fontFace: HEAD, fontSize: 18, bold: true, color: COMP, margin: 0 });
   s.addText("訓練時多預測幾步當額外訊號（更密的監督），推論時那些 head 直接當投機解碼的 draft。",
@@ -376,10 +347,10 @@ const PE = "收尾";
   footer(s, P1);
 })();
 
-// ============================================================ 10 全景對照
+// ============================================================ 9 全景對照
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "09", "全景：五個實驗室 × 五個旋鈕", PURP);
+  header(s, "08", "全景：五個實驗室 × 五個旋鈕", PURP);
   tableGrid(s, MX, 1.45, 11.9, [
     { t: "", w: 2.1 }, { t: "① 壓 KV", w: 1.8 }, { t: "② 少算（MoE）", w: 2.5 }, { t: "③ 少看（attention）", w: 3.0 }, { t: "④ 一次多產", w: 1.4 }, { t: "⑤ 降精度", w: 1.1 },
   ], [
@@ -398,10 +369,10 @@ const PE = "收尾";
   footer(s, P1);
 })();
 
-// ============================================================ 11 開源零件
+// ============================================================ 10 開源零件
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "10", "為什麼他們連 kernel 都開源？", MEM);
+  header(s, "09", "為什麼他們連 kernel 都開源？", MEM);
   s.addText("這是前半與後半的接縫：這四個零件，等一下會在機櫃上一一出現。",
     { x: MX, y: 1.35, w: 11.9, h: 0.32, fontFace: BODY, fontSize: 13, color: MUTE, margin: 0 });
   card(s, MX, 1.85, 11.9, 1.3, BG2, WARN);
@@ -410,9 +381,9 @@ const PE = "收尾";
     { x: MX + 0.28, y: 2.35, w: 11.3, h: 0.7, valign: "top", fontFace: BODY, fontSize: 12, color: MUTE, lineSpacingMultiple: 1.3, margin: 0 });
   const parts = [
     ["FlashMLA", "MLA 的 decode kernel", "讓 ① 壓 KV 真的跑得快", MEM],
-    ["DeepEP", "MoE dispatch / combine 的通訊庫", "讓 ② 少算 在多機可行（第 17、20 頁）", COMP],
-    ["DeepGEMM", "FP8 GEMM", "讓 ⑤ 降精度 吃到 tensor core（第 20 頁）", GOOD],
-    ["EPLB", "專家平行負載均衡器", "熱門專家做副本（第 22–23 頁）", PURP],
+    ["DeepEP", "MoE dispatch / combine 的通訊庫", "讓 ② 少算 在多機可行（第 16、19 頁）", COMP],
+    ["DeepGEMM", "FP8 GEMM", "讓 ⑤ 降精度 吃到 tensor core（第 19 頁）", GOOD],
+    ["EPLB", "專家平行負載均衡器", "熱門專家做副本（第 21–22 頁）", PURP],
   ];
   parts.forEach(([t, d, why, c], i) => {
     const y = 3.35 + i * 0.66;
@@ -425,10 +396,10 @@ const PE = "收尾";
   footer(s, P1);
 })();
 
-// ============================================================ 12 接縫：要搬上機櫃的模型
+// ============================================================ 11 接縫：要搬上機櫃的模型
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "11", "等一下要搬上機櫃的，就是這個模型：DeepSeek-V3", MEM);
+  header(s, "10", "等一下要搬上機櫃的，就是這個模型：DeepSeek-V3", MEM);
   lede(s, "前半段的每個設計決定，到了機櫃上都會變成一筆搬運帳。");
   tableGrid(s, MX, 1.8, 11.9, [
     { t: "規格", w: 2.2 }, { t: "數字", w: 3.6 }, { t: "前半段哪一頁", w: 2.1 }, { t: "到了機櫃上變成…", w: 4.0 },
@@ -442,10 +413,83 @@ const PE = "收尾";
   card(s, MX, 5.05, 11.9, 0.8, BG2, COMP);
   s.addText([
     { text: "671B 一台機器放不下，只能拆。", options: { bold: true, color: COMP } },
-    { text: "但拆得越散、卡之間的交換越多——照常識應該越慢越貴。實測卻相反。", options: { color: MUTE } },
+    { text: "下一頁先看拆完長什麼樣；再看一個反常識的實測：拆得越散，每張卡反而越划算。", options: { color: MUTE } },
   ], { x: MX + 0.28, y: 5.05, w: 11.3, h: 0.8, valign: "middle", fontFace: BODY, fontSize: 13, margin: 0 });
   takeaway(s, "後半段：跟著一個請求穿過 12 台機器，看這些規格各自在哪一站付帳。", MEM);
   footer(s, P1);
+})();
+
+// ============================================================ 12 服務長什麼樣
+(() => {
+  const s = pres.addSlide(); base(s); runningHeader(s);
+  header(s, "11", "拆完長這樣：一個 router、兩個池子、三張網——gate 在每張卡的每一層裡", MEM);
+  lede(s, "SGLang 在 12 台 × 8 張 H100 上的開源復現（prefill 與 decode 在同一叢集上分開量測）。右邊放大 decode 池裡的一張卡。");
+  const TOP = 1.8, HT = 2.45;
+  const arrowR = (x, y, w, c, lab) => {
+    s.addShape(pres.shapes.LINE, { x, y, w, h: 0, line: { color: c, width: 2, endArrowType: "triangle" } });
+    if (lab) s.addText(lab, { x: x - 0.3, y: y - 0.3, w: w + 0.6, h: 0.26, align: "center", fontFace: MONO, fontSize: 8.5, bold: true, color: c, margin: 0 });
+  };
+
+  card(s, MX, TOP, 1.55, 0.6, BG2, FOOTC);
+  s.addText("使用者", { x: MX, y: TOP, w: 1.55, h: 0.6, align: "center", valign: "middle", fontFace: HEAD, fontSize: 12.5, bold: true, color: INK, margin: 0 });
+  s.addShape(pres.shapes.LINE, { x: MX + 0.775, y: TOP + 0.62, w: 0, h: 0.24, line: { color: FOOTC, width: 2, endArrowType: "triangle" } });
+  card(s, MX, TOP + 0.9, 1.55, HT - 0.9, BG2, INK);
+  s.addText("Router", { x: MX, y: TOP + 0.98, w: 1.55, h: 0.34, align: "center", fontFace: HEAD, fontSize: 13.5, bold: true, color: INK, margin: 0 });
+  s.addText("KV-aware\n挑一組 P / D\n同一請求\n同時送給兩邊", { x: MX + 0.05, y: TOP + 1.34, w: 1.45, h: 0.95, align: "center", valign: "top", fontFace: BODY, fontSize: 9.5, color: MUTE, lineSpacingMultiple: 1.15, margin: 0 });
+  arrowR(MX + 1.57, TOP + 1.55, 0.2, INK);
+
+  const PX = 2.5, PW = 2.9;
+  card(s, PX, TOP, PW, HT, BG2, COMP);
+  s.addText("Prefill 池 · EP32", { x: PX + 0.15, y: TOP + 0.08, w: PW - 0.3, h: 0.3, fontFace: HEAD, fontSize: 12.5, bold: true, color: COMP, margin: 0 });
+  for (let i = 0; i < 4; i++) {
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: PX + 0.15, y: TOP + 0.45 + i * 0.42, w: PW - 0.3, h: 0.33, rectRadius: 0.05, fill: { color: COMPTINT }, line: { color: COMP, width: 0.8 } });
+    s.addText(`P${i + 1} · 8 × H100`, { x: PX + 0.15, y: TOP + 0.45 + i * 0.42, w: PW - 0.3, h: 0.33, align: "center", valign: "middle", fontFace: MONO, fontSize: 9.5, color: COMP, margin: 0 });
+  }
+  s.addText("每卡 9 個專家 · 整段 prompt", { x: PX + 0.15, y: TOP + 2.13, w: PW - 0.3, h: 0.24, align: "center", fontFace: BODY, fontSize: 9, color: FOOTC, margin: 0 });
+  arrowR(PX + PW + 0.02, TOP + 1.2, 0.26, GOOD, "KV");
+
+  const DX = 5.7, DW = 3.45;
+  card(s, DX, TOP, DW, HT, BG2, MEM);
+  s.addText("Decode 池 · EP72", { x: DX + 0.15, y: TOP + 0.08, w: DW - 0.3, h: 0.3, fontFace: HEAD, fontSize: 12.5, bold: true, color: MEM, margin: 0 });
+  for (let i = 0; i < 9; i++) {
+    const x = DX + 0.15 + (i % 3) * 1.07, y = TOP + 0.45 + Math.floor(i / 3) * 0.56;
+    const on = i === 2;
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w: 1.0, h: 0.48, rectRadius: 0.05, fill: { color: on ? PURPTINT : MEMTINT }, line: { color: on ? PURP : MEM, width: on ? 1.5 : 0.8 } });
+    s.addText(`D${i + 1}\n8 × H100`, { x, y, w: 1.0, h: 0.48, align: "center", valign: "middle", fontFace: MONO, fontSize: 8.5, color: on ? PURP : MEM, margin: 0 });
+  }
+  s.addText("每卡 4 個專家 · 每卡 256 條序列", { x: DX + 0.15, y: TOP + 2.13, w: DW - 0.3, h: 0.24, align: "center", fontFace: BODY, fontSize: 9, color: FOOTC, margin: 0 });
+  s.addShape(pres.shapes.LINE, { x: DX + 0.15 + 2 * 1.07 + 1.0, y: TOP + 0.69, w: 9.35 - (DX + 0.15 + 2 * 1.07 + 1.0), h: 0, line: { color: PURP, width: 1.5, dashType: "dash" } });
+
+  const ZX = 9.35, ZW = 3.25;
+  card(s, ZX, TOP, ZW, HT, BG2, PURP);
+  s.addText("放大：D3 裡的一張卡，每一層", { x: ZX + 0.15, y: TOP + 0.08, w: ZW - 0.3, h: 0.3, fontFace: HEAD, fontSize: 11.5, bold: true, color: PURP, margin: 0 });
+  [["① MLA attention", "只算自己那批 KV", MEM],
+  ["② Gate", "256 個專家打分，選 8", PURP],
+  ["③ Dispatch →", "送去專家所在的卡", COMP],
+  ["　 專家", "本卡 4 個 routed + shared", COMP],
+  ["④ ← Combine", "結果送回這張卡", MEM]]
+    .forEach(([t, d, c], i) => {
+      const y = TOP + 0.45 + i * 0.34;
+      s.addShape(pres.shapes.RECTANGLE, { x: ZX + 0.15, y, w: ZW - 0.3, h: 0.29, fill: { color: i === 1 ? PURPTINT : BG3 }, line: { color: c, width: i === 1 ? 1.5 : 0.8 } });
+      s.addText(t, { x: ZX + 0.22, y, w: 1.3, h: 0.29, valign: "middle", fontFace: HEAD, fontSize: 9.5, bold: true, color: c, margin: 0 });
+      s.addText(d, { x: ZX + 1.5, y, w: ZW - 1.7, h: 0.29, valign: "middle", fontFace: BODY, fontSize: 8.8, color: MUTE, margin: 0 });
+    });
+  s.addText("× 58 層 MoE ＝ 每字 116 次交換", { x: ZX + 0.15, y: TOP + 2.13, w: ZW - 0.3, h: 0.24, align: "center", fontFace: MONO, fontSize: 9, bold: true, color: PURP, margin: 0 });
+
+  s.addShape(pres.shapes.RECTANGLE, { x: MX, y: 4.38, w: 11.9, h: 0.45, fill: { color: MEMTINT }, line: { color: MEM, width: 1 } });
+  s.addText("算力網：跨機 RDMA · 每卡一張 400G ≈ 50 GB/s（每方向）—— KV 交接、跨機的 dispatch / combine 都走這裡", { x: MX, y: 4.38, w: 11.9, h: 0.45, align: "center", valign: "middle", fontFace: BODY, fontSize: 11.5, bold: true, color: MEM, margin: 0 });
+
+  [["機內 NVLink 4", "每方向 450 GB/s · 8 卡一個 scale-up 域", COMP],
+  ["跨機 RDMA 400G", "每方向 ≈ 50 GB/s · 慢一個數量級", MEM],
+  ["前端乙太", "使用者 ↔ router：延遲 ms 級", FOOTC]]
+    .forEach(([t, d, c], i) => {
+      const x = MX + i * 4.03;
+      card(s, x, 4.96, 3.85, 0.8, BG2, c);
+      s.addText(t, { x: x + 0.18, y: 5.03, w: 3.5, h: 0.32, fontFace: HEAD, fontSize: 12.5, bold: true, color: c, margin: 0 });
+      s.addText(d, { x: x + 0.18, y: 5.35, w: 3.5, h: 0.34, fontFace: BODY, fontSize: 10.5, color: MUTE, margin: 0 });
+    });
+  takeaway(s, "DeepSeek-V3 權重 688.6 GB——一台 8×80 GB 的 H100 連權重都放不下。跨機不是選項，是前提。", MEM);
+  footer(s, PA);
 })();
 
 // ============================================================ 13 拆散反而更便宜
@@ -467,49 +511,10 @@ const PE = "收尾";
   footer(s, PA);
 })();
 
-// ============================================================ 14 服務長什麼樣
+// ============================================================ 14 四種資料 × 四條路
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "13", "一個「模型服務」不是一台機器，是一個 router、兩個池子、三張網", MEM);
-  lede(s, "本堂主角：SGLang 在 12 台 × 8 張 H100 上的開源復現（prefill 與 decode 在同一叢集上分開量測）。");
-
-  card(s, MX, 1.85, 1.75, 1.1, BG2, INK);
-  s.addText("Router", { x: MX, y: 1.95, w: 1.75, h: 0.35, align: "center", fontFace: HEAD, fontSize: 14, bold: true, color: INK, margin: 0 });
-  s.addText("KV-aware\n選一組 P/D", { x: MX, y: 2.3, w: 1.75, h: 0.6, align: "center", valign: "top", fontFace: BODY, fontSize: 10.5, color: MUTE, margin: 0 });
-
-  card(s, 2.75, 1.75, 3.4, 2.5, BG2, COMP);
-  s.addText("Prefill 池 · EP32", { x: 2.95, y: 1.85, w: 3.0, h: 0.35, fontFace: HEAD, fontSize: 14, bold: true, color: COMP, margin: 0 });
-  for (let i = 0; i < 4; i++) {
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 2.95, y: 2.3 + i * 0.46, w: 3.0, h: 0.38, rectRadius: 0.06, fill: { color: COMPTINT }, line: { color: COMP, width: 1 } });
-    s.addText(`node P${i + 1} · 8 × H100`, { x: 2.95, y: 2.3 + i * 0.46, w: 3.0, h: 0.38, align: "center", valign: "middle", fontFace: MONO, fontSize: 10.5, color: COMP, margin: 0 });
-  }
-  card(s, 6.5, 1.75, 6.1, 2.5, BG2, MEM);
-  s.addText("Decode 池 · EP72", { x: 6.7, y: 1.85, w: 4.0, h: 0.35, fontFace: HEAD, fontSize: 14, bold: true, color: MEM, margin: 0 });
-  for (let i = 0; i < 9; i++) {
-    const x = 6.7 + (i % 3) * 1.93, y = 2.3 + Math.floor(i / 3) * 0.6;
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w: 1.82, h: 0.5, rectRadius: 0.06, fill: { color: MEMTINT }, line: { color: MEM, width: 1 } });
-    s.addText(`node D${i + 1}\n8 × H100`, { x, y, w: 1.82, h: 0.5, align: "center", valign: "middle", fontFace: MONO, fontSize: 9, color: MEM, margin: 0 });
-  }
-  s.addShape(pres.shapes.RECTANGLE, { x: MX, y: 4.4, w: 11.9, h: 0.5, fill: { color: MEMTINT }, line: { color: MEM, width: 1 } });
-  s.addText("算力網：跨機 RDMA · 每卡一張 400G ≈ 50 GB/s（每方向）", { x: MX, y: 4.4, w: 11.9, h: 0.5, align: "center", valign: "middle", fontFace: BODY, fontSize: 12, bold: true, color: MEM, margin: 0 });
-
-  [["機內 NVLink 4", "每方向 450 GB/s · 8 卡一個 scale-up 域", COMP],
-  ["跨機 RDMA 400G", "每方向 ≈ 50 GB/s · 慢一個數量級", MEM],
-  ["前端乙太", "使用者 ↔ router：延遲 ms 級", FOOTC]]
-    .forEach(([t, d, c], i) => {
-      const x = MX + i * 4.03;
-      card(s, x, 5.05, 3.85, 0.8, BG2, c);
-      s.addText(t, { x: x + 0.18, y: 5.12, w: 3.5, h: 0.32, fontFace: HEAD, fontSize: 12.5, bold: true, color: c, margin: 0 });
-      s.addText(d, { x: x + 0.18, y: 5.44, w: 3.5, h: 0.34, fontFace: BODY, fontSize: 10.5, color: MUTE, margin: 0 });
-    });
-  takeaway(s, "DeepSeek-V3 權重 688.6 GB——一台 8×80 GB 的 H100 連權重都放不下。跨機不是選項，是前提。", MEM);
-  footer(s, PA);
-})();
-
-// ============================================================ 15 四種資料 × 四條路
-(() => {
-  const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "14", "機櫃群＝多了三層的記憶體階層：每種資料走它付得起的路", PURP);
+  header(s, "13", "機櫃群＝多了三層的記憶體階層：每種資料走它付得起的路", PURP);
   lede(s, "第一堂：暫存器 → L1 → L2 → HBM → PCIe → SSD，每往外一層慢一個數量級。機櫃群只是再往外加三層。");
   [["scale-up 域", "450–900 GB/s", COMP], ["跨機 RDMA", "≈ 50 GB/s", MEM], ["前端乙太", "ms 級", FOOTC], ["儲存網", "啟動時才用", PURP]]
     .forEach(([t, n, c], i) => {
@@ -530,10 +535,10 @@ const PE = "收尾";
   footer(s, PA);
 })();
 
-// ============================================================ 16 第一站 router
+// ============================================================ 15 第一站 router
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "15", "進門那一跳只搬幾 KB，卻決定了一半的 prefill 要不要算", MEM);
+  header(s, "14", "進門那一跳只搬幾 KB，卻決定了一半的 prefill 要不要算", MEM);
   stationStepper(s, 0);
   [["SGLang", "sglang_router --pd-disaggregation", "挑一組 prefill／decode，塞入 bootstrap_host / port / room（隨機 63-bit ID），同一個請求同時 POST 給兩邊；串流從 decode 回來", MEM],
   ["vLLM / llm-d", "Gateway → Endpoint Picker（EPP）", "KV-aware 排程挑 pod，再由 sidecar 串起 prefill → NIXL → decode", COMP],
@@ -554,10 +559,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 17 第二站 prefill
+// ============================================================ 16 第二站 prefill
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "16", "Prefill 是整批的大塊通訊，跨 InfiniBand 也吃得消", COMP);
+  header(s, "15", "Prefill 是整批的大塊通訊，跨 InfiniBand 也吃得消", COMP);
   stationStepper(s, 1);
   lede(s, "prefill 吃整段 prompt → 大 GEMM → compute-bound（第一堂 roofline）；通訊是「一批 token 一次送」。", 1.9);
   tableGrid(s, MX, 2.3, 5.8, [
@@ -582,10 +587,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 18 第三站 KV 交接流程
+// ============================================================ 17 第三站 KV 交接流程
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "17", "KV 交接不是「傳過去」而已：SGLang 先預留再推，vLLM 先算完再拉", MEM);
+  header(s, "16", "KV 交接不是「傳過去」而已：SGLang 先預留再推，vLLM 先算完再拉", MEM);
   stationStepper(s, 2);
   const sg = ["router 同時送給 prefill 與 decode（同一個 bootstrap_room）",
     "decode 查 prefill 端的 bootstrap server、握手",
@@ -617,10 +622,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 19 KV 要搬多久
+// ============================================================ 18 KV 要搬多久
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "18", "一份 5K token 的 KV 跨機只要 7 ms——MLA 在前半段就替這一跳付了帳", MEM);
+  header(s, "17", "一份 5K token 的 KV 跨機只要 7 ms——MLA 在前半段就替這一跳付了帳", MEM);
   stationStepper(s, 2);
   lede(s, "以 DeepSeek 官方統計的平均 KV 長度 4,989 token、跨機 400G（實測 49.5 GB/s）計算。橫軸為對數刻度。", 1.9);
   const lg = (ms) => (Math.log10(ms) + 1) / 5;   // 0.1 ms → 10 s
@@ -643,10 +648,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 20 decode 一步
+// ============================================================ 19 decode 一步
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "19", "Decode 一步：attention 各算各的，MoE 大家一起交換", PURP);
+  header(s, "18", "Decode 一步：attention 各算各的，MoE 大家一起交換", PURP);
   stationStepper(s, 3);
   const steps = [["① Attention", "每卡只算自己那批\nKV 不重複", MEM], ["② Gate", "每個 token\n選 8 個專家", PURP],
   ["③ Dispatch", "送去專家所在的卡\nFP8、每張卡只送一次", COMP], ["④ Experts", "grouped GEMM\n（DeepGEMM）", COMP],
@@ -671,10 +676,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 21 通訊的時間帳
+// ============================================================ 20 通訊的時間帳
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "20", "不做重疊時，通訊佔掉 decode 一步約四成", MEM);
+  header(s, "19", "不做重疊時，通訊佔掉 decode 一步約四成", MEM);
   lede(s, "實測一步 92 ms（22,282 tok/s ÷ 8 卡 ÷ 256 序列）；模型算出每層通訊 0.86 ms × 58 層 ≈ 50 ms。");
   const MAXMS = 140;
   s.addText("不開 two-batch overlap", { x: MX, y: 1.85, w: 3.4, h: 0.4, valign: "middle", align: "right", fontFace: BODY, fontSize: 11.5, color: MUTE, margin: 0 });
@@ -707,10 +712,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 22 為什麼拆散便宜
+// ============================================================ 21 為什麼拆散便宜
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "21", "拆散之所以便宜：每卡只放 4 個專家，省下的 HBM 拿去開大 batch", GOOD);
+  header(s, "20", "拆散之所以便宜：每卡只放 4 個專家，省下的 HBM 拿去開大 batch", GOOD);
   lede(s, "同樣 72 張 H100（每張 80 GB），兩種切法下單卡記憶體的用途完全不同。");
   [["TP16（72 張切成 4.5 組）", [[43, FOOTC, "權重 43 GB"], [37, MEM, "KV 37 GB"]], "MLA 的 latent 無法按 head 切 → 16 張卡各存同一份 KV", WARN],
   ["DP attention + EP72", [[29, FOOTC, "權重 29 GB"], [51, MEM, "KV 51 GB"]], "每張卡只存自己那批請求的 KV，完全不重複", GOOD]]
@@ -737,10 +742,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 23 代價：節拍器
+// ============================================================ 22 代價：節拍器
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "22", "代價是 72 張卡綁成一個節拍器：最慢那張決定速度", WARN);
+  header(s, "21", "代價是 72 張卡綁成一個節拍器：最慢那張決定速度", WARN);
   lede(s, "DP attention + EP 下，同一個 decode 單元的所有 rank 必須同步進入每一層的 all-to-all。");
   for (let i = 0; i < 72; i++) {
     const x = MX + (i % 18) * 0.49, y = 1.85 + Math.floor(i / 18) * 0.42;
@@ -761,10 +766,10 @@ const PE = "收尾";
   footer(s, PB);
 })();
 
-// ============================================================ 24 互動環節
+// ============================================================ 23 互動環節
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "23", "互動環節：同一個請求放到三種硬體上各走一次", PURP);
+  header(s, "22", "互動環節：同一個請求放到三種硬體上各走一次", PURP);
   card(s, MX, 1.4, 11.9, 0.95, BG2, PURP);
   s.addText("interactive/rack_journey_map.html", { x: MX + 0.3, y: 1.4, w: 6.5, h: 0.95, valign: "middle", fontFace: MONO, fontSize: 17, bold: true, color: PURP, margin: 0 });
   [["1–4", "切層"], ["H B G", "切硬體"], ["空白鍵", "播放／暫停"]].forEach(([k, d], i) => {
@@ -783,11 +788,11 @@ const PE = "收尾";
   footer(s, PC);
 })();
 
-// ============================================================ 25 合回來：真瓶頸
+// ============================================================ 24 合回來：真瓶頸
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "24", "四種資料只有一種付不起跨機的路", COMP);
-  lede(s, "回到第 15 頁的地圖，逐格結帳：");
+  header(s, "23", "四種資料只有一種付不起跨機的路", COMP);
+  lede(s, "回到第 14 頁的地圖，逐格結帳：");
   [["① 請求本身", "前端乙太就夠", "✔ 付得起", GOOD], ["② KV 交接", "MLA 讓它 7 ms，跨機櫃也行", "✔ 付得起", GOOD],
   ["④ 權重", "幾乎不搬", "✔ 付得起", GOOD], ["③ MoE 交換", "每字 116 次、每層都要全員同步", "✘ 只有它付不起慢車道", WARN]]
     .forEach(([t, d, v, c], i) => {
@@ -810,10 +815,10 @@ const PE = "收尾";
   footer(s, PC);
 })();
 
-// ============================================================ 26 證據
+// ============================================================ 25 證據
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "25", "同一顆 GPU、同樣的 NVLink 頻寬，只把域從 8 擴到 72", GOOD);
+  header(s, "24", "同一顆 GPU、同樣的 NVLink 頻寬，只把域從 8 擴到 72", GOOD);
   lede(s, "SemiAnalysis InferenceX：DeepSeek-R1 FP4、1K/1K、Dynamo + TRT-LLM、含 MTP、125 tok/s/user。");
   tableGrid(s, MX, 1.8, 11.9, [
     { t: "", w: 2.5 }, { t: "GPU", w: 1.5 }, { t: "每卡 NVLink", w: 2.0 }, { t: "域", w: 0.9 }, { t: "拓樸", w: 3.2 }, { t: "tok/s／GPU", w: 1.8 },
@@ -835,31 +840,31 @@ const PE = "收尾";
   footer(s, PC);
 })();
 
-// ============================================================ 27 旅程 × 全系列
+// ============================================================ 26 旅程 × 全系列
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "26", "這趟旅程的每一站，都能在前面找到它的那一頁", MEM);
+  header(s, "25", "這趟旅程的每一站，都能在前面找到它的那一頁", MEM);
   tableGrid(s, MX, 1.4, 11.9, [
     { t: "旅程的一站", w: 3.6 }, { t: "決定它快慢的東西", w: 5.3 }, { t: "在哪一堂", w: 3.0 },
   ], [
-    ["router 選誰", "cache-aware、局部性 vs 均衡", "本堂第 16 頁"],
+    ["router 選誰", "cache-aware、局部性 vs 均衡", "本堂第 15 頁"],
     ["prefill 跨機", "compute-bound、大 GEMM", "第一堂 roofline"],
     ["KV 交接 7 ms", "MLA 把 KV 壓到 70 KB／token", "本堂旋鈕①（第 4 頁）"],
     ["KV 放得進 HBM", "分頁 KV、continuous batching", "第三堂 ②"],
     ["decode 為什麼要大 batch", "memory-bound、AI ≈ B", "第一堂、第三堂地基"],
     ["116 次 all-to-all 走哪條線", "scale-up 域 vs RDMA 的頻寬階梯", "第二堂 Part B"],
     ["每步不回 CPU", "CUDA Graph、固定 buffer", "第三堂 ④"],
-    ["專家熱點、掉卡", "EPLB、爆炸半徑", "本堂第 22–23 頁"],
-    ["每字少搬幾個 byte", "MoE 稀疏、FP8 / NVFP4", "本堂旋鈕②⑤（第 6、9 頁）"],
+    ["專家熱點、掉卡", "EPLB、爆炸半徑", "本堂第 21–22 頁"],
+    ["每字少搬幾個 byte", "MoE 稀疏、FP8 / NVFP4", "本堂旋鈕②⑤（第 6、8 頁）"],
   ], MEM, 11, 0.44);
   takeaway(s, "第一堂那張記憶體階層表，在最後一堂長成了一座資料中心。", MEM);
   footer(s, PE);
 })();
 
-// ============================================================ 28 帶走三句話
+// ============================================================ 27 帶走三句話
 (() => {
   const s = pres.addSlide(); base(s); runningHeader(s);
-  header(s, "27", "帶走三句話", MEM);
+  header(s, "26", "帶走三句話", MEM);
   [["1", "架構決策就是硬體帳單",
     "MLA 為了 decode 的 HBM 頻寬而生，順手讓 KV 交接只要 7 ms；MoE 讓每個字少算，卻換來每字 116 次的全員交換。模型怎麼設計，決定了機櫃上要搬什麼。", PURP],
   ["2", "72 張卡同步踏一步划算，是因為最常搬的東西走了最快的路",

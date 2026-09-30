@@ -360,7 +360,7 @@ window.QUIZ = [
           { label: "token ids 與串流回傳", desc: "每請求一次、每字一次，每次只有幾 KB。", hint: "這種資料確實搬得很頻繁。但每次只有幾 KB，走 ms 級的前端乙太就夠了。再想一次？" }
         ],
         answer: 1,
-        explain: "MoE hidden states 是每層 × 每步 × 72 張卡同步交換，DeepSeek-V3 有 58 層 MoE、每層 dispatch + combine 各一次，所以每個字 116 次，只有 scale-up 域或特化 RDMA 付得起。請求本身走前端乙太、KV 走跨機 RDMA（MLA 讓它只要 7 ms）、權重幾乎不搬。出處：第四堂第 15 頁、第 25 頁。",
+        explain: "MoE hidden states 是每層 × 每步 × 72 張卡同步交換，DeepSeek-V3 有 58 層 MoE、每層 dispatch + combine 各一次，所以每個字 116 次，只有 scale-up 域或特化 RDMA 付得起。請求本身走前端乙太、KV 走跨機 RDMA（MLA 讓它只要 7 ms）、權重幾乎不搬。出處：第四堂第 14 頁、第 24 頁。",
         dig: "116 次是怎麼算出來的？如果模型改成每 2 層才放一個 MoE 層，這個數字和對 scale-up 域的依賴會怎麼變？"
       },
       {
@@ -373,7 +373,7 @@ window.QUIZ = [
           { label: "排程器不再把同前綴排在一起", desc: "cache-aware 排程只認得 full attention 的請求。", hint: "cache-aware 排程確實影響命中率。但排程只是決定順序；就算排在一起，這種模型也拿不出可以複用的東西。再想一次？" }
         ],
         answer: 0,
-        explain: "稀疏注意力保留完整 KV、只是每個 query 看 top-k；線性注意力不存 KV，改成固定大小的遞迴狀態。這種狀態不像 KV 能直接切片複用，所以 RadixAttention 的整套價值歸零；同時線性狀態對精度敏感（旋鈕⑤失效），投機解碼在線性骨幹上也仍是未解問題。出處：第四堂第 7–8 頁。",
+        explain: "稀疏注意力保留完整 KV、只是每個 query 看 top-k；線性注意力不存 KV，改成固定大小的遞迴狀態。這種狀態不像 KV 能直接切片複用，所以 RadixAttention 的整套價值歸零；同時線性狀態對精度敏感（旋鈕⑤失效），投機解碼在線性骨幹上也仍是未解問題。出處：第四堂第 7 頁（MiniMax 的例子見講稿）。",
         dig: "Qwen 和 Kimi K3 都用約 3:1 的混合比例保留了一部分 full attention 層。這些 full 層對 prefix caching 能救回多少？"
       },
       {
@@ -386,7 +386,7 @@ window.QUIZ = [
           { label: "約九成的流量走跨機網卡", desc: "72 張卡裡只有 7 張跟自己同機，大部分交換要出機器。", hint: null }
         ],
         answer: 3,
-        explain: "一個 token 送往的卡裡，落在同一個 scale-up 域的比例 ≈ (8−1)/(72−1) ≈ 10%，約 90% 的流量走 400G 網卡（約 50 GB/s）。瓶頸在網卡，NVLink 快一倍只加速那一成。換成 GB200 NVL72（域 = 72），跨機比例變 0%，每步通訊約 9 ms。出處：第四堂第 24–25 頁。",
+        explain: "一個 token 送往的卡裡，落在同一個 scale-up 域的比例 ≈ (8−1)/(72−1) ≈ 10%，約 90% 的流量走 400G 網卡（約 50 GB/s）。瓶頸在網卡，NVLink 快一倍只加速那一成。換成 GB200 NVL72（域 = 72），跨機比例變 0%，每步通訊約 9 ms。出處：第四堂第 23–24 頁。",
         dig: "如果改成 EP16（兩台 8 卡機），跨機流量比例會變成多少？這時 NVLink 變快一倍的效果會比 EP72 時明顯嗎？"
       },
       {
@@ -412,7 +412,7 @@ window.QUIZ = [
           { label: "整個單元的 ITL 被拖慢", desc: "每層都要全員同步，最慢那張卡決定整體節奏。", hint: null }
         ],
         answer: 3,
-        explain: "DP-attention + EP 下，同一個 decode 單元的所有 rank 必須同步進入每一層的 all-to-all，沒請求的卡也得跑空批次陪跑。所以最慢那張卡決定整體 ITL（barrier／straggler），掉一張卡整個 72 卡單元停擺；拆散換到大 batch，代價就是被這個節拍器綁住。出處：第四堂第 23 頁。",
+        explain: "DP-attention + EP 下，同一個 decode 單元的所有 rank 必須同步進入每一層的 all-to-all，沒請求的卡也得跑空批次陪跑。所以最慢那張卡決定整體 ITL（barrier／straggler），掉一張卡整個 72 卡單元停擺；拆散換到大 batch，代價就是被這個節拍器綁住。出處：第四堂第 22 頁。",
         dig: "EP 越大、爆炸半徑越大。一張卡變慢時，你常分不清它是掛了還是只是慢——72 卡單元要怎麼判斷該等它，還是把它踢掉？"
       },
       {
@@ -438,7 +438,7 @@ window.QUIZ = [
           { label: "KV 在各卡重複存，命中率提高", desc: "每張卡都有一份完整的 KV，任何請求都能命中。", hint: "重複存一份 KV 在某些場景確實能提高命中。但這正是 TP16 的缺點：MLA latent 不能按 head 切，16 張卡各存同一份，浪費了空間。再想一次？" }
         ],
         answer: 1,
-        explain: "EP72 每卡只放 4 個 routed + 1 個 shared 專家，權重約 29 GB，剩約 51 GB 只存自己那批請求的 KV；TP16 每卡約 43 GB 權重，而且 MLA latent 在 16 張卡上各存一份。省下的 HBM 讓每張卡跑 256 條序列，AI ≈ B 被推到幾百。代價則是 72 張卡綁成一個節拍器。出處：第四堂第 22–23 頁。",
+        explain: "EP72 每卡只放 4 個 routed + 1 個 shared 專家，權重約 29 GB，剩約 51 GB 只存自己那批請求的 KV；TP16 每卡約 43 GB 權重，而且 MLA latent 在 16 張卡上各存一份。省下的 HBM 讓每張卡跑 256 條序列，AI ≈ B 被推到幾百。代價則是 72 張卡綁成一個節拍器。出處：第四堂第 21–22 頁。",
         dig: "72 張卡能放的「不重複」KV，EP72 約 3.6 TB、TP16 約 170 GB。這 20 倍的差距裡，有多少來自「權重變少」、多少來自「KV 不重複」？"
       },
     ],

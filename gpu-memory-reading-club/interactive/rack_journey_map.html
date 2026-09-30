@@ -998,7 +998,7 @@ function panelLedger() {
       ? `<b>模型只換互連，GB200 一步快 ×${(base.total / r.total).toFixed(2)}；實測每卡產出卻是 B200 的 4.4×。</b>差的那一截來自第 3 層的機制：域夠大，EP 就能開大、每卡專家更少、HBM 留給 KV 更多、batch 更大——再加上 Blackwell 計算本身更快。`
       : S.ep <= 8
       ? `<b>EP8 整個留在一台${hw.name}裡，通訊帳只剩固定開銷。</b>把 EP 拉大，看網卡什麼時候變成主角。`
-      : `<b>${hw.name}的通訊帳幾乎全由網卡決定。</b>scale-up 頻寬再快，EP${S.ep} 的交換也只有一小部分走得到——這就是投影片第 25 頁說的「真瓶頸是域大小」。`,
+      : `<b>${hw.name}的通訊帳幾乎全由網卡決定。</b>scale-up 頻寬再快，EP${S.ep} 的交換也只有一小部分走得到——這就是投影片第 24 頁說的「真瓶頸是域大小」。`,
     caveat: "計算時間 74.5 ms 與 TBO 藏住 65% 的通訊，都是由 LMSYS 96×H100 實測（一步 ≈ 92 ms、TBO +35%）反推的校準值；換硬體時刻意不變，以隔離互連這個變數。真實的 Blackwell 計算更快、batch 也能開更大。計算模型見 notes/class4_models_to_racks.md §6。",
   };
 }
