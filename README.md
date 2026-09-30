@@ -85,18 +85,18 @@ Spark 流處理實驗室——最小可行實驗設置，用於流式事件模�
 
 ### 10. gpu-memory-reading-club
 
-GPU 記憶體與資料搬遷讀書會——從硬體架構一路走到推論服務與模型設計，探討為什麼 inference／training 的資料搬遷與記憶體相關速度差這麼多。
+GPU 記憶體與資料搬遷讀書會——從一張 GPU 的記憶體階層一路走到上百張卡的推論叢集，回答「為什麼同一個模型，換個搬資料的方式就差十倍」。
 
-- **形式**：技術讀書會（五堂系列），每堂一份投影片（.pptx，pptxgenjs 程式化產生）＋ 講稿＋ 互動教具（HTML），另有可重現 demo
-- **主線**：Roofline／算術強度 + 記憶體階層；**decode 是 memory-bound**，所有優化都在提高算術強度
+- **網站入口**：<https://chesterhsieh.github.io/Always_try_to_learn/gpu-memory-reading-club/>（投影片、講稿、互動教具、測驗都是網頁）
+- **形式**：四堂技術讀書會。投影片是 HTML（由 `slides/build/generate_*.js` 程式化產生）＋ 講稿（Markdown）＋ 互動教具（單檔 HTML）＋ 每堂 8 題的複習測驗，另有可重現的 PyTorch demo
+- **主線**：Roofline／算術強度 + 記憶體階層；**decode 是 memory-bound**，每產一個字都要把整份權重和 KV 搬一遍
 - **課程結構**（依「看的高度」分層）：
-  1. **硬體本身**——roofline、記憶體階層、GPU 單元、Transformer 上機（34 頁）
-  2. **一張卡 → 多張卡**——逐 block 對應 GPU 單元；DP/TP/PP/EP 與 NVIDIA 互連（24 頁）
-  3. **SGLang 單機篇**——沿著 SGLang 遇到的問題走：①程式難平行 ②前綴重算 ③輸出不可控 ④CPU 成瓶頸（24 頁）
-  4. **SGLang 多機篇**——問題 ⑤大規模 EP ⑥PD 分離 ⑦cache-aware router ⑧容錯；以經典分散式系統的共同問題為對照框架
-  5. **中國開源模型**——五個旋鈕（壓 KV／少算／少看／一次多產／降精度）× DeepSeek／Kimi／MiniMax／Qwen／GLM（16 頁）
-- **互動教具**：GPU 下鑽地圖、玩具 Transformer、NVIDIA 互連、多卡平行、推論服務地圖（共 5 張 HTML）
-- **詳情**：[gpu-memory-reading-club/README.md](gpu-memory-reading-club/README.md)
+  1. **硬體 × Transformer**——roofline、記憶體階層、GPU 單元、Transformer 上機（[34 頁](gpu-memory-reading-club/slides/full_series.html)）
+  2. **Transformer × GPU**——逐 block 對應 GPU 單元；DP/TP/PP/EP 與 NVIDIA 互連（[24 頁](gpu-memory-reading-club/slides/class2_transformer_gpu.html)）
+  3. **推論引擎單機篇**——SGLang × vLLM 的四個問題：①程式難平行 ②前綴重算 ③輸出不可控 ④CPU 成瓶頸（[27 頁](gpu-memory-reading-club/slides/class3_engine_single_node.html)）
+  4. **最終章：從模型到機櫃**——前半是 decode／MoE 入門與中國開源模型的五個旋鈕（壓 KV／少算／少看／一次多產／降精度），後半跟著一個請求穿過 SGLang 96×H100 叢集（[27 頁](gpu-memory-reading-club/slides/class4_models_to_racks.html)）
+- **互動教具**（6 張 HTML）：GPU 下鑽地圖、玩具 Transformer、多卡平行、NVIDIA 互連、推論服務地圖、[機櫃旅程地圖](gpu-memory-reading-club/interactive/rack_journey_map.html)
+- **詳情**：[gpu-memory-reading-club/README.md](gpu-memory-reading-club/README.md)｜[複習測驗](gpu-memory-reading-club/quiz/index.html)｜[術語表](gpu-memory-reading-club/notes/glossary.md)
 
 ### 11. ros2-robotics-mastery
 
@@ -152,4 +152,4 @@ Chester Hsieh
 
 ## 更新日期
 
-2026-07-31
+2026-09-30
