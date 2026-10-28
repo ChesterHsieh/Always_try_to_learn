@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Polars 2.0 引擎轉向</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one reading column (~720px) inside a 1040px frame; figures break out to the full frame. */
+:root {
+  --paper: #f5f5f5;
+  --paper-2: #ececec;
+  --node: #ffffff;
+  --ink: #2d3142;
+  --muted: #4f5d75;
+  --soft: #5a6580;
+  --rule: rgba(45,49,66,0.12);
+  --rule-strong: #bfc0c0;
+  --accent: #bf4520;
+  --accent-tint: rgba(191,69,32,0.08);
+  --link: #2e5aa8;
+  --store: rgba(45,49,66,0.06);
+  --code-bg: #e9e9ec;
+  --serif: 'Instrument Serif', 'Noto Serif TC', serif;
+  --sans: 'Geist', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #262935; --paper-2: #30344a; --node: #2f3345; --ink: #f0f0f2; --muted: #bfc0c0; --soft: #a7afc0;
+    --rule: rgba(245,245,245,0.12); --rule-strong: rgba(191,192,192,0.3); --accent: #f08a59; --accent-tint: rgba(240,138,89,0.13);
+    --link: #8db4ec; --store: rgba(245,245,245,0.07); --code-bg: #1e212b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #262935; --paper-2: #30344a; --node: #2f3345; --ink: #f0f0f2; --muted: #bfc0c0; --soft: #a7afc0;
+  --rule: rgba(245,245,245,0.12); --rule-strong: rgba(191,192,192,0.3); --accent: #f08a59; --accent-tint: rgba(240,138,89,0.13);
+  --link: #8db4ec; --store: rgba(245,245,245,0.07); --code-bg: #1e212b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.8; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 48px 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.prose { max-width: 720px; }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(2.2rem, 4vw + 1rem, 3.4rem); line-height: 1.1; letter-spacing: -0.01em; margin: 0 0 20px; text-wrap: balance; }
+h2 { font-family: var(--serif); font-weight: 500; font-size: clamp(1.6rem, 1.6vw + 1rem, 2.1rem); line-height: 1.25; margin: 0 0 16px; text-wrap: balance; }
+h3 { font-size: 1.08rem; font-weight: 700; margin: 32px 0 8px; }
+h2 .num { font-family: var(--mono); font-size: 0.9rem; color: var(--accent); letter-spacing: 0.08em; display: block; margin-bottom: 4px; }
+p { margin: 0 0 16px; }
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); border-radius: 6px; padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.src { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 24px; }
+.src a { color: var(--muted); }
+section { padding-top: 56px; border-top: 1px solid var(--rule); margin-top: 56px; }
+.dek { font-size: 1.12rem; color: var(--muted); max-width: 680px; }
+.facts { display: flex; flex-wrap: wrap; gap: 12px 36px; margin: 28px 0 8px; padding: 18px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.facts div { min-width: 0; }
+.facts b { display: block; font-family: var(--mono); font-weight: 500; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.facts span { font-size: 13px; color: var(--muted); }
+.tldr { border-left: 2px solid var(--accent); padding: 4px 0 4px 20px; margin: 32px 0; max-width: 760px; }
+.tldr ol { margin: 0; padding-left: 1.2em; }
+.tldr li { margin-bottom: 8px; }
+.toc { font-size: 14px; columns: 2 260px; column-gap: 32px; margin: 8px 0 0; padding: 0; list-style: none; }
+.toc li { break-inside: avoid; padding: 3px 0; }
+.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
+.toc .n { font-family: var(--mono); color: var(--accent); margin-right: 8px; font-size: 12px; }
+figure { margin: 32px 0; }
+.fig-scroll { overflow-x: auto; }
+figure svg { display: block; width: 100%; height: auto; }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 10px; max-width: 720px; line-height: 1.7; }
+figcaption b { color: var(--ink); font-weight: 600; }
+.tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 6px; border: 1px solid var(--rule-strong); border-radius: 3px; color: var(--muted); white-space: nowrap; }
+.tag.inf { border-color: var(--accent); color: var(--accent); }
+.note { font-size: 14px; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.6; }
+.tbl { overflow-x: auto; margin: 16px 0 24px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--rule); }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td code { white-space: nowrap; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 40px; margin: 16px 0 24px; }
+.cols > div { min-width: 0; }
+.cols h4 { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; font-weight: 500; }
+.cols ol { margin: 0; padding-left: 1.4em; font-size: 14px; line-height: 1.7; }
+.cols li.new { color: var(--accent); }
+.cols li.new::marker { color: var(--accent); }
+.factor { display: grid; grid-template-columns: 2.2em 1fr; gap: 0 12px; margin: 0 0 20px; max-width: 760px; }
+.factor .k { font-family: var(--mono); color: var(--accent); font-size: 14px; padding-top: 3px; }
+.factor p { margin: 0 0 6px; }
+ul.plain { padding-left: 1.2em; margin: 0 0 16px; }
+ul.plain li { margin-bottom: 6px; }
+@media (max-width: 640px) {
+  .cols { grid-template-columns: 1fr; }
+  body { font-size: 15.5px; }
+}
+/* SVG vocabulary (diagram-design skin) */
+.mask { fill: var(--paper); }
+.nb { fill: var(--node); stroke: var(--ink); stroke-width: 1; }
+.nf { fill: var(--accent-tint); stroke: var(--accent); stroke-width: 1.2; }
+.ns { fill: var(--store); stroke: var(--muted); stroke-width: 1; }
+.nx { fill: var(--store); stroke: var(--rule-strong); stroke-width: 1; stroke-dasharray: 4 3; }
+.zone { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.zone-a { fill: none; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 4; }
+.tn { fill: var(--ink); font: 600 13px var(--sans); }
+.ts { fill: var(--muted); font: 400 10px var(--mono); }
+.tz { fill: var(--soft); font: 500 12px var(--sans); }
+.th { fill: var(--ink); font: 700 13px var(--sans); }
+.tl { fill: var(--soft); font: 500 9.5px var(--mono); letter-spacing: 0.04em; }
+.tA { fill: var(--accent); }
+.tI { fill: var(--ink); }
+.ar { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+.ar-a { stroke: var(--accent); stroke-width: 1.4; fill: none; }
+.ar-l { stroke: var(--link); stroke-width: 1.2; fill: none; }
+.dash { stroke-dasharray: 5 4; }
+.mk { fill: var(--muted); }
+.mk-a { fill: var(--accent); }
+.mk-l { fill: var(--link); }
+.bar { fill: var(--store); stroke: var(--muted); stroke-width: 1; }
+.bar-faint { fill: var(--store); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.75; }
+.bar-a { fill: var(--accent); }
+.chip { fill: var(--accent); }
+.hair { stroke: var(--rule); stroke-width: 1; }
+.axis { stroke: var(--ink); stroke-width: 1.2; }
+.barrier { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.idle { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 1 3; }
+.dot { fill: var(--ink); }
+.dot-a { fill: var(--accent); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="prose" style="max-width:820px">
+  <p class="eyebrow">原始碼導讀 · pola-rs/polars · py-1.0.0 → py-2.0.0</p>
+  <h1>Polars 2.0 引擎轉向</h1>
+  <p class="dek">2.0 的核心改動在 Rust 裡只是一個 <code>match</code> 分支：<code>Engine::Auto</code> 從 <code>InMemory</code> 改成 <code>Streaming</code>。為了讓這一行能安全地翻過去，團隊花了兩年多重寫一顆 streaming 引擎、刪掉舊的那顆、放寬行順序的語意，最後在發布前一天打開了 spill-to-disk。這份報告把技術選型、卡關點和決策因素攤開，每一段都指回原始碼。</p>
+  <div class="facts" aria-label="關鍵數字">
+    <div><b>3.4k → 55.9k</b><span>polars-stream 行數（1.0 → 2.0）</span></div>
+    <div><b>885</b><span>兩個 tag 之間碰到 polars-stream 的 commit</span></div>
+    <div><b>8.3k → 21.4k</b><span>optimizer 目錄行數</span></div>
+    <div><b>2024-06 → 2026-10</b><span>新引擎第一個 commit 到 2.0.0</span></div>
+  </div>
+</header>
+
+<div class="tldr">
+  <ol>
+    <li><b>記憶體下降主要來自執行模型的改變，spill 不是主因。</b>1.x 的 in-memory 引擎每個運算子都回傳一整個 <code>DataFrame</code>；2.0 的 streaming 引擎讓約 10 萬列的 morsel 在容量為 1 的通道裡流動，來源端還有預取位元組上限、row group 統計跳過與延遲解碼。</li>
+    <li><b>以前不做，是因為舊的 streaming 引擎（<code>polars-pipe</code>）撐不起「預設」。</b>它靠白名單決定能不能串流，鎖步執行，順序靠一個全域計數器，最常見的 group-by 和所有 join 都不能 spill。團隊選擇重寫，而不是擴充。</li>
+    <li><b>新引擎是 morsel-driven、push-based、async 的設計。</b>每個節點以 async 任務執行，<code>MorselSeq</code> 加 linearizer 在平行之下還原順序，consume token 與 <code>SourceToken.stop()</code> 提供背壓，pipeline breaker 把執行切成多個 phase。</li>
+    <li><b>真正需要 major 版號的是行順序。</b>join、group_by、unpivot 不再保證「順便」的順序，optimizer 的 <code>simplify_ordering</code> 會把沒人觀察的順序約束拿掉，讓引擎能亂序平行。</li>
+    <li><b>2.0 的 optimizer 也開始往 cost-based 走</b>：基數估計、貪婪 left-deep join reordering、join runtime filter。這些都在 2.0 前六週才合併，仍屬早期。</li>
+  </ol>
+</div>
+
+<nav aria-label="目錄">
+  <ul class="toc">
+    <li><a href="#flip"><span class="n">01</span>一行 match 的翻轉</a></li>
+    <li><a href="#memory"><span class="n">02</span>記憶體為什麼小那麼多</a></li>
+    <li><a href="#engine"><span class="n">03</span>新引擎怎麼跑</a></li>
+    <li><a href="#why-not"><span class="n">04</span>為什麼 1.x 不這樣做</a></li>
+    <li><a href="#timeline"><span class="n">05</span>兩年的路</a></li>
+    <li><a href="#hard"><span class="n">06</span>難關與技術選擇</a></li>
+    <li><a href="#why-now"><span class="n">07</span>為什麼是現在</a></li>
+    <li><a href="#trace"><span class="n">08</span>追原始碼的路線圖</a></li>
+    <li><a href="#sources"><span class="n">09</span>資料來源與限制</a></li>
+  </ul>
+</nav>
+
+<!-- ============ 01 ============ -->
+<section id="flip">
+<div class="prose">
+  <h2><span class="num">01</span>一行 match 的翻轉</h2>
+  <p>先把「2.0 到底改了什麼」講精確。Python 端 <code>collect(engine="auto")</code> 的預設值在 1.x 和 2.0 都一樣，差別在 Rust 端把 <code>Auto</code> 解析成哪一顆引擎：</p>
+<pre><code>// py-1.44.2（最後一個 1.x）crates/polars-lazy/src/frame/mod.rs
+Engine::Auto =&gt; Engine::InMemory,
+
+// py-2.0.0 同一個函式 collect_with_engine
+Engine::Auto =&gt; {
+    if self.opt_state.eager() { Engine::InMemory } else { Engine::Streaming }
+},</code></pre>
+  <p class="src">來源：<a href="https://github.com/pola-rs/polars/blob/py-1.44.2/crates/polars-lazy/src/frame/mod.rs#L637-L642">py-1.44.2 frame/mod.rs#L637-L642</a> · <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-lazy/src/frame/mod.rs#L634-L646">py-2.0.0 frame/mod.rs#L634-L646</a> · PR <a href="https://github.com/pola-rs/polars/pull/27822">#27822</a>（2026-06-27 寫成，2026-08-26 合併，首次出現在 py-2.0.0-rc.1）</p>
+  <p>Eager 的 <code>DataFrame</code> 操作仍走 in-memory（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/lazyframe/engine_config.py#L64-L66"><code>_eager_engine()</code></a>）。想退回舊行為，可以用 <code>pl.Config.set_engine_affinity("in-memory")</code> 或環境變數 <code>POLARS_ENGINE_AFFINITY=in-memory</code>（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/lazyframe/engine_config.py#L87-L101"><code>_select_engine</code></a>、<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-config/src/engine.rs#L4-L12"><code>enum Engine</code></a>）。<code>sink_*</code> 本來就一律走 streaming，所以不受影響。</p>
+  <p>升級指南把這條列為第一個 breaking change，並放了一個 danger 框：streaming 引擎對不需要順序的運算（<code>unpivot</code>、<code>group_by</code>、join…）不保證行順序（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/docs/source/releases/upgrade/2.md#L5-L23">upgrade/2.md#L5-L23</a>）。官方的 2.0 預發布文章也直接說，之所以要升 major 版，就是因為這個順序語意的改變。</p>
+</div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="memory">
+<div class="prose">
+  <h2><span class="num">02</span>記憶體為什麼小那麼多</h2>
+  <p>先看數字。下面三組都不是我實測的：第一組是第三方作者的單次測試，後兩組是 Polars 官方在 2025 年 5 月用 1.30.0 跑的 PDS-H（衍生自 TPC-H，非稽核結果），屬於廠商自測。</p>
+</div>
+
+<figure>
+  <div class="fig-scroll">
+  <svg viewBox="0 0 960 236" role="img" aria-labelledby="num-title num-desc" style="min-width:720px">
+    <title id="num-title">in-memory 與 streaming 的記憶體與時間</title>
+    <desc id="num-desc">1 億列測試中峰值記憶體從 4.76 GB 降到 691 MB；PDS-H SF100 總時間從 152 秒降到 24 秒，SF10 從 9.7 秒降到 3.9 秒。</desc>
+    <!-- group 1 -->
+    <text class="th" x="24" y="40">峰值記憶體 · 1 億列</text>
+    <text class="tz" x="24" y="58">第三方單次測試</text>
+    <rect class="bar" x="300" y="24" width="600" height="16" rx="2"/>
+    <text class="ts tI" x="892" y="36" text-anchor="end">4.76 GB</text>
+    <rect class="bar-a" x="300" y="46" width="87" height="16" rx="2"/>
+    <text class="ts tI" x="395" y="58">691 MB</text>
+    <!-- group 2 -->
+    <text class="th" x="24" y="110">PDS-H SF100 總時間</text>
+    <text class="tz" x="24" y="128">官方 · Polars 1.30.0</text>
+    <rect class="bar" x="300" y="94" width="600" height="16" rx="2"/>
+    <text class="ts tI" x="892" y="106" text-anchor="end">152.3 s</text>
+    <rect class="bar-a" x="300" y="116" width="94" height="16" rx="2"/>
+    <text class="ts tI" x="402" y="128">23.9 s</text>
+    <!-- group 3 -->
+    <text class="th" x="24" y="180">PDS-H SF10 總時間</text>
+    <text class="tz" x="24" y="198">官方 · Polars 1.30.0</text>
+    <rect class="bar" x="300" y="164" width="600" height="16" rx="2"/>
+    <text class="ts tI" x="892" y="176" text-anchor="end">9.68 s</text>
+    <rect class="bar-a" x="300" y="186" width="241" height="16" rx="2"/>
+    <text class="ts tI" x="549" y="198">3.89 s</text>
+    <!-- legend -->
+    <line class="hair" x1="24" y1="214" x2="936" y2="214"/>
+    <rect class="bar" x="300" y="222" width="20" height="10" rx="2"/>
+    <text class="tz" x="328" y="232">in-memory</text>
+    <rect class="bar-a" x="420" y="222" width="20" height="10" rx="2"/>
+    <text class="tz" x="448" y="232">streaming</text>
+    <text class="tz" x="560" y="232">每組各自的比例尺</text>
+  </svg>
+  </div>
+  <figcaption><b>數字的方向一致，但都是別人跑的。</b>官方文章把 SF100 in-memory 變慢主要歸因於 CPU cache miss：整批資料在記憶體裡來回，變成 memory-bound。Q21 因為 range join 當時還沒有 streaming 實作而退回 in-memory。出處：<a href="https://pola.rs/posts/benchmarks/">pola.rs/posts/benchmarks</a>、<a href="https://python.plainenglish.io/polars-2-0-just-dropped-i-threw-100-million-rows-at-it-70e1f05e5608">Python in Plain English</a>。</figcaption>
+</figure>
+
+<div class="prose">
+  <p>機制可以從同一個查詢在兩顆引擎裡的形狀看出來：</p>
+</div>
+
+<figure>
+  <div class="fig-scroll">
+  <svg viewBox="0 0 960 384" role="img" aria-labelledby="mem-title mem-desc" style="min-width:880px">
+    <title id="mem-title">同一個查詢在兩顆引擎裡佔用的記憶體</title>
+    <desc id="mem-desc">in-memory 引擎每一步都物化整份 DataFrame，峰值出現在讀進整張表加上過濾結果時；streaming 引擎讓 morsel 逐塊流過，各節點只保留預取緩衝或聚合狀態。</desc>
+    <defs>
+      <marker id="mem-ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker>
+      <marker id="mem-ara" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-a" points="0 0, 8 3, 0 6"/></marker>
+    </defs>
+    <text class="th" x="24" y="28">1.x 預設：in-memory 引擎</text>
+    <text class="th" x="492" y="28">2.0 預設：streaming 引擎</text>
+    <line class="hair" x1="476" y1="12" x2="476" y2="332"/>
+
+    <!-- left arrows -->
+    <line class="ar" x1="128" y1="92" x2="128" y2="122" marker-end="url(#mem-ar)"/>
+    <line class="ar" x1="128" y1="168" x2="128" y2="198" marker-end="url(#mem-ar)"/>
+    <line class="ar" x1="128" y1="244" x2="128" y2="274" marker-end="url(#mem-ar)"/>
+    <rect class="mask" x="136" y="100" width="92" height="16"/>
+    <text class="tz" x="138" y="112">整份 DataFrame</text>
+
+    <!-- left nodes -->
+    <rect class="mask" x="40" y="48" width="176" height="44" rx="6"/><rect class="nb" x="40" y="48" width="176" height="44" rx="6"/>
+    <text class="tn" x="128" y="67" text-anchor="middle">Scan parquet</text><text class="ts" x="128" y="83" text-anchor="middle">ParquetExec</text>
+    <rect class="mask" x="40" y="124" width="176" height="44" rx="6"/><rect class="nb" x="40" y="124" width="176" height="44" rx="6"/>
+    <text class="tn" x="128" y="143" text-anchor="middle">Filter</text><text class="ts" x="128" y="159" text-anchor="middle">FilterExec</text>
+    <rect class="mask" x="40" y="200" width="176" height="44" rx="6"/><rect class="nb" x="40" y="200" width="176" height="44" rx="6"/>
+    <text class="tn" x="128" y="219" text-anchor="middle">GroupBy.agg</text><text class="ts" x="128" y="235" text-anchor="middle">GroupByExec</text>
+    <rect class="mask" x="40" y="276" width="176" height="44" rx="6"/><rect class="nb" x="40" y="276" width="176" height="44" rx="6"/>
+    <text class="tn" x="128" y="295" text-anchor="middle">collect()</text><text class="ts" x="128" y="311" text-anchor="middle">DataFrame</text>
+
+    <!-- left bars -->
+    <rect class="bar" x="240" y="58" width="200" height="24" rx="2"/>
+    <text class="tz tI" x="250" y="75">投影後的整張表</text>
+    <rect class="bar-faint" x="240" y="132" width="200" height="12" rx="2"/>
+    <rect class="bar" x="240" y="148" width="72" height="12" rx="2"/>
+    <text class="tz" x="322" y="160">輸入與輸出同時存在</text>
+    <rect class="bar" x="240" y="210" width="64" height="24" rx="2"/>
+    <text class="tz" x="314" y="227">雜湊表＋聚合結果</text>
+    <rect class="bar" x="240" y="286" width="24" height="24" rx="2"/>
+    <text class="tz" x="274" y="303">結果</text>
+    <rect class="zone-a" x="234" y="52" width="216" height="114" rx="4"/>
+    <text class="tz tA" x="450" y="186" text-anchor="end">峰值：整張表＋過濾結果</text>
+
+    <!-- right arrows with morsels -->
+    <line class="ar-a" x1="596" y1="92" x2="596" y2="122" marker-end="url(#mem-ara)"/>
+    <line class="ar-a" x1="596" y1="168" x2="596" y2="198" marker-end="url(#mem-ara)"/>
+    <line class="ar-a" x1="596" y1="244" x2="596" y2="274" marker-end="url(#mem-ara)"/>
+    <rect class="chip" x="590" y="101" width="12" height="8" rx="1"/>
+    <rect class="chip" x="590" y="177" width="12" height="8" rx="1"/>
+    <rect class="chip" x="590" y="253" width="12" height="8" rx="1"/>
+    <rect class="mask" x="606" y="100" width="100" height="16"/>
+    <text class="tz" x="608" y="112">一次一個 morsel</text>
+
+    <!-- right nodes -->
+    <rect class="mask" x="508" y="48" width="176" height="44" rx="6"/><rect class="nb" x="508" y="48" width="176" height="44" rx="6"/>
+    <text class="tn" x="596" y="67" text-anchor="middle">Scan parquet</text><text class="ts" x="596" y="83" text-anchor="middle">MultiScan node</text>
+    <rect class="mask" x="508" y="124" width="176" height="44" rx="6"/><rect class="nb" x="508" y="124" width="176" height="44" rx="6"/>
+    <text class="tn" x="596" y="143" text-anchor="middle">Filter</text><text class="ts" x="596" y="159" text-anchor="middle">FilterNode × N pipelines</text>
+    <rect class="mask" x="508" y="200" width="176" height="44" rx="6"/><rect class="nb" x="508" y="200" width="176" height="44" rx="6"/>
+    <text class="tn" x="596" y="219" text-anchor="middle">GroupBy.agg</text><text class="ts" x="596" y="235" text-anchor="middle">GroupByNode</text>
+    <rect class="mask" x="508" y="276" width="176" height="44" rx="6"/><rect class="nb" x="508" y="276" width="176" height="44" rx="6"/>
+    <text class="tn" x="596" y="295" text-anchor="middle">collect()</text><text class="ts" x="596" y="311" text-anchor="middle">InMemorySink</text>
+
+    <!-- right bars -->
+    <rect class="bar" x="708" y="58" width="40" height="24" rx="2"/>
+    <text class="tz" x="758" y="75">預取有位元組上限</text>
+    <rect class="bar" x="708" y="140" width="16" height="12" rx="2"/>
+    <text class="tz" x="734" y="151">只有在途的幾個 morsel</text>
+    <rect class="bar" x="708" y="210" width="64" height="24" rx="2"/>
+    <text class="tz" x="782" y="227">只留聚合狀態</text>
+    <rect class="bar" x="708" y="286" width="24" height="24" rx="2"/>
+    <text class="tz" x="742" y="303">結果</text>
+
+    <!-- legend -->
+    <line class="hair" x1="24" y1="344" x2="936" y2="344"/>
+    <rect class="bar" x="24" y="358" width="20" height="12" rx="2"/>
+    <text class="tz" x="52" y="369">同時佔用記憶體的資料（示意，不按比例）</text>
+    <rect class="chip" x="372" y="360" width="12" height="8" rx="1"/>
+    <text class="tz" x="392" y="369">morsel，預設約 10 萬列</text>
+    <rect class="zone-a" x="612" y="358" width="20" height="12" rx="2"/>
+    <text class="tz" x="640" y="369">峰值所在</text>
+  </svg>
+  </div>
+  <figcaption><b>in-memory 的峰值出現在第一、二步之間，streaming 則只保留緩衝與狀態。</b>in-memory 引擎的介面是 <code>fn execute(&amp;mut self, …) -&gt; PolarsResult&lt;DataFrame&gt;</code>，<code>FilterExec</code> 先把整個輸入 <code>execute()</code> 出來再過濾，<code>JoinExec</code> 兩邊都先完整算完。見 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-mem-engine/src/executors/executor.rs#L10-L11">executor.rs#L10-L11</a>、<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-mem-engine/src/executors/filter.rs#L118-L128">filter.rs#L118-L128</a>、<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-mem-engine/src/executors/join.rs#L56-L70">join.rs#L56-L70</a>。</figcaption>
+</figure>
+
+<div class="prose">
+  <p>把上圖拆成四個機制：</p>
+  <h3>① 中間結果不物化，通道容量是 1</h3>
+  <p>節點之間的 port 是 single-producer、single-consumer、<b>容量 1</b> 的 <code>connector</code>（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-async/src/primitives/connector.rs#L15-L24">connector.rs#L15-L24</a>）。distributor 與 linearizer 的緩衝預設各 4 格（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/lib.rs#L36-L52">polars-stream/lib.rs#L36-L52</a>），morsel 大小預設 100,000 列（<code>POLARS_IDEAL_MORSEL_SIZE</code>，<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-config/src/lib.rs#L36-L37">polars-config/lib.rs#L36-L37</a>）。上游塞滿了就只能等，所以在途資料大約是「pipeline 數 × 少數幾格 × 10 萬列」這個量級。</p>
+  <h3>② 來源端的預取有預算</h3>
+  <p>Parquet 讀取用兩個 semaphore 組成 <code>PipelineBudget</code>，一個限數量、一個限 KB：數量是 <code>max(2 × pipelines, inflight)</code>，夾在 16 到 2048 之間；KB 是 <code>4 × pipelines × chunk_size</code>。原始碼註解寫著「大資料集多半是 KB 上限先生效」（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/io_sources/parquet/builder.rs#L80-L115">parquet/builder.rs#L80-L115</a>、<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/io_sources/shared/pipeline_budget.rs#L11-L35">pipeline_budget.rs#L11-L35</a>）。CSV 也有 <code>POLARS_CSV_CHUNK_PREFETCH_LIMIT</code>（預設 2 × pipelines）。</p>
+  <h3>③ 不需要的資料根本不解碼</h3>
+  <p>Predicate 會被改寫成對 min/max/null_count 的測試（例如 <code>col &gt; 5</code> 變成檢查 <code>col_max</code>，<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/aexpr/predicates/skip_batches.rs#L152-L167">skip_batches.rs#L152-L167</a>），整個 row group 在抓取前就跳過（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/io_sources/parquet/row_group_data_fetch.rs#L162-L168">row_group_data_fetch.rs#L162-L168</a>）。留下來的 row group 走 prefilter，也就是延遲物化：先解 predicate 欄位，再用 <code>Filter::Mask</code> 只解碼保留列的其他欄位（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/io_sources/parquet/row_group_decode.rs#L623-L700">row_group_decode.rs#L623-L700</a>，自 <a href="https://github.com/pola-rs/polars/pull/22190">#22190</a> 起預設啟用）。對照 1.0 的 in-memory parquet scan：它把每個檔案讀成 <code>Vec&lt;DataFrame&gt;</code> 再垂直合併，有 row index 時甚至整份讀完才套 predicate，註解自己寫了「This is inefficient」（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-mem-engine/src/executors/scan/parquet.rs#L318-L358">1.0 scan/parquet.rs#L318-L358</a>）。</p>
+  <h3>④ pipeline breaker 只留狀態，一次只跑一個吃記憶體的</h3>
+  <p>Group-by 邊吃邊聚合，hot table 命中的 key 就地累加。排程器每個 phase 最多只跑<b>一個</b>「memory-intensive pipeline blocker」，除非剩下的全是 sink（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/execute.rs#L62-L150"><code>find_runnable_subgraph</code>，execute.rs#L62-L150</a>）。宣告自己吃記憶體的節點包括 GroupBy、Sort、各種 Join、Window、InMemorySink。</p>
+  <p><span class="tag inf">推論</span> 那個 4.76 GB → 691 MB 的落差應該<b>和 spill 無關</b>。OOC 的預設門檻是可用 RAM 的 80%（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-config/src/lib.rs#L75-L85">polars-config/lib.rs#L75-L85</a>），4.76 GB 在一般機器上碰不到，而且 OOC 直到 2.0.0 才預設開啟（<a href="https://github.com/pola-rs/polars/pull/29741">#29741</a>，2026-10-05，比 rc.1 還晚）。落差主要來自上面的 ①～④。spill 解決的是另一個問題：pipeline breaker 的狀態真的大過 RAM 的時候（見 <a href="#ooc">6.3</a>）。</p>
+</div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="engine">
+<div class="prose">
+  <h2><span class="num">03</span>新引擎怎麼跑</h2>
+  <p>從 CMU 15-445/721 的角度看，Polars 裡同時存在兩種執行模型。in-memory 引擎是 <b>operator-at-a-time、整批物化</b>，比較接近 MonetDB 的 BAT 模型，和 Volcano 那種一次 <code>next()</code> 拿一個 tuple 的 iterator 不同。2.0 預設的 streaming 引擎則是 <b>morsel-driven、push-based</b>，相當接近 Leis 等人 2014 年的 Morsel-Driven Parallelism：固定大小的資料塊、每個 worker 一條 pipeline、pipeline breaker 把執行切成多個階段。morsel 內部的運算維持向量化、columnar，沒有 JIT。</p>
+  <p class="note">原始碼裡沒有任何註解直接引用 HyPer 或 Leis。Polars 2025 年 12 月的 "Polars in Aggregate" 文章則把 Morsel-Driven Parallelism 列為設計參考。</p>
+  <p>一個 query 從 Python 進來後，會經過這些層：</p>
+</div>
+
+<figure>
+  <div class="fig-scroll">
+  <svg viewBox="0 0 960 476" role="img" aria-labelledby="life-title life-desc" style="min-width:880px">
+    <title id="life-title">2.0 中一個 LazyFrame 查詢的生命週期</title>
+    <desc id="life-desc">DslPlan 轉成以 arena 儲存的 IR，經過 optimizer 後由 Engine 解析決定路徑：預設進 polars-stream，依序 lower 成 PhysNode DAG、ComputeNode 圖並在 polars-async 執行器上執行；不支援的節點以 InMemoryMap 退回 polars-mem-engine。</desc>
+    <defs>
+      <marker id="life-ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker>
+      <marker id="life-ara" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-a" points="0 0, 8 3, 0 6"/></marker>
+    </defs>
+    <!-- zone -->
+    <rect class="zone-a" x="288" y="264" width="664" height="92" rx="8"/>
+    <text class="tz tA" x="296" y="254">polars-stream · 2.0 預設路徑</text>
+
+    <!-- vertical arrows -->
+    <line class="ar" x1="140" y1="80" x2="140" y2="114" marker-end="url(#life-ar)"/>
+    <line class="ar" x1="140" y1="164" x2="140" y2="198" marker-end="url(#life-ar)"/>
+    <line class="ar" x1="140" y1="248" x2="140" y2="282" marker-end="url(#life-ar)"/>
+    <line class="ar" x1="140" y1="332" x2="140" y2="394" marker-end="url(#life-ar)"/>
+    <rect class="mask" x="150" y="88" width="48" height="14"/><text class="tl" x="152" y="98">to_alp</text>
+    <rect class="mask" x="150" y="172" width="132" height="14"/><text class="tl" x="152" y="182">pushdown · CSE · order</text>
+    <rect class="mask" x="150" y="256" width="78" height="14"/><text class="tl" x="152" y="266">Engine::Auto</text>
+    <rect class="mask" x="150" y="356" width="118" height="14"/><text class="tl" x="152" y="366">eager / in-memory</text>
+
+    <!-- streaming row arrows -->
+    <line class="ar-a" x1="240" y1="308" x2="302" y2="308" marker-end="url(#life-ara)"/>
+    <line class="ar-a" x1="480" y1="308" x2="534" y2="308" marker-end="url(#life-ara)"/>
+    <line class="ar-a" x1="712" y1="308" x2="766" y2="308" marker-end="url(#life-ara)"/>
+    <rect class="mask" x="248" y="284" width="48" height="14"/><text class="tl" x="272" y="294" text-anchor="middle">lower_ir</text>
+    <rect class="mask" x="484" y="284" width="48" height="14"/><text class="tl" x="508" y="294" text-anchor="middle">to_graph</text>
+    <rect class="mask" x="720" y="284" width="40" height="14"/><text class="tl" x="740" y="294" text-anchor="middle">spawn</text>
+
+    <!-- fallback -->
+    <path class="ar dash" d="M392 332 V412 Q392 420 384 420 H242" marker-end="url(#life-ar)"/>
+    <rect class="mask" x="280" y="398" width="66" height="14"/><text class="tl" x="313" y="408" text-anchor="middle">InMemoryMap</text>
+    <text class="tz" x="256" y="442">不支援的節點整份物化後退回</text>
+
+    <!-- nodes: left column -->
+    <rect class="mask" x="40" y="32" width="200" height="48" rx="6"/><rect class="nb" x="40" y="32" width="200" height="48" rx="6"/>
+    <text class="tn" x="140" y="53" text-anchor="middle">LazyFrame · DslPlan</text><text class="ts" x="140" y="69" text-anchor="middle">user-built Arc tree</text>
+    <rect class="mask" x="40" y="116" width="200" height="48" rx="6"/><rect class="nb" x="40" y="116" width="200" height="48" rx="6"/>
+    <text class="tn" x="140" y="137" text-anchor="middle">IR ＋ AExpr</text><text class="ts" x="140" y="153" text-anchor="middle">Arena&lt;IR&gt; · Node(usize)</text>
+    <rect class="mask" x="40" y="200" width="200" height="48" rx="6"/><rect class="nb" x="40" y="200" width="200" height="48" rx="6"/>
+    <text class="tn" x="140" y="221" text-anchor="middle">optimize()</text><text class="ts" x="140" y="237" text-anchor="middle">rules + join_order</text>
+    <rect class="mask" x="40" y="284" width="200" height="48" rx="6"/><rect class="nf" x="40" y="284" width="200" height="48" rx="6"/>
+    <text class="tn" x="140" y="305" text-anchor="middle">Engine 解析</text><text class="ts" x="140" y="321" text-anchor="middle">Auto → Streaming</text>
+    <rect class="mask" x="40" y="396" width="200" height="48" rx="6"/><rect class="ns" x="40" y="396" width="200" height="48" rx="6"/>
+    <text class="tn" x="140" y="417" text-anchor="middle">polars-mem-engine</text><text class="ts" x="140" y="433" text-anchor="middle">execute() -&gt; DataFrame</text>
+
+    <!-- streaming nodes -->
+    <rect class="mask" x="304" y="284" width="176" height="48" rx="6"/><rect class="nb" x="304" y="284" width="176" height="48" rx="6"/>
+    <text class="tn" x="392" y="305" text-anchor="middle">PhysNode DAG</text><text class="ts" x="392" y="321" text-anchor="middle">50+ PhysNodeKind</text>
+    <rect class="mask" x="536" y="284" width="176" height="48" rx="6"/><rect class="nb" x="536" y="284" width="176" height="48" rx="6"/>
+    <text class="tn" x="624" y="305" text-anchor="middle">ComputeNode 圖</text><text class="ts" x="624" y="321" text-anchor="middle">update_state · spawn</text>
+    <rect class="mask" x="768" y="284" width="168" height="48" rx="6"/><rect class="nb" x="768" y="284" width="168" height="48" rx="6"/>
+    <text class="tn" x="852" y="305" text-anchor="middle">polars-async</text><text class="ts" x="852" y="321" text-anchor="middle">work-stealing · NUMA</text>
+  </svg>
+  </div>
+  <figcaption><b>上半部兩顆引擎共用，分歧點在 Engine 解析。</b>DSL→IR 在 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L54-L75">dsl_to_ir/mod.rs</a>；optimizer 在 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/mod.rs#L104-L382">optimizer/mod.rs#L104-L382</a>；streaming 的入口 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/skeleton.rs#L37-L60"><code>run_query</code></a> 依序呼叫 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/mod.rs#L1026-L1060"><code>build_physical_plan</code></a>、<code>physical_plan_to_graph</code>、<code>execute_graph</code>。fallback 節點定義在 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/mod.rs#L263-L270">physical_plan/mod.rs#L263-L270</a>。</figcaption>
+</figure>
+
+<div class="prose">
+  <h3>核心資料結構：Morsel</h3>
+<pre><code>pub struct Morsel {
+    sf: SpillFrame,                     // 資料本體；2.0 起可以被 spill 到磁碟
+    seq: MorselSeq,                     // 序號：同一條 pipeline 內只能持平或遞增
+    source_token: SourceToken,          // 來自哪個 source，下游可以叫它停
+    consume_token: Option&lt;WaitToken&gt;,   // 被消費時通知生產者 → 背壓
+}</code></pre>
+  <p class="src"><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/morsel.rs#L82-L96">morsel.rs#L82-L96</a> · <code>MorselSeq</code> 是「單調不減、可以不連續」的序號，內部乘 2 保留最低位元（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/morsel.rs#L16-L50">#L16-L50</a>）</p>
+
+  <h3>節點介面：ComputeNode</h3>
+<pre><code>pub trait ComputeNode: Send {
+    fn update_state(&amp;mut self, recv: &amp;mut [PortState], send: &amp;mut [PortState],
+                    state: &amp;StreamingExecutionState) -&gt; PolarsResult&lt;()&gt;;
+    fn is_memory_intensive_pipeline_blocker(&amp;self) -&gt; bool { false }
+    fn spawn&lt;'env, 's&gt;(&amp;'env mut self, scope: &amp;'s TaskScope&lt;'s, 'env&gt;,
+        recv_ports: &amp;mut [Option&lt;RecvPort&lt;'_&gt;&gt;], send_ports: &amp;mut [Option&lt;SendPort&lt;'_&gt;&gt;],
+        state: &amp;'s StreamingExecutionState, join_handles: &amp;mut Vec&lt;JoinHandle&lt;PolarsResult&lt;()&gt;&gt;&gt;);
+    fn get_output(&amp;mut self) -&gt; PolarsResult&lt;Option&lt;DataFrame&gt;&gt; { Ok(None) }
+}</code></pre>
+  <p class="src"><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/mod.rs#L80-L124">nodes/mod.rs#L80-L124</a> · 最簡單的範例是 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/filter.rs#L26-L91">filter.rs</a></p>
+  <p>每個節點有兩個責任。<code>update_state</code> 協商每個 port 的 <code>PortState::{Blocked, Ready, Done}</code>（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/graph.rs#L211-L216">graph.rs#L211-L216</a>），<code>spawn</code> 在每個 phase 開出 async 任務。port 兩端各自宣告要 serial 還是 parallel，框架依組合自動插入 distributor（serial→parallel）或 linearizer（parallel→serial）（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/pipe.rs#L84-L109">pipe.rs#L84-L109</a>）。</p>
+  <p>平行和順序怎麼並存，看資料怎麼流：</p>
+</div>
+
+<figure>
+  <div class="fig-scroll">
+  <svg viewBox="0 0 960 376" role="img" aria-labelledby="pipe-title pipe-desc" style="min-width:880px">
+    <title id="pipe-title">morsel 在平行 pipeline 中的流動與背壓</title>
+    <desc id="pipe-desc">serial source 經 distributor 把 morsel 分給多條平行 pipeline，linearizer 用以序號為鍵的最小堆把輸出合併回原順序；consume token 讓消費端放行下一個 morsel，SourceToken.stop 讓下游要求來源停止。</desc>
+    <defs>
+      <marker id="pipe-ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker>
+      <marker id="pipe-ara" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-a" points="0 0, 8 3, 0 6"/></marker>
+    </defs>
+    <!-- feedback paths first -->
+    <path class="ar-a dash" d="M720 216 V328 Q720 336 712 336 H108 Q100 336 100 328 V218" marker-end="url(#pipe-ara)"/>
+    <rect class="mask" x="310" y="346" width="212" height="18"/>
+    <text class="tz tA" x="416" y="360" text-anchor="middle">consume_token：被消費才放行下一個</text>
+    <path class="ar dash" d="M888 160 V56 Q888 48 880 48 H108 Q100 48 100 56 V158" marker-end="url(#pipe-ar)"/>
+    <rect class="mask" x="378" y="22" width="232" height="18"/>
+    <text class="tz" x="494" y="36" text-anchor="middle">SourceToken.stop()：下游夠了就喊停</text>
+
+    <!-- forward paths -->
+    <line class="ar" x1="176" y1="188" x2="222" y2="188" marker-end="url(#pipe-ar)"/>
+    <path class="ar" d="M360 174 H380 Q388 174 388 166 V108 Q388 100 396 100 H414" marker-end="url(#pipe-ar)"/>
+    <line class="ar" x1="360" y1="188" x2="414" y2="188" marker-end="url(#pipe-ar)"/>
+    <path class="ar" d="M360 202 H380 Q388 202 388 210 V268 Q388 276 396 276 H414" marker-end="url(#pipe-ar)"/>
+    <path class="ar" d="M592 100 H612 Q620 100 620 108 V166 Q620 174 628 174 H646" marker-end="url(#pipe-ar)"/>
+    <line class="ar" x1="592" y1="188" x2="646" y2="188" marker-end="url(#pipe-ar)"/>
+    <path class="ar" d="M592 276 H612 Q620 276 620 268 V210 Q620 202 628 202 H646" marker-end="url(#pipe-ar)"/>
+    <line class="ar" x1="792" y1="188" x2="838" y2="188" marker-end="url(#pipe-ar)"/>
+
+    <!-- nodes -->
+    <rect class="mask" x="24" y="160" width="152" height="56" rx="6"/><rect class="nb" x="24" y="160" width="152" height="56" rx="6"/>
+    <text class="tn" x="100" y="184" text-anchor="middle">Source</text><text class="ts" x="100" y="202" text-anchor="middle">TaskPriority::Low</text>
+    <rect class="mask" x="224" y="160" width="136" height="56" rx="6"/><rect class="nb" x="224" y="160" width="136" height="56" rx="6"/>
+    <text class="tn" x="292" y="184" text-anchor="middle">Distributor</text><text class="ts" x="292" y="202" text-anchor="middle">ring buffer × 4</text>
+    <rect class="mask" x="416" y="72" width="176" height="56" rx="6"/><rect class="nb" x="416" y="72" width="176" height="56" rx="6"/>
+    <text class="tn" x="504" y="96" text-anchor="middle">Filter · Select #0</text><text class="ts" x="504" y="114" text-anchor="middle">seq 0, 3, 6 …</text>
+    <rect class="mask" x="416" y="160" width="176" height="56" rx="6"/><rect class="nb" x="416" y="160" width="176" height="56" rx="6"/>
+    <text class="tn" x="504" y="184" text-anchor="middle">Filter · Select #1</text><text class="ts" x="504" y="202" text-anchor="middle">seq 1, 4, 7 …</text>
+    <rect class="mask" x="416" y="248" width="176" height="56" rx="6"/><rect class="nb" x="416" y="248" width="176" height="56" rx="6"/>
+    <text class="tn" x="504" y="272" text-anchor="middle">Filter · Select #2</text><text class="ts" x="504" y="290" text-anchor="middle">seq 2, 5, 8 …</text>
+    <rect class="mask" x="648" y="160" width="144" height="56" rx="6"/><rect class="nf" x="648" y="160" width="144" height="56" rx="6"/>
+    <text class="tn" x="720" y="184" text-anchor="middle">Linearizer</text><text class="ts" x="720" y="202" text-anchor="middle">min-heap on seq</text>
+    <rect class="mask" x="840" y="160" width="96" height="56" rx="6"/><rect class="nb" x="840" y="160" width="96" height="56" rx="6"/>
+    <text class="tn" x="888" y="184" text-anchor="middle">Sink</text><text class="ts" x="888" y="202" text-anchor="middle">0, 1, 2, 3 …</text>
+  </svg>
+  </div>
+  <figcaption><b>每條 pipeline 自己的輸出序號是遞增的，所以 k 路合併就能還原全域順序。</b>Linearizer 的 heap 裡每個 inserter 剛好放一筆，鍵是 <code>Reverse&lt;MorselSeq&gt;</code>；不需要順序時就退化成一條共用的 mpsc channel（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-async/src/primitives/linearizer.rs#L63-L121">linearizer.rs#L63-L121</a>）。linearizer 要等送出成功才 drop consume token，註解寫明「This ensures we have backpressure」（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/pipe.rs#L285-L299">pipe.rs#L285-L299</a>）。<code>StreamingSlice</code> 拿到足夠的列就呼叫 <code>source_token().stop()</code>（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/streaming_slice.rs#L80-L84">streaming_slice.rs#L80-L84</a>）。</figcaption>
+</figure>
+
+<div class="prose">
+  <h3>執行迴圈：phase 制</h3>
+<pre><code>loop {
+    graph.update_all_states(&amp;node_states, metrics.as_deref())?;  // 所有 PortState 收斂到不動點
+    let (nodes, pipes) = find_runnable_subgraph(graph);          // 挑出這一輪能跑的子圖
+    if nodes.is_empty() { break; }
+    run_subgraph(graph, &amp;nodes, &amp;pipes, &amp;mut pipe_seq_offsets, ...)?; // sink 先 spawn，跑到這個 phase 結束
+}</code></pre>
+  <p class="src"><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/execute.rs#L298-L414">execute.rs#L298-L414</a> · 狀態收斂 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/graph.rs#L98-L180">graph.rs#L98-L180</a></p>
+  <p>這一段是整個設計最關鍵的部分。<code>update_all_states</code> 用 worklist 反覆呼叫各節點的 <code>update_state</code>，直到沒有任何 port 狀態再改變；從 <code>Done</code> 轉出去會直接報錯。接著 <code>find_runnable_subgraph</code> 找出 pipeline blocker（輸出全被擋住、但有輸入就緒的節點），再沿著兩端都 <code>Ready</code> 的 pipe 往回擴張。每個 pipe 的 <code>seq_offset</code> 跨 phase 保留，所以順序在 phase 之間也成立（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/execute.rs#L159-L171">#L159-L171</a>）。</p>
+  <p>執行器是 Polars 自己寫的（2.0 時搬進獨立 crate <code>polars-async</code>，<a href="https://github.com/pola-rs/polars/pull/27629">#27629</a>）。它有兩個優先級：source 用 Low，pipe 與運算用 High，讓「消化」優先於「生產」（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-async/src/executor/mod.rs#L59-L64">executor/mod.rs#L59-L64</a>）。每條執行緒有一個 LIFO local slot 加一個可被偷的佇列，偷工作時先找同一個 NUMA 區域（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-async/src/executor/mod.rs#L256-L310">#L256-L310</a>，NUMA 感知來自 <a href="https://github.com/pola-rs/polars/pull/28464">#28464</a>）。</p>
+</div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="why-not">
+<div class="prose">
+  <h2><span class="num">04</span>為什麼 1.x 不這樣做</h2>
+  <p>1.0 其實<b>已經有</b>一顆 streaming 引擎：<code>crates/polars-pipe</code>，透過 <code>collect(streaming=True)</code> 開啟，文件標為 unstable。它沒辦法變成預設，原因在設計本身：</p>
+</div>
+
+<figure>
+  <div class="fig-scroll">
+  <svg viewBox="0 0 960 420" role="img" aria-labelledby="old-title old-desc" style="min-width:880px">
+    <title id="old-title">1.x 舊 streaming 引擎的結構限制</title>
+    <desc id="old-desc">左邊：1.x 開啟 streaming 後，只有白名單內的子樹變成 streaming 島，島的出口整份物化，上層不支援的運算仍在 in-memory 執行。右邊：polars-pipe 以 rayon scope 鎖步執行，每一輪都要等最慢的 chunk；polars-stream 用 async 任務與工作竊取，沒有全域 barrier。</desc>
+    <defs>
+      <marker id="old-ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker>
+    </defs>
+    <text class="th" x="24" y="24">1.x 查詢加上 streaming=True 後的實際形狀</text>
+    <rect class="zone" x="40" y="196" width="280" height="212" rx="8"/>
+    <text class="tz" x="52" y="215">streaming 島</text>
+    <!-- arrows (upward) -->
+    <line class="ar" x1="180" y1="352" x2="180" y2="338" marker-end="url(#old-ar)"/>
+    <line class="ar" x1="180" y1="288" x2="180" y2="274" marker-end="url(#old-ar)"/>
+    <line class="ar" x1="180" y1="224" x2="180" y2="170" marker-end="url(#old-ar)"/>
+    <line class="ar" x1="180" y1="120" x2="180" y2="90" marker-end="url(#old-ar)"/>
+    <!-- nodes -->
+    <rect class="mask" x="64" y="40" width="232" height="48" rx="6"/><rect class="nx" x="64" y="40" width="232" height="48" rx="6"/>
+    <text class="tn" x="180" y="61" text-anchor="middle">Sort · maintain_order</text><text class="ts" x="180" y="77" text-anchor="middle">in-memory</text>
+    <rect class="mask" x="64" y="120" width="232" height="48" rx="6"/><rect class="nx" x="64" y="120" width="232" height="48" rx="6"/>
+    <text class="tn" x="180" y="141" text-anchor="middle">GroupBy · median()</text><text class="ts" x="180" y="157" text-anchor="middle">in-memory</text>
+    <rect class="mask" x="64" y="224" width="232" height="48" rx="6"/><rect class="nf" x="64" y="224" width="232" height="48" rx="6"/>
+    <text class="tn" x="180" y="245" text-anchor="middle">Sink{Memory}</text><text class="ts" x="180" y="261" text-anchor="middle">materialize at boundary</text>
+    <rect class="mask" x="64" y="288" width="232" height="48" rx="6"/><rect class="nb" x="64" y="288" width="232" height="48" rx="6"/>
+    <text class="tn" x="180" y="309" text-anchor="middle">Filter</text><text class="ts" x="180" y="325" text-anchor="middle">operator.split(thread_no)</text>
+    <rect class="mask" x="64" y="352" width="232" height="48" rx="6"/><rect class="nb" x="64" y="352" width="232" height="48" rx="6"/>
+    <text class="tn" x="180" y="373" text-anchor="middle">Scan csv</text><text class="ts" x="180" y="389" text-anchor="middle">CHUNK_INDEX.fetch_add</text>
+    <!-- annotations -->
+    <text class="tz" x="308" y="68">maintain_order → 直接拒絕</text>
+    <text class="tz" x="308" y="148">median 不在白名單 → 退回</text>
+    <text class="tz tA" x="308" y="252">島的出口：整份物化</text>
+
+    <!-- right: lockstep -->
+    <line class="hair" x1="536" y1="12" x2="536" y2="404"/>
+    <text class="th" x="560" y="24">polars-pipe：rayon scope 鎖步</text>
+    <text class="ts" x="560" y="60">t0</text><text class="ts" x="560" y="88">t1</text><text class="ts" x="560" y="116">t2</text><text class="ts" x="560" y="144">t3</text>
+    <rect class="bar" x="600" y="48" width="120" height="16" rx="2"/>
+    <rect class="bar" x="600" y="76" width="80" height="16" rx="2"/>
+    <rect class="bar-a" x="600" y="104" width="152" height="16" rx="2"/>
+    <rect class="bar" x="600" y="132" width="96" height="16" rx="2"/>
+    <line class="idle" x1="724" y1="56" x2="756" y2="56"/>
+    <line class="idle" x1="684" y1="84" x2="756" y2="84"/>
+    <line class="idle" x1="700" y1="140" x2="756" y2="140"/>
+    <line class="barrier" x1="760" y1="40" x2="760" y2="156"/>
+    <rect class="bar" x="768" y="48" width="72" height="16" rx="2"/>
+    <rect class="bar" x="768" y="76" width="104" height="16" rx="2"/>
+    <rect class="bar" x="768" y="104" width="64" height="16" rx="2"/>
+    <rect class="bar" x="768" y="132" width="88" height="16" rx="2"/>
+    <line class="idle" x1="844" y1="56" x2="876" y2="56"/>
+    <line class="idle" x1="836" y1="112" x2="876" y2="112"/>
+    <line class="idle" x1="860" y1="140" x2="876" y2="140"/>
+    <line class="barrier" x1="880" y1="40" x2="880" y2="156"/>
+    <text class="tz" x="560" y="180">每一輪都要等最慢的 chunk（橘色）做完</text>
+
+    <text class="th" x="560" y="224">polars-stream：async 任務＋工作竊取</text>
+    <text class="ts" x="560" y="256">t0</text><text class="ts" x="560" y="284">t1</text><text class="ts" x="560" y="312">t2</text><text class="ts" x="560" y="340">t3</text>
+    <rect class="bar" x="600" y="244" width="96" height="16" rx="2"/><rect class="bar" x="700" y="244" width="64" height="16" rx="2"/><rect class="bar" x="768" y="244" width="120" height="16" rx="2"/><rect class="bar" x="892" y="244" width="28" height="16" rx="2"/>
+    <rect class="bar" x="600" y="272" width="72" height="16" rx="2"/><rect class="bar" x="676" y="272" width="140" height="16" rx="2"/><rect class="bar" x="820" y="272" width="100" height="16" rx="2"/>
+    <rect class="bar" x="600" y="300" width="152" height="16" rx="2"/><rect class="bar" x="756" y="300" width="80" height="16" rx="2"/><rect class="bar" x="840" y="300" width="80" height="16" rx="2"/>
+    <rect class="bar" x="600" y="328" width="60" height="16" rx="2"/><rect class="bar" x="664" y="328" width="96" height="16" rx="2"/><rect class="bar" x="764" y="328" width="88" height="16" rx="2"/><rect class="bar" x="856" y="328" width="64" height="16" rx="2"/>
+    <text class="tz" x="560" y="372">沒有全域 barrier，閒下來的執行緒去偷工作</text>
+  </svg>
+  </div>
+  <figcaption><b>左：streaming 只發生在白名單內的島嶼裡。</b>不能串流的節點透過 <code>process_non_streamable_node</code> 切開，島本身被包成 <code>MapFunction{FunctionNode::Pipeline}</code>，執行後回傳整份 <code>DataFrame</code> 給 in-memory executor（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-lazy/src/physical_plan/streaming/convert_alp.rs#L51-L70">convert_alp.rs#L51-L70</a>、<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-lazy/src/physical_plan/streaming/construct_pipeline.rs#L222-L264">construct_pipeline.rs#L222-L264</a>）。<b>右：</b>舊引擎每一批都在同一個 <code>POOL.scope</code> 裡把 chunk 與各執行緒的 operator 副本 zip 起來 spawn，scope 結束才進下一批（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/pipeline/dispatcher/drive_operator.rs#L36-L78">drive_operator.rs#L36-L78</a>）。右圖的長條是示意。</figcaption>
+</figure>
+
+<div class="prose">
+  <p>逐項看舊引擎的天花板：</p>
+</div>
+<div class="tbl">
+<table>
+  <thead><tr><th style="width:18%">面向</th><th style="width:44%">1.0 的 <code>polars-pipe</code></th><th>2.0 的 <code>polars-stream</code></th></tr></thead>
+  <tbody>
+    <tr><td>能不能串流</td><td>在計畫階段用白名單判斷。<code>is_streamable</code> 只接受 Column、Literal、Binary、Ternary、Cast 和 elementwise 函式；任何 <code>over()</code>、<code>shift</code>、<code>cum_*</code>、<code>rank</code> 都會讓整個節點出局（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-plan/src/plans/aexpr/utils.rs#L10-L65">aexpr/utils.rs#L10-L65</a>）</td><td>逐節點、逐表達式 lower，做不到的才包進 <code>InMemoryMap</code>，而且只預先選需要的欄位（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/lower_expr.rs#L406-L485">lower_expr.rs#L406-L485</a>）</td></tr>
+    <tr><td>運算子覆蓋</td><td><code>get_operator</code> 只有 projection、select、with_columns、filter、map、union，其他一律 panic（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/pipeline/convert.rs#L574-L643">convert.rs#L574-L643</a>）。Join 只支援 cross/left/full/coalesced inner，semi、anti、asof 都退回（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-lazy/src/physical_plan/streaming/checks.rs#L27-L43">checks.rs#L27-L43</a>）</td><td>50+ 種 <code>PhysNodeKind</code>：equi、merge、semi/anti、cross、asof、range join，sorted/dynamic/rolling group-by，top-k，window，各格式的 source 與 sink（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/mod.rs#L173">physical_plan/mod.rs#L173</a>）</td></tr>
+    <tr><td>Group-by 聚合</td><td>每個表達式只能是單一個 sum/first/last/mean/count/len，或不傳播 NaN 的數值 min/max；median、std、quantile、n_unique 都不行（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/executors/sinks/group_by/aggregates/convert.rs#L50-L120">aggregates/convert.rs#L50-L120</a>）</td><td>新的 group-by 實作（<a href="https://github.com/pola-rs/polars/pull/22285">#22285</a>）採 hash 分區，每個分區帶基數 sketch（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/group_by.rs#L61-L113">group_by.rs#L61-L113</a>）</td></tr>
+    <tr><td>Spill to disk</td><td>只有 sort 和 generic group-by 會 spill。最常見的整數 key、字串 key group-by 寫死 <code>ooc=false</code>，註解是「this ooc is broken fix later」（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/executors/sinks/group_by/primitive/mod.rs#L95-L105">primitive/mod.rs#L95-L105</a>）。它的 <code>OocState</code> 開頭寫著「THIS CODE DOESN'T MAKE SENSE」（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/executors/sinks/group_by/ooc_state.rs#L10-L64">ooc_state.rs</a>）。Join build side 全部留在 RAM</td><td>統一的 <code>polars-ooc</code>：morsel 本身就是 <code>SpillFrame</code>，sort、group-by 冷資料、join build side、multiplexer 與最終結果都註冊到 spill context（見 <a href="#ooc">6.3</a>）</td></tr>
+    <tr><td>順序</td><td>每個 source 從一個行程全域的 <code>static CHUNK_INDEX: AtomicU32</code> 拿編號，最後由 <code>OrderedSink</code> 收齊再 <code>sort_unstable_by_key</code>（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/executors/sources/mod.rs#L24-L28">sources/mod.rs#L24-L28</a>、<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/executors/sinks/ordered.rs#L26-L59">ordered.rs#L26-L59</a>）。需要順序保證的運算一律拒絕</td><td><code>MorselSeq</code> 是結構的一部分，linearizer 做串流式 k 路合併；需要順序時照樣能跑，只是付平行度的代價</td></tr>
+    <tr><td>排程</td><td>rayon scope 鎖步，每執行緒一份 operator 副本，stage 之間沒有流量控制</td><td>自製 async 執行器、兩級優先、work stealing、背壓</td></tr>
+    <tr><td>和 optimizer 的關係</td><td><code>streaming=True</code> 時直接關掉 CSE（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-lazy/src/frame/mod.rs#L611-L614">frame/mod.rs#L611-L614</a>）</td><td>共用子計畫變成 <code>Multiplexer</code> 節點，落後的消費者用可 spill 的緩衝（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/mod.rs#L871-L902">physical_plan/mod.rs#L871-L902</a>）</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="prose">
+  <p>那新引擎在 1.0 時是什麼狀態？<code>polars-stream</code> 已經存在，但只有約 3,400 行，<code>lib.rs</code> 頂端還掛著 <code>#![allow(unused)] // TODO: remove</code>。<code>PhysNode</code> 只有 InMemorySource、Select、Filter、SimpleProjection、InMemorySink、InMemoryMap、Map、Sort 這幾種，<code>lower_ir</code> 遇到其他節點就 <code>todo!()</code>（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-stream/src/physical_plan/lower_ir.rs#L72-L150">1.0 lower_ir.rs#L72-L150</a>）。Python wheel 甚至沒有把它編進去，<code>"new_streaming"</code> 在 feature 清單裡是註解掉的（<a href="https://github.com/pola-rs/polars/blob/py-1.0.0/py-polars/Cargo.toml#L231-L244">py-polars/Cargo.toml#L231-L244</a>）。</p>
+  <p>不過骨架上的關鍵決定在 1.0 前就已經做了：自製 async 執行器、<code>Morsel</code> 帶 <code>MorselSeq</code>、port 狀態圖。第一個 commit 是 2024-06-12 的 <a href="https://github.com/pola-rs/polars/pull/16884">#16884</a>（"add fundamentals for new async-based streaming execution engine"）。1.0 的發布文章也已經描述這個方向：結合 morsel-driven parallelism 與 Rust 的 async state machine，做成 push/pull 混合的引擎，rolling window 這類需要更多同步的運算則退回 in-memory。</p>
+  <p>移除舊引擎的 PR（<a href="https://github.com/pola-rs/polars/pull/23103">#23103</a>，Orson Peters）說得很直接：「The old streaming engine was experimental, and deprecated for a while now」，而且它「started breaking more and more and becoming a maintenance issue」。這個 PR 刪掉約 1.2 萬行。</p>
+</div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="timeline">
+<div class="prose">
+  <h2><span class="num">05</span>兩年的路</h2>
+  <p>從 git log 與 <code>git tag --contains</code> 整理出的里程碑（日期是 author date）：</p>
+</div>
+<figure>
+  <div class="fig-scroll">
+  <svg viewBox="0 0 960 272" role="img" aria-labelledby="tl-title tl-desc" style="min-width:880px">
+    <title id="tl-title">新 streaming 引擎從起步到成為預設</title>
+    <desc id="tl-desc">2024 年 6 月新引擎起步，2024 年 12 月有了 streaming join，2025 年 1 月舊引擎標記 deprecated、6 月刪除，2026 年 4 月加入 spill 記憶體管理器，5 月宣告穩定，8 月合併預設切換，10 月開啟 OOC 並發布 2.0.0。</desc>
+    <line class="axis" x1="40" y1="150" x2="932" y2="150"/>
+    <line class="hair" x1="260" y1="144" x2="260" y2="156"/><text class="ts" x="264" y="144">2025</text>
+    <line class="hair" x1="637" y1="144" x2="637" y2="156"/><text class="ts" x="641" y="144">2026</text>
+    <!-- leaders -->
+    <line class="hair" x1="52" y1="126" x2="52" y2="146"/>
+    <line class="hair" x1="245" y1="154" x2="245" y2="176"/>
+    <line class="hair" x1="289" y1="78" x2="289" y2="146"/>
+    <line class="hair" x1="365" y1="154" x2="365" y2="224"/>
+    <line class="hair" x1="422" y1="126" x2="422" y2="146"/>
+    <line class="hair" x1="745" y1="154" x2="745" y2="176"/>
+    <line class="hair" x1="766" y1="126" x2="766" y2="146"/>
+    <line class="hair" x1="883" y1="154" x2="883" y2="224"/>
+    <line class="hair" x1="925" y1="78" x2="925" y2="146"/>
+    <!-- dots -->
+    <circle class="dot" cx="52" cy="150" r="4"/><circle class="dot" cx="245" cy="150" r="4"/><circle class="dot" cx="289" cy="150" r="4"/>
+    <circle class="dot" cx="365" cy="150" r="4"/><circle class="dot" cx="422" cy="150" r="4"/><circle class="dot" cx="745" cy="150" r="4"/>
+    <circle class="dot" cx="766" cy="150" r="4"/><circle class="dot-a" cx="883" cy="150" r="5"/><circle class="dot-a" cx="925" cy="150" r="5"/>
+    <!-- labels -->
+    <text class="ts" x="44" y="104">2024-06 · #16884</text><text class="tz tI" x="44" y="120">polars-stream 起步</text>
+    <text class="ts" x="245" y="192" text-anchor="middle">2024-12 · #19869</text><text class="tz tI" x="245" y="208" text-anchor="middle">streaming equi-join</text>
+    <text class="ts" x="289" y="56" text-anchor="middle">2025-01 · #20949</text><text class="tz tI" x="289" y="72" text-anchor="middle">舊引擎標記 deprecated</text>
+    <text class="ts" x="365" y="240" text-anchor="middle">2025-04 · #22153</text><text class="tz tI" x="365" y="256" text-anchor="middle">scan 預設改走新引擎</text>
+    <text class="ts" x="422" y="104" text-anchor="middle">2025-06 · #23103</text><text class="tz tI" x="422" y="120" text-anchor="middle">刪除 polars-pipe</text>
+    <text class="ts" x="745" y="192" text-anchor="middle">2026-04 · #26774</text><text class="tz tI" x="745" y="208" text-anchor="middle">spill 記憶體管理器</text>
+    <text class="ts" x="766" y="104" text-anchor="middle">2026-05 · #27497</text><text class="tz tI" x="766" y="120" text-anchor="middle">streaming 宣告穩定</text>
+    <text class="ts" x="891" y="240" text-anchor="end">2026-08 · #27822</text><text class="tz tA" x="891" y="256" text-anchor="end">Auto → Streaming</text>
+    <text class="ts" x="932" y="56" text-anchor="end">2026-10 · #29741</text><text class="tz tA" x="932" y="72" text-anchor="end">OOC 預設開啟 · 2.0.0</text>
+  </svg>
+  </div>
+  <figcaption><b>引擎先在 1.x 後期把 scan、sink、join 一塊塊接手，最後才翻預設。</b>#27822 在 2026-06-27 寫成，但等到 8-26 才合併、進 2.0.0-rc.1。OOC 預設開啟（#29741）是 2026-10-05，只比 2.0.0 tag（10-06）早一天，rc.1 裡沒有。其他節點：parquet source <a href="https://github.com/pola-rs/polars/pull/18152">#18152</a>（2024-08）、streaming group-by <a href="https://github.com/pola-rs/polars/pull/19291">#19291</a>（2024-10）、新 group-by <a href="https://github.com/pola-rs/polars/pull/22285">#22285</a>（2025-04）、out-of-core sort <a href="https://github.com/pola-rs/polars/pull/29657">#29657</a>（2026-10-01）。</figcaption>
+</figure>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="hard">
+<div class="prose">
+  <h2><span class="num">06</span>難關與技術選擇</h2>
+
+  <h3 id="order">6.1 行順序：最難的是語意，不是程式</h3>
+  <p>DataFrame 使用者習慣「資料怎麼進來就怎麼出去」。in-memory 引擎多半順手做到了，例如 left join 保持左表順序，於是很多程式碼不知不覺依賴這件事。streaming 引擎想要全速平行，就得允許 morsel 亂序完成。舊引擎的做法是拒絕所有需要順序的運算；新引擎的選擇分成三層：</p>
+  <ul class="plain">
+    <li><b>引擎層：</b>序號是 morsel 的一部分，需要時用 linearizer 合併，代價是失去部分平行度。</li>
+    <li><b>語意層：</b>2.0 把「順便的順序」從合約中拿掉，需要時明確寫 <code>maintain_order</code> 或 <code>sort</code>。join 的 <code>maintain_order</code> 預設 <code>None</code>，文件說它「might differ across Polars versions or even between different runs」（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/lazyframe/frame.py#L6066-L6081">frame.py#L6066-L6081</a>）。</li>
+    <li><b>Optimizer 層：</b><code>simplify_ordering</code> 從計畫中找出順序真正被觀察的地方，其餘的邊標成 <code>Unordered</code>。</li>
+  </ul>
+</div>
+
+<figure>
+  <div class="fig-scroll">
+  <svg viewBox="0 0 960 232" role="img" aria-labelledby="ord-title ord-desc" style="min-width:880px">
+    <title id="ord-title">simplify_ordering 如何標記計畫中的順序</title>
+    <desc id="ord-desc">兩個 parquet scan 進入 join、group-by、sort，只有 sort 之後的輸出邊是有序的，其餘邊都被標為無序，讓 scan 可以亂序解碼、join 可以批次探測。</desc>
+    <defs>
+      <marker id="ord-ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker>
+      <marker id="ord-ara" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk-a" points="0 0, 8 3, 0 6"/></marker>
+    </defs>
+    <path class="ar" d="M200 60 H244 Q252 60 252 68 V104 Q252 112 260 112 H302" marker-end="url(#ord-ar)"/>
+    <path class="ar" d="M200 188 H244 Q252 188 252 180 V144 Q252 136 260 136 H302" marker-end="url(#ord-ar)"/>
+    <line class="ar" x1="480" y1="124" x2="526" y2="124" marker-end="url(#ord-ar)"/>
+    <line class="ar" x1="704" y1="124" x2="750" y2="124" marker-end="url(#ord-ar)"/>
+    <line class="ar-a" x1="888" y1="124" x2="934" y2="124" marker-end="url(#ord-ara)"/>
+    <rect class="mask" x="204" y="36" width="36" height="16"/><text class="tz" x="222" y="49" text-anchor="middle">無序</text>
+    <rect class="mask" x="204" y="164" width="36" height="16"/><text class="tz" x="222" y="177" text-anchor="middle">無序</text>
+    <rect class="mask" x="486" y="100" width="36" height="16"/><text class="tz" x="504" y="113" text-anchor="middle">無序</text>
+    <rect class="mask" x="710" y="100" width="36" height="16"/><text class="tz" x="728" y="113" text-anchor="middle">無序</text>
+    <rect class="mask" x="894" y="100" width="36" height="16"/><text class="tz tA" x="912" y="113" text-anchor="middle">有序</text>
+    <rect class="mask" x="24" y="32" width="176" height="56" rx="6"/><rect class="nb" x="24" y="32" width="176" height="56" rx="6"/>
+    <text class="tn" x="112" y="56" text-anchor="middle">scan_parquet(orders)</text><text class="ts" x="112" y="74" text-anchor="middle">maintain_order=false</text>
+    <rect class="mask" x="24" y="160" width="176" height="56" rx="6"/><rect class="nb" x="24" y="160" width="176" height="56" rx="6"/>
+    <text class="tn" x="112" y="184" text-anchor="middle">scan_parquet(cust)</text><text class="ts" x="112" y="202" text-anchor="middle">maintain_order=false</text>
+    <rect class="mask" x="304" y="96" width="176" height="56" rx="6"/><rect class="nb" x="304" y="96" width="176" height="56" rx="6"/>
+    <text class="tn" x="392" y="120" text-anchor="middle">Join</text><text class="ts" x="392" y="138" text-anchor="middle">maintain_order=None</text>
+    <rect class="mask" x="528" y="96" width="176" height="56" rx="6"/><rect class="nb" x="528" y="96" width="176" height="56" rx="6"/>
+    <text class="tn" x="616" y="120" text-anchor="middle">GroupBy.agg</text><text class="ts" x="616" y="138" text-anchor="middle">maintain_order → off</text>
+    <rect class="mask" x="752" y="96" width="136" height="56" rx="6"/><rect class="nf" x="752" y="96" width="136" height="56" rx="6"/>
+    <text class="tn" x="820" y="120" text-anchor="middle">Sort</text><text class="ts" x="820" y="138" text-anchor="middle">order observed</text>
+  </svg>
+  </div>
+  <figcaption><b>只有 sort 之後順序會被看見，其他邊都可以亂序。</b>這個 pass 給每條邊標上 <code>Ordered</code> 或 <code>Unordered</code>（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/simplify_ordering/mod.rs#L22-L27">simplify_ordering/mod.rs#L22-L27</a>），會移除沒人觀察的 Sort（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/simplify_ordering/mod.rs#L202-L206">#L202-L206</a>），清掉 GroupBy 與 Distinct 的 <code>maintain_order</code>（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/simplify_ordering/mod.rs#L335-L360">#L335-L360</a>），並讓 scan 以 <code>maintain_order=false</code> 亂序解碼（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/simplify_ordering/mod.rs#L82-L96">#L82-L96</a>）。</figcaption>
+</figure>
+
+<div class="prose">
+<pre><code>// simplify_ordering：join 沒要求順序 → 兩個輸入和輸出都標成無序
+if out_edge.is_unordered() || options.args.maintain_order == JO::None {
+    *out_edge = Edge::Unordered;
+    *in_edge_lhs = Edge::Unordered;
+    *in_edge_rhs = Edge::Unordered;
+    Arc::make_mut(options).args.maintain_order = JO::None;
+}</code></pre>
+  <p class="src"><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/simplify_ordering/mod.rs#L416-L424">simplify_ordering/mod.rs#L416-L424</a></p>
+<pre><code>// equi_join：有序與無序的 probe 是兩條不同的路
+let out_seq = if params.preserve_order_probe {
+    in_seq                                                         // 沿用 probe morsel 的序號
+} else {
+    MorselSeq::new(unordered_morsel_seq.fetch_add(1, Ordering::Relaxed)) // 隨便發一個新號
+};
+// ...
+if params.preserve_order_probe {
+    // To preserve the order we can't do bulk probes per partition and must follow
+    // the order of the probe morsel.</code></pre>
+  <p class="src"><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/joins/equi_join.rs#L1110-L1126">equi_join.rs#L1110-L1126</a> · <code>preserve_order_probe = maintain_order != None</code> 在 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/joins/equi_join.rs#L1488-L1494">#L1488-L1494</a></p>
+  <p>這段程式碼把代價寫得很清楚：要保持順序，join 就不能按 partition 批次 probe，只能跟著 probe morsel 的順序走。這就是為什麼「預設不保證順序」是讓 streaming 成為預設的前提。值得注意的是，順序可觀察性的 optimizer pass 本身比 2.0 早很多（<a href="https://github.com/pola-rs/polars/pull/20396">#20396</a>，2024-12；2026-04 改寫成 <code>simplify_ordering</code>，<a href="https://github.com/pola-rs/polars/pull/27075">#27075</a>）。2.0 改變的是預設引擎開始真正吃下這份自由，配套 PR 有 <a href="https://github.com/pola-rs/polars/pull/27883">#27883</a>（為非有序 join 改寫測試）。</p>
+
+  <h3>6.2 覆蓋率：每個運算子都要重寫一次</h3>
+  <p>streaming 版的運算子和 in-memory 版是不同的演算法。group-by 要 hash 分區加冷熱分離，equi-join 是 <code>Sample → Build → Probe → EmitUnmatched → Done</code> 的狀態機（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/joins/equi_join.rs#L1427-L1434">equi_join.rs#L1427-L1434</a>），sort 要取樣、分桶、可 spill。兩個 tag 之間有 885 個 commit 碰過 <code>polars-stream</code>，光 lowering 的程式就有 <code>lower_ir.rs</code> 2,148 行、<code>lower_expr.rs</code> 3,287 行、<code>lower_group_by.rs</code> 1,455 行。</p>
+  <p>技術上的選擇是<b>逐節點 fallback</b>：做不到的部分用 <code>InMemoryMap</code> 或 <code>InMemoryJoin</code> 包起來，讓整個查詢仍然能用 streaming 跑。例如 <code>unique(maintain_order=True, keep="last")</code> 到 2.0 仍走這條路（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/lower_ir.rs#L1722-L1765">lower_ir.rs#L1722-L1765</a>）。代價是 fallback 節點要把輸入整份收齊，命中 fallback 的查詢就拿不到記憶體優勢。舊引擎則是整棵子樹二選一，所以一個不支援的表達式就足以讓上半部全部物化。</p>
+
+  <h3 id="ooc">6.3 Pipeline breaker 與 out-of-core</h3>
+  <p>串流解決不了需要看到全部資料的運算：sort、group-by 的狀態、join 的 build side。2.0 的答案是新 crate <code>polars-ooc</code>，它有三個部分：</p>
+  <ul class="plain">
+    <li><b>精確計帳。</b>包住 jemalloc/mimalloc 的 <code>GlobalAlloc</code>，每次 alloc/dealloc 先記在 thread-local 的漂移計數器，超過 4 MiB 才合併進全域 atomic（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-ooc/src/global_alloc.rs#L28-L52">global_alloc.rs#L28-L52</a>）。Python wheel 把它設成 <code>#[global_allocator]</code>（<a href="https://github.com/pola-rs/polars/pull/27103">#27103</a>）。</li>
+    <li><b>何時 spill。</b>每次運算子註冊一塊緩衝資料，就檢查「用量＋預取中 − spill 中」是否超過預算；預算是 0.8 × 總 RAM（會看 cgroup）與 <code>POLARS_OOC_MEMORY_BUDGET_MB</code> 取小（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-ooc/src/memory_manager.rs#L61-L67">memory_manager.rs#L61-L67</a>）。選誰 spill 用 Thompson sampling 挑 spill context，分 MostRecent、LeastRecent、Random 三種淘汰策略。</li>
+    <li><b>怎麼 spill。</b>寫成 Arrow IPC stream，可選 zstd，存到 <code>/var/tmp/polars-$USER/spill</code>；<code>SpillToken</code> 有 pin 計數，<code>get().await</code> 時透明地讀回來（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-ooc/src/spill_frame.rs#L19-L85">spill_frame.rs#L19-L85</a>）。</li>
+  </ul>
+<pre><code>// sort：每個緩衝的 morsel 都註冊到 LeastRecentSpillContext
+bytes.fetch_add(df.estimated_size(false) as u64, Ordering::Relaxed);
+let keys = key_series(&amp;df, key)?;
+sample.add(&amp;keys);
+...
+spill_ctx.register(morsel.sf()).await;</code></pre>
+  <p class="src"><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/sort/mod.rs#L406-L416">sort/mod.rs#L406-L416</a> · 超過 <code>min(32 MiB, budget/2)</code> 改走範圍分桶，見 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/sort/mod.rs#L135-L161">#L135-L161</a> · group-by 冷資料 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/group_by.rs#L437">group_by.rs#L437</a> · join build <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/joins/equi_join.rs#L745">equi_join.rs#L745</a></p>
+  <p>還沒完成的部分：hash table 和 group-by 的 hot table 本身不能 spill，只有緩衝的 frame 可以；sort 的 partition builder 註解明說「can't be spilled」（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/sort/tuning.rs#L9-L12">tuning.rs#L9-L12</a>）。repo 裡唯一的 OOC Python 測試還標著 <code>@pytest.mark.skip</code>，相關設定也全在 <code>// Private.</code> 區塊，沒有文件。官方 2.0 文章把這稱為「initial out-of-core support」。這塊應該視為剛起步。</p>
+
+  <h3>6.4 排程：為什麼自己寫 async 執行器</h3>
+  <p>rayon 的 fork-join 模型適合「一個運算子內部平行」，正好是 in-memory 引擎的需求。但 streaming 需要很多長壽、會互相等待的任務：source 等下游消化、linearizer 等某條 pipeline、join 的 probe 等 build 完成。這種情況用 async state machine 表達最自然：等待時讓出執行緒，不必阻塞。Polars 因此寫了自己的執行器，加上優先級（先消化再生產）與 NUMA 感知的 work stealing。<span class="tag inf">推論</span> 這也是舊引擎鎖步問題的根本解法：沒有全域 barrier，慢的 morsel 只拖住自己那條 pipeline。</p>
+
+  <h3>6.5 Optimizer 跟著長大</h3>
+  <p>optimizer 目錄從 8,308 行長到 21,351 行。對照兩版 <code>optimize()</code> 的 pass 順序（橘色是 2.0 新增或位置有改變的）：</p>
+</div>
+<div class="cols">
+  <div>
+    <h4>1.0 · <a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-plan/src/plans/optimizer/mod.rs#L60-L235">optimizer/mod.rs#L60-L235</a></h4>
+    <ol>
+      <li>to_alp（內含 type coercion、simplify）</li>
+      <li>CSPE 共用子計畫消除</li>
+      <li>Projection pushdown（在 predicate 前）</li>
+      <li>Predicate pushdown</li>
+      <li>cluster_with_columns</li>
+      <li>規則迴圈：SimpleProjectionAndCollapse、DelayRechunk、SlicePushDown、SimplifyBoolean、FlattenUnion</li>
+      <li>set_cache_states</li>
+      <li>CSE（表達式）</li>
+    </ol>
+  </div>
+  <div>
+    <h4>2.0 · <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/mod.rs#L104-L382">optimizer/mod.rs#L104-L382</a></h4>
+    <ol>
+      <li>CSPE 共用子計畫消除</li>
+      <li class="new">Slice pushdown → Predicate pushdown（含 cross join + filter 折成 equi/IE join）</li>
+      <li class="new">CollapseSort</li>
+      <li class="new">outer join pushthrough、join_order、join predicate fusion</li>
+      <li class="new">Projection pushdown（移到 predicate 之後，<a href="https://github.com/pola-rs/polars/pull/26688">#26688</a>）</li>
+      <li>規則迴圈：FusedArithmetic、SimpleProjectionAndCollapse、DelayRechunk、<span style="color:var(--accent)">FilterConstraintRule</span>、SimplifyBoolean、<span style="color:var(--accent)">FlattenMergeSorted</span>、FlattenUnion</li>
+      <li class="new">第二次 slice pushdown、join build side、join runtime filters</li>
+      <li>cluster_with_columns、CSE、<span style="color:var(--accent)">extract_windows</span></li>
+      <li class="new">simplify_ordering（CHECK_ORDER_OBSERVE）</li>
+      <li class="new">expand_datasets、DSL resolvers、prune parquet metadata</li>
+    </ol>
+  </div>
+</div>
+<div class="prose">
+  <p>從 CMU optimizer 課的角度，最有意思的是 2.0 <b>第一次出現 cost-based 的成分</b>。1.0 是純 rule-based，唯一的估計 <code>row_estimate</code> 只用來讓舊 streaming 引擎選 join build side。2.0 則有：</p>
+  <ul class="plain">
+    <li><b>基數模型</b>（<a href="https://github.com/pola-rs/polars/pull/29024">#29024</a>）：join 大小用教科書公式 <code>|A|·|B| / Π domain(key)</code>，domain 取兩側 NDV 的最大值，沒有 NDV 時用整數 min/max 範圍（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/stats/node.rs#L781-L785">stats/node.rs#L781-L785</a>）；預設選擇率 0.2；估計值帶 <code>Card::{Unknown, Exact, Approx{rel_err}}</code> 信心標籤。</li>
+    <li><b>Join reordering</b>（<a href="https://github.com/pola-rs/polars/pull/28985">#28985</a>，2026-08-26）：找出連續的 inner equi-join，用<b>貪婪 left-deep</b> 搜尋。每個葉子都試一次當起點（上限 24 個葉子），不引入原本沒有的 cross product，成本是中間結果大小總和（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/join_order/enumerate.rs#L11-L91">join_order/enumerate.rs#L11-L91</a>）。模組文件寫得很實際：「The estimates can be wrong, so it skips any cluster it cannot measure」（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/join_order/mod.rs#L1-L14">join_order/mod.rs#L1-L14</a>）。</li>
+    <li><b>Join runtime filter</b>：hash join build 完成後，把 min/max 範圍與 bloom filter 推到 probe 側的 parquet scan（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/join_runtime_filter.rs#L1-L30">join_runtime_filter.rs#L1-L30</a>）。這個技巧在 streaming 下特別划算，因為 probe 側還沒開始讀。</li>
+  </ul>
+  <p><span class="tag inf">推論</span> 這仍然<b>不是</b> System R 或 Cascades 式的 optimizer：沒有對 join 子集合做 DP，沒有 physical property 列舉，也沒有全計畫的成本搜尋。它是固定的規則管線，裡面嵌一個用估計值的 join ordering pass。統計來自 parquet footer、Iceberg manifest 與取樣，不是 ANALYZE 產生的直方圖。對照課程內容，這是 rule-based 系統逐步加入 cost model 的典型路線。</p>
+  <p>Predicate pushdown 經過 join 的邏輯也變聰明了。2.0 會用 join key 等值關係把 key 上的 filter 同時推到兩側（transitive predicate transfer），也會在 filter 會剔除 null 列時把 Full 降成 Left/Right、把 Left/Right 降成 Inner，也就是經典的 outer join simplification（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/predicate_pushdown/join/predicate_pruning.rs#L402-L424">predicate_pruning.rs#L402-L424</a>）。1.0 的版本在 <a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-plan/src/plans/optimizer/predicate_pushdown/join.rs#L123-L257">predicate_pushdown/join.rs#L123-L257</a>，可以對照著讀。</p>
+</div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="why-now">
+<div class="prose">
+  <h2><span class="num">07</span>為什麼是現在：決策因素</h2>
+  <p>原始碼不會說「我們為什麼選這個時間點」。下面六點把可以驗證的事實和我的推論分開標示。</p>
+</div>
+<div class="factor"><div class="k">A</div><div>
+  <p><b>覆蓋率過了門檻。</b>native 節點涵蓋所有 join 類型、各種 group-by、sort/top-k、window 和全部 IO 格式，fallback 從「常態」變成「例外」。#27822 本身也動到了 <code>lower_group_by.rs</code> 與 <code>lower_ir.rs</code>。</p>
+  <p class="note"><span class="tag">事實</span> 節點清單見 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/mod.rs#L173">PhysNodeKind</a>　<span class="tag inf">推論</span> 門檻是團隊主觀判斷的</p>
+</div></div>
+<div class="factor"><div class="k">B</div><div>
+  <p><b>效能證據夠強。</b>官方 PDS-H 顯示 streaming 快 3～7 倍，資料越大差越多，這讓「預設慢一點換省記憶體」的顧慮不存在。</p>
+  <p class="note"><span class="tag">事實</span> 官方自測數字　<span class="tag inf">推論</span> 這是說服使用者接受 breaking change 的主要論據</p>
+</div></div>
+<div class="factor"><div class="k">C</div><div>
+  <p><b>行順序必須等 major 版本。</b>預設引擎換掉會悄悄改變結果順序，semver 下只能放進 2.0。官方文章也明說升 major 是為了這個。</p>
+  <p class="note"><span class="tag">事實</span> <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/docs/source/releases/upgrade/2.md#L5-L23">upgrade/2.md 的 danger 框</a></p>
+</div></div>
+<div class="factor"><div class="k">D</div><div>
+  <p><b>記憶體安全網要在預設之前就位。</b>streaming 變成預設後，pipeline breaker 的狀態若沒有 spill 機制，大查詢一樣會 OOM。OOC 在發布前一天才預設開啟。</p>
+  <p class="note"><span class="tag">事實</span> <a href="https://github.com/pola-rs/polars/pull/29741">#29741</a>（2026-10-05）　<span class="tag inf">推論</span> 時間點顯示它是趕在 2.0 前補上的</p>
+</div></div>
+<div class="factor"><div class="k">E</div><div>
+  <p><b>維護兩顆引擎太貴。</b>舊引擎因「maintenance issue」被刪除。2.0 的 in-memory 引擎連檔案 scan 都已委派給 streaming 的子執行器，兩顆引擎在收斂。CI 也移除了 auto-streaming job，streaming 成為主要測試路徑（<a href="https://github.com/pola-rs/polars/pull/29214">#29214</a>）。</p>
+  <p class="note"><span class="tag">事實</span> <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-mem-engine/src/planner/lp.rs#L467-L524">mem-engine planner/lp.rs#L467-L524</a>　<span class="tag">事實</span> <a href="https://github.com/pola-rs/polars/pull/23103">#23103</a> 說明文字</p>
+</div></div>
+<div class="factor"><div class="k">F</div><div>
+  <p><b>產品方向。</b>開啟 query monitoring 時，Python 會把 engine affinity 設成 <code>"streaming"</code>；per-node 執行指標也只有 streaming 引擎能回報到 Polars Cloud。</p>
+  <p class="note"><span class="tag">事實</span> <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/config.py#L1689">config.py#L1689</a>　<span class="tag inf">推論</span> 雲端與分散式執行需要 morsel 這種可切分、可觀測的單位</p>
+</div></div>
+<div class="prose">
+  <p>回到你的三個問題，濃縮成一句：<b>以前不做</b>，是因為舊引擎的設計（白名單、鎖步、全域計數器、半套 OOC）撐不起預設，新引擎在 1.0 時還只是骨架；<b>後來做</b>，是因為覆蓋率、效能證據和 OOC 都到位，而且碰上可以改語意的 major 版本；<b>中間的難關</b>是順序語意、每個運算子的重寫，以及 pipeline breaker 的記憶體上限。</p>
+</div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="trace">
+<div class="prose">
+  <h2><span class="num">08</span>追原始碼的路線圖</h2>
+  <p>建議的閱讀順序（全部固定在 tag，連結不會漂移）：</p>
+</div>
+<div class="tbl">
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:30%">從哪裡讀</th><th>看什麼</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-lazy/src/frame/mod.rs#L634-L700">polars-lazy/src/frame/mod.rs#L634</a></td><td>Engine 解析，以及分派到 <code>polars_stream::run_query</code> 或 <code>run_in_memory_query</code></td></tr>
+    <tr><td>2</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-plan/src/plans/optimizer/mod.rs#L104-L382">polars-plan/.../optimizer/mod.rs</a></td><td>完整 pass 管線；接著讀 <code>simplify_ordering/</code> 和 <code>join_order/</code></td></tr>
+    <tr><td>3</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/skeleton.rs#L37-L60">polars-stream/src/skeleton.rs</a></td><td>streaming 引擎的入口，四個步驟</td></tr>
+    <tr><td>4</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/physical_plan/lower_ir.rs#L175-L187">physical_plan/lower_ir.rs</a></td><td>IR 怎麼變成 PhysNode，哪裡會 fallback</td></tr>
+    <tr><td>5</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/morsel.rs">morsel.rs</a> → <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/mod.rs#L80-L124">nodes/mod.rs</a> → <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/filter.rs">nodes/filter.rs</a></td><td>資料單位、節點介面、最簡單的節點</td></tr>
+    <tr><td>6</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/execute.rs#L298-L414">execute.rs</a> + <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/graph.rs#L98-L180">graph.rs</a></td><td>phase 迴圈、狀態收斂、blocker 選擇</td></tr>
+    <tr><td>7</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/pipe.rs#L84-L109">pipe.rs</a> + <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-async/src/primitives/linearizer.rs#L63-L121">polars-async/.../linearizer.rs</a></td><td>serial/parallel 的接法、順序還原、背壓</td></tr>
+    <tr><td>8</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-stream/src/nodes/joins/equi_join.rs#L1427-L1494">nodes/joins/equi_join.rs</a></td><td>最完整的 pipeline breaker：取樣、build、probe、有序與無序兩條路</td></tr>
+    <tr><td>9</td><td><a href="https://github.com/pola-rs/polars/blob/py-2.0.0/crates/polars-ooc/src/memory_manager.rs#L61-L179">polars-ooc/src/memory_manager.rs</a></td><td>spill 何時觸發、怎麼挑對象</td></tr>
+    <tr><td>10</td><td><a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-lazy/src/physical_plan/streaming/convert_alp.rs#L84-L443">1.0 convert_alp.rs</a> + <a href="https://github.com/pola-rs/polars/blob/py-1.0.0/crates/polars-pipe/src/pipeline/dispatcher/drive_operator.rs#L36-L131">1.0 drive_operator.rs</a></td><td>對照組：舊引擎怎麼切島、怎麼鎖步</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="prose">
+  <p>自己動手看兩顆引擎的差異：</p>
+<pre><code>import polars as pl
+
+lf = (pl.scan_parquet("data/*.parquet")
+        .filter(pl.col("amount") &gt; 0)
+        .group_by("customer_id")
+        .agg(pl.col("amount").sum()))
+
+print(lf.explain(engine="streaming"))      # 看 streaming 的計畫
+lf.show_graph(engine="streaming")          # 2.0 預設畫 physical 圖，圖例標出記憶體密集的節點
+lf.collect(engine="in-memory")             # 對照組：1.x 的預設行為
+
+# 環境變數（建議用 /usr/bin/time -v 量峰值 RSS）
+# POLARS_ENGINE_AFFINITY=in-memory   整個行程退回舊預設
+# POLARS_IDEAL_MORSEL_SIZE=100000    morsel 列數
+# POLARS_OOC_MEMORY_BUDGET_MB=2000   壓低 spill 門檻，觀察 out-of-core（私有設定，未來可能變）</code></pre>
+  <p class="note">還有兩處與現況不一致的殘留，可以當作追 code 的小練習：<code>collect_async</code> 明確傳 <code>engine="streaming"</code> 時仍會發出「streaming mode is considered unstable」警告（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/lazyframe/engine.py#L417-L418">engine.py#L417-L418</a>）；<code>LazyFrame.unique</code> 的 docstring 仍說 <code>maintain_order</code> 會阻止 streaming（<a href="https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/lazyframe/frame.py#L7844-L7847">frame.py#L7844-L7847</a>），但 <a href="https://github.com/pola-rs/polars/pull/27052">#27052</a> 已經讓它可以串流。</p>
+</div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="sources">
+<div class="prose">
+  <h2><span class="num">09</span>資料來源與限制</h2>
+  <ul class="plain">
+    <li><b>原始碼：</b>pola-rs/polars 的 <code>py-1.0.0</code>（f73937a，2024-07-01）與 <code>py-2.0.0</code>（22a147d，2026-10-06）兩個 tag，加上 <code>py-1.44.2</code> 作為最後一個 1.x 的對照。行號都用 grep/sed 對過；PR 編號取自 commit 訊息，日期用 author date。</li>
+    <li><b>官方文件：</b>repo 內的 <a href="https://github.com/pola-rs/polars/blob/py-2.0.0/docs/source/releases/upgrade/2.md">docs/source/releases/upgrade/2.md</a>。</li>
+    <li><b>PR 與 issue：</b><a href="https://github.com/pola-rs/polars/pull/23103">#23103</a>（移除舊引擎的說明）、<a href="https://github.com/pola-rs/polars/issues/20947">#20947</a>（新引擎追蹤 issue：「In time, it will become the default engine, as it is usually faster and uses less memory」）、<a href="https://github.com/pola-rs/polars/issues/21648">#21648</a>。</li>
+    <li><b>部落格：</b><a href="https://pola.rs/posts/announcing-polars-2/">Pre-release of Polars 2.0</a>、<a href="https://pola.rs/posts/announcing-polars-1/">Announcing Polars 1.0</a>、<a href="https://pola.rs/posts/benchmarks/">PDS-H benchmarks（2025-05）</a>、<a href="https://pola.rs/posts/polars-in-aggregate-dec25/">Polars in Aggregate（2025-12）</a>。這次的執行環境無法直接打開 pola.rs，這些文章的內容是透過搜尋摘要取得的，引文請以原文為準。</li>
+    <li><b>第三方：</b>1 億列記憶體數字出自 <a href="https://python.plainenglish.io/polars-2-0-just-dropped-i-threw-100-million-rows-at-it-70e1f05e5608">Python in Plain English</a>（付費文章，只看到摘要），屬單次測試。</li>
+    <li><b>沒做的事：</b>我沒有實際編譯或執行 Polars，所有效能與記憶體結論都來自原始碼閱讀與上述資料。標成「推論」的段落是我對程式碼的解讀。</li>
+    <li><b>新功能的成熟度：</b>join reordering、基數模型、runtime filter、OOC 預設開啟都在 2.0 tag 前六週內合併，接下來幾個版本很可能還會變。</li>
+  </ul>
+</div>
+</section>
+
+</div>
+</body>
+</html>

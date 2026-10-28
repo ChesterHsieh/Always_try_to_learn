@@ -116,12 +116,23 @@ MuJoCo 機器人控制實驗（simulation / control / shared 三層結構）。
 - **關聯**：與 `ros2-robotics-mastery` 的 A3-5 節點對接（`mujoco_ros2_control`）
 - **詳情**：[robot-mujoco-control/README.md](robot-mujoco-control/README.md)
 
+### 13. polars-engine-internals
+
+追 Polars 原始碼，搞懂 1.x → 2.0 為什麼把 streaming 引擎變成 `collect()` 的預設、峰值記憶體為什麼能掉那麼多，並對照 CMU 15-445/721 的執行模型與查詢最佳化。
+
+- **網站入口**：[導讀報告](https://chesterhsieh.github.io/Always_try_to_learn/polars-engine-internals/report/)｜[技能樹](https://chesterhsieh.github.io/Always_try_to_learn/polars-engine-internals/skill-tree/)
+- **形式**：單檔 HTML 導讀報告（6 張內嵌 SVG 圖）＋ 互動技能樹（50 節點 / 11 章 / 153 題四選一，每題附解釋與深挖 prompt）
+- **主線**：欄式儲存與 Parquet → Volcano / materialization / 向量化 / morsel-driven → IR 與規則式最佳化 → 舊引擎 polars-pipe 的天花板 → polars-stream 的 morsel、linearizer、phase 迴圈 → 行順序語意 → polars-ooc spill → cost-based join reordering
+- **證據**：所有連結固定在 `py-1.0.0` / `py-2.0.0` tag，可逐行追回原始碼
+- **詳情**：[polars-engine-internals/README.md](polars-engine-internals/README.md)
+
 ## 技術棧概覽
 
 - **語言**：Python、Java、C++
 - **框架／工具**：JAX、Flax、Spark、PySpark、Kubernetes、Helm、Prometheus、Grafana、OpenTelemetry、diffusers / kohya_ss、ComfyUI、pytest、ROS 2、Gazebo、MuJoCo、MoveIt 2、Isaac Sim / Isaac Lab
 - **領域**：
   - 大數據處理與資料工程
+  - 資料庫內部（查詢執行模型、查詢最佳化，以 Polars 原始碼為教材）
   - 機器學習（Transformer、JAX）
   - 強化學習（PPO、Heuristic Learning、Isaac Lab）
   - 生成式 AI（LoRA 文生圖）
@@ -152,4 +163,4 @@ Chester Hsieh
 
 ## 更新日期
 
-2026-09-30
+2026-10-28
